@@ -16,7 +16,7 @@ def f(uvwpqrPTAxyz,t,b, m, l, k):
     w1,w2,w3,w4 = W
     u_punto = r*v - q*w - g*sin(theta)
     v_punto = p*w - r*u - g*cos(theta)*sin(phi)
-    w_punto = q*u - p*v + g*cos(phi)*cos(theta) - (b/m)*(np.sum(np.array([w1,w2,w3,w4])**2))
+    w_punto = q*u - p*v + g*cos(phi)*cos(theta) - (b/m)*np.linalg.norm(W)**2
     p_punto = ((l*k)/(Ixx))*(w4**2 - w2**2) - q*r*((Izz-Iyy)/(Ixx))
     q_punto = ((l*k)/(Iyy))*(w3**2 - w1**2) - p*r*((Ixx-Izz)/(Iyy))
     r_punto = (b/Izz)*(w2**2 +  w4**2 - w1**2 - w3**2)
