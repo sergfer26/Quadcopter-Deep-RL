@@ -40,9 +40,6 @@ y = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10
 sol = odeint(f, y, t, args=(b, m, l, kt, W))
 sol2 = odeint(f, y, t, args=(b, m, l, kt, W2))
 
-print(np.linalg.norm(sol-sol2))
-
-
 psi = sol[:,6]
 theta = sol[:,7]
 phi = sol[:,8]
@@ -50,13 +47,16 @@ X = sol[:,9]
 Y = sol[:,10]
 Z = sol[:,11]
 
-fig = go.Figure(data=[go.Scatter3d(
-     x=X,
-     y=Y,
-     z=Z,
-     mode='markers',
-     marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
-fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-fig.show()
+def escribe():
+    posicion = open('XYZ.txt','w')
+    angulos = open('ang.txt','w')
+    for i in range(len(X)):
+        posicion.write(str([X[i],Y[i],Z[i]]) + ',')
+        angulos.write(str([psi[i],theta[i],phi[i]]) + ',')
+    posicion.close()
+    angulos.close()
+def imagen():
+    fig = go.Figure(data=[go.Scatter3d(x=X,y=Y,z=Z,mode='markers',marker=dict(size=1,colorscale='Viridis',opacity=0.8))])
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
+    fig.show()
 
-print(Z)
