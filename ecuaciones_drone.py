@@ -12,12 +12,11 @@ B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219 #kt
 
 
-def f(y, W):
-    #El primer parametro es un vector
-    #W,I tambien
+def f(y,t,w1,w2,w3,w4):
+    #El primer parametro es un vector 
     u, v, w, p, q, r, psi, theta, phi, x, y, z = y
     Ixx, Iyy, Izz = I
-    w1, w2, w3, w4 = W
+    W = np.array([w1, w2, w3, w4])
     du = r*v - q*w - G*sin(theta)
     dv = p*w - r*u - G*cos(theta)*sin(phi)
     dw = q*u - p*v + G*cos(phi)*cos(theta) - (K/M)*np.linalg.norm(W)**2
@@ -33,11 +32,12 @@ def f(y, W):
     return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
 
 
-W = (53.6666, 53.66, 53.6666, 53.668)
-t = np.linspace(0, 11, 10000)
-y = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10
+w1,w2,w3,w4 = (0, 53.6666, 55.6666, 1)
+t = np.linspace(0, 2, 1000)
+y = 0, 0, 0, 0, 0, 0, 2, 3, 1, 0, 0, 10
 
-sol = odeint(f, y, t, args=(W))
+sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
+
 
 psi = sol[:,6]
 theta = sol[:,7]
@@ -46,24 +46,11 @@ X = sol[:,9]
 Y = sol[:,10]
 Z = sol[:,11]
 
-fig = go.Figure(data=[go.Scatter3d(
-     x=X,
-     y=Y,
-     z=Z,
-     mode='markers',
-     marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
-fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-# fig.show()
-
-np.savetxt('test.txt', sol[:,6:12], delimiter=" ", fmt="%s") 
-
-
 def escribe():
     posicion = open('XYZ.txt','w')
     angulos = open('ang.txt','w')
-    for i in range(len(X)):
-        posicion.write(str([X[i],Y[i],Z[i]]) + ',')
-        angulos.write(str([psi[i],theta[i],phi[i]]) + ',')
+    np.savetxt('XYZ.txt',[X,Y,Z])
+    np.savetxt('ang.txt',[psi,theta,phi])
     posicion.close()
     angulos.close()
 
@@ -71,5 +58,8 @@ def imagen():
     fig = go.Figure(data=[go.Scatter3d(x=X,y=Y,z=Z,mode='markers',marker=dict(size=1,colorscale='Viridis',opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
+
+escribe()
+#imagen()
 
 
