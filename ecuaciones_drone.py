@@ -12,14 +12,8 @@ B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219 #kt
 
 
-<<<<<<< HEAD
-def f(y, t, w1, w2, w3, w4):
-    #El primer parametro es un vector
-    #W,I tambien
-=======
 def f(y,t,w1,w2,w3,w4):
     #El primer parametro es un vector 
->>>>>>> refs/remotes/origin/master
     u, v, w, p, q, r, psi, theta, phi, x, y, z = y
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
