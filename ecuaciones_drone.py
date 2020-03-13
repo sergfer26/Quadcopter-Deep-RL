@@ -12,9 +12,14 @@ B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219 #kt
 
 
+<<<<<<< HEAD
 def f(y, t, w1, w2, w3, w4):
     #El primer parametro es un vector
     #W,I tambien
+=======
+def f(y,t,w1,w2,w3,w4):
+    #El primer parametro es un vector 
+>>>>>>> refs/remotes/origin/master
     u, v, w, p, q, r, psi, theta, phi, x, y, z = y
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
@@ -33,11 +38,20 @@ def f(y, t, w1, w2, w3, w4):
     return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
 
 
+<<<<<<< HEAD
 w1, w2, w3, w4 = (53.6666, 53.66, 53.6666, 53.668)
 t = np.linspace(0, 11, 10000)
 y = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10
 
 sol = odeint(f, y, t, args=(w1, w2, w3, w4))
+=======
+w1,w2,w3,w4 = (0, 53.6666, 55.6666, 1)
+t = np.linspace(0, 2, 1000)
+y = 0, 0, 0, 0, 0, 0, 2, 3, 1, 0, 0, 10
+
+sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
+
+>>>>>>> refs/remotes/origin/master
 
 psi = sol[:,6]
 theta = sol[:,7]
@@ -46,26 +60,14 @@ X = sol[:,9]
 Y = sol[:,10]
 Z = sol[:,11]
 
-print(sol.shape)
-
-fig = go.Figure(data=[go.Scatter3d(
-     x=X,
-     y=Y,
-     z=Z,
-     mode='markers',
-     marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
-fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-# fig.show()
-
-np.savetxt('test.txt', sol[:,6:12], delimiter=" ", fmt="%s") 
 
 def escribe():
     posicion = open('XYZ.txt','w')
     angulos = open('ang.txt','w')
-    X = sol[:, 6:9].T
-    Y = sol[:, 9:12].T
-    np.savetxt('XYZ.txt', Y)
-    np.savetxt('ang.txt', X)
+    np.savetxt('XYZ.txt',[X,Y,Z])
+    np.savetxt('ang.txt',[psi,theta,phi])
+    posicion.close()
+    angulos.close()
 
 
 def imagen():
@@ -73,7 +75,8 @@ def imagen():
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
-escribe()
 
+escribe()
+#imagen()
 
 
