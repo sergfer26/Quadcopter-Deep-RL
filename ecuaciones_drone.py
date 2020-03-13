@@ -38,20 +38,18 @@ def f(y,t,w1,w2,w3,w4):
     return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
 
 
-<<<<<<< HEAD
 w1, w2, w3, w4 = (53.6666, 53.66, 53.6666, 53.668)
 t = np.linspace(0, 11, 10000)
 y = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10
 
 sol = odeint(f, y, t, args=(w1, w2, w3, w4))
-=======
+
 w1,w2,w3,w4 = (0, 53.6666, 55.6666, 1)
 t = np.linspace(0, 2, 1000)
 y = 0, 0, 0, 0, 0, 0, 2, 3, 1, 0, 0, 10
 
 sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
 
->>>>>>> refs/remotes/origin/master
 
 psi = sol[:,6]
 theta = sol[:,7]
