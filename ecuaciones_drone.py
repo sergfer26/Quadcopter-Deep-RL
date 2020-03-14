@@ -1,74 +1,46 @@
 import numpy as np
 from scipy.integrate import odeint
-import plotly.graph_objects as go
 from numpy import sin
 from numpy import cos
 from numpy import tan
-
+from ecuaciones_drone import *
 
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219 #kt
 
-
-def f(y,t,w1,w2,w3,w4):
-    #El primer parametro es un vector 
-    u, v, w, p, q, r, psi, theta, phi, x, y, z = y
-    Ixx, Iyy, Izz = I
-    W = np.array([w1, w2, w3, w4])
-    du = r*v - q*w - G*sin(theta)
-    dv = p*w - r*u - G*cos(theta)*sin(phi)
-    dw = q*u - p*v + G*cos(phi)*cos(theta) - (K/M)*np.linalg.norm(W)**2
-    dp = ((L*B)/(Ixx))*(w4**2 - w2**2) - q*r*((Izz-Iyy)/(Ixx))
-    dq = ((L*B)/(Iyy))*(w3**2 - w1**2) - p*r*((Ixx-Izz)/(Iyy))
-    dr = (B/Izz)*(w2**2 + w4**2 - w1**2 - w3**2)
-    dpsi = (q*sin(phi) + r*cos(phi))*(1/cos(theta))
-    dtheta = q*cos(phi) - r*sin(phi)
-    dphi = p + (q*sin(phi) + r*cos(phi))*tan(theta)
-    dx = u
-    dy = v
-    dz = w
-    return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
-
-
-w1, w2, w3, w4 = (53.6666, 53.66, 53.6666, 53.668)
-t = np.linspace(0, 11, 10000)
+w1,w2,w3,w4 = (53.66666666, 53.66666666, 53.66666666, 53.66666666)
 y = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10
+W = [w1,w2,w3,w4]
+F = np.array([[0.25,0.25,0.25,0.25],[0.05,0.05,0.05,0.05]]).reshape((4,2))
+def step(W, y, t):
+    w1,w2,w3,w4 = W
+    return odeint(f, y, t, args = (w1,w2,w3,w4))
 
-sol = odeint(f, y, t, args=(w1, w2, w3, w4))
+def Simulador(y,T,tam): #Esta funcion permite solucionar la EDO con controles
+    X = np.zeros((tam,12))
+    X[0] = y
+    t = np.linspace(0, T, tam)
+    for i in range(len(t)-1):
+        z = y[11]
+        w = y[2]
+        A = np.array([z,w]).reshape((2,1))
+        W = F@A
+        y = step(W,y,[t[i],t[i+1]])[1]
+        X[i+1] = y
+    return X
 
-w1,w2,w3,w4 = (0, 53.6666, 55.6666, 1)
-t = np.linspace(0, 2, 1000)
-y = 0, 0, 0, 0, 0, 0, 2, 3, 1, 0, 0, 10
+X = Simulador(y,7,2000)#Contiene las 12 variables
 
-sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
+z = X[:,11]
+y = X[:,10]
+x = X[:,9]
+psi = X[:,6]
+theta = X[:,7]
+phi = X[:,8]
 
-
-psi = sol[:,6]
-theta = sol[:,7]
-phi = sol[:,8]
-X = sol[:,9]
-Y = sol[:,10]
-Z = sol[:,11]
-
-
-def escribe():
-    posicion = open('XYZ.txt','w')
-    angulos = open('ang.txt','w')
-    np.savetxt('XYZ.txt',[X,Y,Z])
-    np.savetxt('ang.txt',[psi,theta,phi])
-    posicion.close()
-    angulos.close()
-
-
-def imagen():
-    fig = go.Figure(data=[go.Scatter3d(x=X,y=Y,z=Z,mode='markers',marker=dict(size=1,colorscale='Viridis',opacity=0.8))])
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-    fig.show()
-
-
-escribe()
-#imagen()
+escribe(x,y,z,psi,theta,phi)#Escribe para que blender lea
+#imagen(x,y,z)
 
 
