@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 import numpy as np
 from scipy.integrate import odeint
 from numpy import sin
@@ -38,15 +38,15 @@ def Simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
         X[i+1] = y
     return X
 
+if __name__ == "__main__":
+    X = Simulador(y, 30, 2000)#Contiene las 12 variables
 
-X = Simulador(y, 30, 2000)#Contiene las 12 variables
+    z = X[:, 11]
+    y = X[:, 10]
+    x = X[:, 9]
+    psi = X[:, 6]
+    theta = X[:, 7]
+    phi = X[:, 8]
 
-z = X[:, 11]
-y = X[:, 10]
-x = X[:, 9]
-psi = X[:, 6]
-theta = X[:, 7]
-phi = X[:, 8]
-
-#escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
-imagen(x, y, z)
+    #escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
+    imagen(x, y, z)
