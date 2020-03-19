@@ -23,14 +23,14 @@ def control_feedback(x, y, F):
     return np.dot(F, A)
 
 
-def Simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
+def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
     X = np.zeros((tam, 12))
     X[0] = y
     t = np.linspace(0, T, tam)
     for i in range(len(t)-1):
         _, _, w, p, q, r, psi, theta, phi, _, _, z = y
         W1 = control_feedback(z, w, F1) # control z
-        W2 = control_feedback(psi, r, F2)  # control psi  
+        W2 = control_feedback(psi, r, F2)  # control 
         W3 = control_feedback(phi, p, F3) # control phi
         W4 = control_feedback(theta, q, F4) # control theta
         W = W1 + W2 + W3 + W4  
@@ -38,8 +38,9 @@ def Simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
         X[i+1] = y
     return X
 
+
 if __name__ == "__main__":
-    X = Simulador(y, 30, 2000)#Contiene las 12 variables
+    X = simulador(y, 30, 2000)#Contiene las 12 variables
 
     z = X[:, 11]
     y = X[:, 10]
@@ -47,6 +48,5 @@ if __name__ == "__main__":
     psi = X[:, 6]
     theta = X[:, 7]
     phi = X[:, 8]
-
     #escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
     imagen(x, y, z)
