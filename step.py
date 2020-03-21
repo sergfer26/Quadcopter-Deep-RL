@@ -39,15 +39,22 @@ def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
         X[i+1] = y
     return X
 
-
 if __name__ == "__main__":
-    X = simulador(y, 30, 100000)#Contiene las 12 variables
-
+    T = 7
+    tam = 4000
+    X = simulador(y, T, tam)#Contiene las 12 variables
+    t = np.linspace(0, T, tam)
     z = X[:, 11]
     y = X[:, 10]
     x = X[:, 9]
-    psi = X[:, 6]
-    theta = X[:, 7]
     phi = X[:, 8]
+    theta = X[:, 7]
+    psi = X[:, 6]
+    r = X[:, 5]
+    q = X[:, 4]
+    p = X[:, 3]
+    w = X[:,2]
     #escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
-    imagen(x, y, z)
+    #imagen(x, y, z)
+    #input()
+    imagen2d(z,w,psi,r,phi,p,theta,q,t)

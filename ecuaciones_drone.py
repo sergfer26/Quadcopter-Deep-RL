@@ -62,7 +62,29 @@ def imagen(X, Y, Z):
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
+def imagen2d(z,w,psi,r,phi,p,theta,q,t):
+    f, ((w1,w2), (r1,r2), (p1,p2), (q1,q2)) = plt.subplots(4, 2)
+    w1.plot(t, z)
+    w1.set_ylabel('z')
+    w2.plot(t, w)
+    w2.set_ylabel('dz')
 
+    r1.plot(t,psi)
+    r1.set_ylabel('$\psi$')
+    r2.plot(t,r)
+    r2.set_ylabel('d$\psi$')
+
+    p1.plot(t,phi)
+    p1.set_ylabel('$\phi$')
+    p2.plot(t,p)
+    p2.set_ylabel(' d$\phi$')
+
+    q1.plot(t,theta)
+    q1.set_ylabel('$ \\theta$')
+    q2.plot(t,q)
+    q2.set_ylabel(' d$ \\theta$')
+
+    plt.show()
 #escribe()
 #imagen()
 
