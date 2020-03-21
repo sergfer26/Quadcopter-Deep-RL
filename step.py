@@ -13,8 +13,6 @@ F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T
 
 
-
-
 def step(W, y, t):
     w1, w2, w3, w4 = W
     return odeint(f, y, t, args=(w1, w2, w3, w4))
@@ -36,7 +34,7 @@ def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
         W2 = control_feedback(psi, r, F2)  # control 
         W3 = control_feedback(phi, p, F3) # control phi
         W4 = control_feedback(theta, q, F4) # control theta
-        W =  W0 + W1 + W2 + W3 + W4
+        W = W0 + W1 + W2 + W3 + W4
         y = step(W, y, [t[i], t[i+1]])[1]
         X[i+1] = y
     return X
