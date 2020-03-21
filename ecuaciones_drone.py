@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
 import numpy as np
 from scipy.integrate import odeint
 import plotly.graph_objects as go
 from numpy import sin
 from numpy import cos
 from numpy import tan
-from numpy.linalg import norm 
+from numpy.linalg import norm
 
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
@@ -50,14 +51,14 @@ W = [w1, w2, w3, w4]
 def escribe(X, Y, Z, phi, theta, psi):
     posicion = open('XYZ.txt','w')
     angulos = open('ang.txt','w')
-    np.savetxt('XYZ.txt',[X,Y,Z])
-    np.savetxt('ang.txt',[phi,psi,theta])
+    np.savetxt('XYZ.txt', [X, Y, Z])
+    np.savetxt('ang.txt',[phi, psi, theta])
     posicion.close()
     angulos.close()
 
 
 def imagen(X, Y, Z):
-    fig = go.Figure(data=[go.Scatter3d(x=X,y=Y,z=Z,mode='markers',marker=dict(size=1,colorscale='Viridis',opacity=0.8))])
+    fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
