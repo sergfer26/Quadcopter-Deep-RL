@@ -4,26 +4,55 @@ from scipy.integrate import odeint
 from numpy import sin
 from numpy import cos
 from numpy import tan
-from ecuaciones_drone import *
+from ecuaciones_drone import f, escribe, imagen, imagen2d 
 
 
-F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T
-F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T
-F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T
-F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T # matriz de control z
+F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T # matriz de control yaw
+F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T # matriz de control roll
+F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T # matriz de control pitch
 
 
 def step(W, y, t):
+    '''
+    Obtiene una solución numérica de dy=f(y) para un tiempo t+1
+
+    param W: arreglo de velocidades de los  4 rotores
+    param y: arreglo de 12 posiciones del cuadricoptero
+    param t: un paso de tiempo
+
+    regresa: y para el tiempo t+1 
+    '''
     w1, w2, w3, w4 = W
     return odeint(f, y, t, args=(w1, w2, w3, w4))
 
 
 def control_feedback(x, y, F):
+    '''
+    Realiza el control lineal de las velocidades W
+    dadas las variables (x, y).
+
+    param x: variable independiente (dx = y)
+    param y: variable dependiente
+    param F: matriz 2x4 de control
+
+    regresa: W = w1, w2, w3, w4 
+    '''
     A = np.array([x, y]).reshape((2, 1))
     return np.dot(F, A)
 
 
-def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
+def simulador(y, T, tam):
+    '''
+    Soluciona el sistema de EDO usando controles en el
+    intervalo [0, T].
+
+    param y: arreglo de la condición inicial del sistema
+    param T: tiempo final
+    param tam: número de elementos de la partición de [0, T]
+
+    regresa; arreglo de la posición final
+    '''
     W0 = np.array([1, 1, 1, 1])
     X = np.zeros((tam, 12))
     X[0] = y
@@ -31,9 +60,9 @@ def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
     for i in range(len(t)-1):
         _, _, w, p, q, r, psi, theta, phi, _, _, z = y
         W1 = control_feedback(z, w, F1) # control z
-        W2 = control_feedback(psi, r, F2)  # control 
-        W3 = control_feedback(phi, p, F3) # control phi
-        W4 = control_feedback(theta, q, F4) # control theta
+        W2 = control_feedback(psi, r, F2)  # control yaw
+        W3 = control_feedback(phi, p, F3) # control roll
+        W4 = control_feedback(theta, q, F4) # control pitch
         W = W0 + W1 + W2 + W3 + W4
         y = step(W, y, [t[i], t[i+1]])[1]
         X[i+1] = y
@@ -42,7 +71,7 @@ def simulador(y, T, tam): #Esta funcion permite solucionar la EDO con controles
 if __name__ == "__main__":
     T = 7
     tam = 4000
-    X = simulador(y, T, tam)#Contiene las 12 variables
+    X = simulador(y, T, tam)
     t = np.linspace(0, T, tam)
     z = X[:, 11]
     y = X[:, 10]
@@ -57,4 +86,4 @@ if __name__ == "__main__":
     #escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
     #imagen(x, y, z)
     #input()
-    imagen2d(z,w,psi,r,phi,p,theta,q,t)
+    imagen2d(z, w, psi, r, phi, p, theta, q, t)
