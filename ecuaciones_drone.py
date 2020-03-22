@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.integrate import odeint
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from numpy import sin
 from numpy import cos
 from numpy import tan
@@ -38,15 +39,15 @@ w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
 t = np.linspace(0, 10, 1000)
 y = 0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10
 W = [w1, w2, w3, w4]
-#sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
+sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
 
 
 #psi = sol[:,6]
 #theta = sol[:,7]
 #phi = sol[:,8]
-#X = sol[:,9]
-#Y = sol[:,10]
-#Z = sol[:,11]
+X = sol[:,9]
+Y = sol[:,10]
+Z = sol[:,11]
 
 def escribe(X, Y, Z, phi, theta, psi):
     posicion = open('XYZ.txt','w')
@@ -55,7 +56,6 @@ def escribe(X, Y, Z, phi, theta, psi):
     np.savetxt('ang.txt',[phi, psi, theta])
     posicion.close()
     angulos.close()
-
 
 def imagen(X, Y, Z):
     fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
@@ -86,6 +86,6 @@ def imagen2d(z,w,psi,r,phi,p,theta,q,t):
 
     plt.show()
 #escribe()
-#imagen()
+#imagen(X, Y, Z)
 
 
