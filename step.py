@@ -4,9 +4,11 @@ from scipy.integrate import odeint
 from numpy import sin
 from numpy import cos
 from numpy import tan
-from ecuaciones_drone import f, escribe, imagen, imagen2d 
+from ecuaciones_drone import f, escribe, imagen, imagen2d
+from numpy import pi
 
-
+y = np.array([0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10])
+#y = np.array([0, 0, 0, 0, 0, 0, pi/10, pi/10, pi/10, 0, 0, 10]) # condición inicial del drone
 F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T # matriz de control z
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T # matriz de control yaw
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T # matriz de control roll
@@ -19,10 +21,11 @@ def step(W, y, t):
 
     param W: arreglo de velocidades de los  4 rotores
     param y: arreglo de 12 posiciones del cuadricoptero
-    param t: un paso de tiempo
+    param t: un intervalo de tiempo
 
-    regresa: y para el tiempo t+1 
+    regresa: y para el siguiente paso de tiempo
     '''
+    #import pdb; pdb.set_trace()
     w1, w2, w3, w4 = W
     return odeint(f, y, t, args=(w1, w2, w3, w4))
 
@@ -39,7 +42,7 @@ def control_feedback(x, y, F):
     regresa: W = w1, w2, w3, w4 
     '''
     A = np.array([x, y]).reshape((2, 1))
-    return np.dot(F, A)
+    return np.dot(F, A).T [0]
 
 
 def simulador(y, T, tam):
@@ -63,10 +66,12 @@ def simulador(y, T, tam):
         W2 = control_feedback(psi, r, F2)  # control yaw
         W3 = control_feedback(phi, p, F3) # control roll
         W4 = control_feedback(theta, q, F4) # control pitch
+        #import pdb; pdb.set_trace()
         W = W0 + W1 + W2 + W3 + W4
-        y = step(W, y, [t[i], t[i+1]])[1]
+        y = step(W, y, [t[i], t[i+1]]) [1]
         X[i+1] = y
     return X
+
 
 if __name__ == "__main__":
     T = 7
@@ -82,8 +87,8 @@ if __name__ == "__main__":
     r = X[:, 5]
     q = X[:, 4]
     p = X[:, 3]
-    w = X[:,2]
+    w = X[:, 2]
     #escribe(x, y, z, psi, theta, phi)#Escribe para que blender lea
-    #imagen(x, y, z)
+    imagen(x, y, z)
     #input()
     imagen2d(z, w, psi, r, phi, p, theta, q, t)
