@@ -9,14 +9,14 @@ from numpy import pi
 
 omega_0 =  np.sqrt((G * M )/ (4 * K))
 Ixx, Iyy, Izz = I
-#y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
-y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, pi/100, 0, 0, 10]) # condición inicial del drone
-F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T # matriz de control z
-F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T # matriz de control yaw
-F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T # matriz de control roll
-F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T # matriz de control pitch
+# y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
+y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, pi/100, 0, 0, 10])  # condición inicial del drone
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # matriz de control z
+F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
+F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
+F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T  # matriz de control pitch
 
-c1 = 1 #- (((2*K)/M) * omega_0)**(-1)
+c1 = 1  # -(((2*K)/M) * omega_0)**(-1)
 c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
@@ -69,10 +69,10 @@ def simulador(y, T, tam):
     t = np.linspace(0, T, tam)
     for i in range(len(t)-1):
         _, _, w, p, q, r, psi, theta, phi, _, _, z = y
-        W1 = control_feedback(z - 10, w, F1) * c1 # control z
+        W1 = control_feedback(z - 10, w, F1) * c1  # control z
         W2 = control_feedback(psi, r, F2) * c2  # control yaw
-        W3 = control_feedback(phi, p, F3) * c3# control roll
-        W4 = control_feedback(theta, q, F4) * c4# control pitch
+        W3 = control_feedback(phi, p, F3) * c3  # control roll
+        W4 = control_feedback(theta, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
         y = step(W, y, [t[i], t[i+1]])[1]
         X[i+1] = y
