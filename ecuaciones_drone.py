@@ -39,7 +39,7 @@ w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
 t = np.linspace(0, 10, 1000)
 y = 0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10
 W = [w1, w2, w3, w4]
-sol = odeint(f,y,t,args = (w1,w2,w3,w4) )
+sol = odeint(f, y, t, args=(w1,w2,w3,w4))
 
 
 #psi = sol[:,6]
