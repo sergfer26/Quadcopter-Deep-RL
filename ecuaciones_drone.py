@@ -82,11 +82,30 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     plt.show()
 
 
-def postion_vs_velocity(z, w, psi, r, phi, p, theta, q):
-    pass
+def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    fig.suptitle('Sharing x per column, y per row')
+
+    ax1.scatter(z, w, c=cluster, s=50)
+    ax1.set_xlabel('z')
+    ax1.set_ylabel('w')
+
+    ax2.plot(psi, r, c=cluster, s=50)
+    ax2.set_xlabel('$\psi$')
+    ax2.set_ylabel('r')
+
+    ax3.plot(phi, p, c=cluster, s=50)
+    ax3.set_xlabel('$\phi')
+    ax3.set_ylabel('p')
+
+    ax4.plot(theta, q, c=cluster, s=50)
+    ax3.set_xlabel('$\\theta')
+    ax3.set_ylabel('q')
+
 
 
 if __name__ == "__main__":
+    pass
     # w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
     # t = np.linspace(0, 10, 1000)
     # y = 0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10
@@ -102,5 +121,3 @@ if __name__ == "__main__":
 
     #escribe()
     #imagen(X, Y, Z)
-
-
