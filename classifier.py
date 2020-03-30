@@ -69,7 +69,7 @@ def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
     ax3.set_ylabel('p')
 
     ax4.scatter(theta, q, c=cluster, s=10, alpha=0.2)
-    ax3.set_xlabel('$\theta$')
+    ax3.set_xlabel('$\\theta$')
     ax3.set_ylabel('q')
     plt.show()
 
