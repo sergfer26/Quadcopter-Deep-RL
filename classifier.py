@@ -4,9 +4,7 @@ import matplotlib.pyplot as plt
 from numpy.random import normal
 from numpy import pi
 from step import simulador
-
-
-C = 10 ** -3
+C = 10 ** -2
 
 
 def random_position(Ym, Ysd):
@@ -58,34 +56,38 @@ def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
     fig.suptitle('Sharing x per column, y per row')
 
-    ax1.scatter(z, w, c=cluster, s=50)
+    ax1.scatter(z, w, c=cluster, s=10,alpha =0.2)
     ax1.set_xlabel('z')
     ax1.set_ylabel('w')
 
-    ax2.plot(psi, r, c=cluster, s=50)
+    ax2.scatter(psi, r, c=cluster, s=10,alpha =0.2)
     ax2.set_xlabel('$\psi$')
     ax2.set_ylabel('r')
 
-    ax3.plot(phi, p, c=cluster, s=50)
-    ax3.set_xlabel('$\phi')
+    ax3.scatter(phi, p, c=cluster, s=10,alpha =0.2)
+    ax3.set_xlabel('$\phi$')
     ax3.set_ylabel('p')
 
-    ax4.plot(theta, q, c=cluster, s=50)
-    ax3.set_xlabel('$\\theta')
+    ax4.scatter(theta, q, c=cluster, s=10,alpha =0.2)
+    ax3.set_xlabel('$\theta$')
     ax3.set_ylabel('q')
-
+    plt.show()
 
 def n_tests(Ze, n):
     Ym = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10])
-    Ysd = np.ones(12)
-    cluster = np.zeros(n)
+    Ysd = np.ones(12)*(pi/100)
+    cluster = []
     X = np.zeros([n, 12])
     for i in range(n):
+        print(i)		
         Y = random_position(Ym, Ysd)
         clase = test(Y, Ze)
         X[i, ] = Y
+        Y = np.append(Y,clase)
         if clase:
-            cluster[i] = 1
+            cluster.append('b')
+        else:
+            cluster.append('r')
     
     z = X[:, 11]
     w = X[:, 2]
@@ -95,10 +97,11 @@ def n_tests(Ze, n):
     p = X[:, 3]
     theta = X[:, 7]
     q = X[:, 4]
+    np.savez('Clasificados_'+str(C), z, w, psi, r, phi, p, theta, q, cluster)
     postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster)
 
 
 if __name__ == "__main__":
     Y0 = np.array([0, 0, 0, 0, 0, 0, pi/20, pi/20, pi/20, 0, 0, 15])
     Ze = (10, 0, 0, 0)
-    n_tests(Ze, 100)
+    n_tests(Ze, 1000)
