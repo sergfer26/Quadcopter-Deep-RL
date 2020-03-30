@@ -80,24 +80,25 @@ def simulador(Y, Ze, T, tam):
 
 
 if __name__ == "__main__":
-    T = 120
-    tam = 1500
-    Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
+    pass
+    #T = 120
+    #tam = 1500
+    #Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
     # Y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, 0, 0, 0, 10])  
-    Ze = (10, 0, 0, 0)
-    X = simulador(Y, Ze, T, tam)
-    t = np.linspace(0, T, tam)
-    z = X[:, 11]
-    y = X[:, 10]
-    x = X[:, 9]
-    phi = X[:, 8]
-    theta = X[:, 7]
-    psi = X[:, 6]
-    r = X[:, 5]
-    q = X[:, 4]
-    p = X[:, 3]
-    w = X[:, 2]
+    #Ze = (10, 0, 0, 0)
+    #X = simulador(Y, Ze, T, tam)
+    #t = np.linspace(0, T, tam)
+    #z = X[:, 11]
+    #y = X[:, 10]
+    #x = X[:, 9]
+    #phi = X[:, 8]
+    #theta = X[:, 7]
+    #psi = X[:, 6]
+    #r = X[:, 5]
+    #q = X[:, 4]
+    #p = X[:, 3]
+    #w = X[:, 2]
     #escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
-    imagen(x, y, z)
+    #imagen(x, y, z)
     #input()
-    imagen2d(z, w, psi, r, phi, p, theta, q, t)
+    #imagen2d(z, w, psi, r, phi, p, theta, q, t)
