@@ -9,9 +9,9 @@ from step import simulador
 C = 10 ** -3
 
 
-def random_position(mean_y, sd_y):
+def random_position(Ym, Ysd):
     '''
-    Genera un arreglo de normales donde cada elemento i tiene 
+    Genera un arreglo de normales donde cada elemento i tiene
     media mean_y[i] y varianza sd_y[i].
 
     param mean_y: arreglo con medias
@@ -20,7 +20,7 @@ def random_position(mean_y, sd_y):
     regresa: arreglo de normales
     '''
     g = lambda x, y: normal(x, y)
-    return g(mean_y, sd_y)
+    return g(Ym, Ysd)
 
 
 def criterio(z0, zT, ze):
@@ -52,6 +52,9 @@ def test(Y0, Ze):
 
 
 def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
+    '''
+    Grafica la posición vs la velocidad
+    '''
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
     fig.suptitle('Sharing x per column, y per row')
 
