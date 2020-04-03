@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+from progress.bar import Bar, ChargingBar
+import os, time, random
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import normal, uniform
 from numpy import pi
 from step import simulador
-C = 10 ** -2
+C = 10 ** -3
 
 
 def random_position(Ym, perturbations, Ysd=None, normal_=True, dist=None):
@@ -62,6 +64,10 @@ def test(Y0, Ze):
 def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
     '''
     Grafica la posición vs la velocidad
+
+    param z, psi, phi, theta: arreglos de las posiciones en dichas variables
+    param w, r, p, q: arreglos de las velocidades en en dichas variables
+    cluster: lista con las clases de cada entrada de los arreglos anteriores
     '''
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
     fig.suptitle('Sharing x per column, y per row')
@@ -81,17 +87,17 @@ def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
     ax4.scatter(theta, q, c=cluster, s=10, alpha=0.2)
     ax4.set_xlabel('$\\theta$')
     ax4.set_ylabel('q')
-    plt.show()
+    # plt.show()
 
 
 def n_tests(Ze, n, perturbations, normal_=True, d=None):
     Ym = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10])
-    Ysd = np.ones(12)*(pi/100)
+    Ysd = np.ones(12)
     Ysd[-1] = 2
     cluster = []
     X = np.zeros([n, 12])
+    bar1 = Bar('Procesando:', max=n)
     for i in range(n):
-        # print(i)		
         Y = random_position(Ym, perturbations, Ysd=Ysd, normal_=normal_, dist=d)
         clase = test(Y, Ze)
         X[i, ] = Y
@@ -100,7 +106,9 @@ def n_tests(Ze, n, perturbations, normal_=True, d=None):
             cluster.append('b')
         else:
             cluster.append('r')
-    
+        bar1.next()
+        #if i % 100 == 0:
+        #    print(i)
     z = X[:, 11]
     w = X[:, 2]
     psi = X[:, 6]
@@ -109,16 +117,29 @@ def n_tests(Ze, n, perturbations, normal_=True, d=None):
     p = X[:, 3]
     theta = X[:, 7]
     q = X[:, 4]
-    name = 'Clasificados_'+str(C)+'_'+str(n)+'_'+str(normal_)
+    name = 'Clasificados_'+str(C)+''+str(n)+''+str(normal_)
     np.savez(name, z, w, psi, r, phi, p, theta, q, cluster)
     postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster)
+    bar1.finish()
+    if not normal_:
+        a, b = [i for i, e in enumerate(perturbations) if e != 0]
+        save = 'perturbaciones_uniforme_'+str(n)+'_'+str(a)+str(b)+'.png'
+        plt.savefig(save)
 
 
 if __name__ == "__main__":
-    Y0 = np.array([0, 0, 0, 0, 0, 0, pi/20, pi/20, pi/20, 0, 0, 15])
-    dist = np.array([0, 0, pi/200, pi/200, pi/200, pi/100, pi/200, pi/200, pi/200, 0, 0, 2])
-    perturbations = [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1]
+    dist = np.array([0, 0, 8, 0, 0.0, 0.0, 0, 0, 0, 0, 0, 30])    
+    # du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
+    # perturbations = [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1] # todas 
     Ze = (10, 0, 0, 0)
-    n_tests(Ze, 10, perturbations, normal_=False, d=dist) # uniforme
-    #n_tests(Ze, 1000, perturbations) # normal
+    # perturbations = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]  # pitch
+    perturbations = [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1] # z
+    n_tests(Ze, 5000, perturbations, normal_=False, d=dist) # uniforme
+
+    # perturbations = [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]  # roll
+    #perturbations = [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] # yaw
+    #n_tests(Ze, 500, perturbations, normal_=False, d=dist) # uniforme
+
+    # n_tests(Ze, 1000, perturbations) # normal
+
 
