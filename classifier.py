@@ -128,18 +128,18 @@ def n_tests(Ze, n, perturbations, normal_=True, d=None):
 
 
 if __name__ == "__main__":
-    dist = np.array([0, 0, 8, 0, 0.0, 0.0, 0, 0, 0, 0, 0, 30])    
+    dist = np.array([0, 0, 8, .15, .15, 0, 0, .2, .2, 0, 0, 30])
+    Ze = (10, 0, 0, 0)   
     # du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
     # perturbations = [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1] # todas 
-    Ze = (10, 0, 0, 0)
     # perturbations = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]  # pitch
-    perturbations = [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1] # z
+    # perturbations = [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1] # z
+    # perturbations = [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]  # roll
+    # perturbations = [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] # yaw
+
+    perturbations = [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]  # roll
     n_tests(Ze, 5000, perturbations, normal_=False, d=dist) # uniforme
 
-    # perturbations = [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]  # roll
-    #perturbations = [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] # yaw
-    #n_tests(Ze, 500, perturbations, normal_=False, d=dist) # uniforme
-
-    # n_tests(Ze, 1000, perturbations) # normal
-
+    perturbations = [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]  # pitch
+    n_tests(Ze, 5000, perturbations, normal_=False, d=dist) # uniforme
 
