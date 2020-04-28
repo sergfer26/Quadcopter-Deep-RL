@@ -6,6 +6,7 @@ from numpy import cos
 from numpy import tan
 from ecuaciones_drone import f, escribe, imagen, imagen2d, I, K, B, M, L, G
 from numpy import pi
+from torch.utils.tensorboard import SummaryWriter
 
 omega_0 = np.sqrt((G * M)/(4 * K))
 Ixx, Iyy, Izz = I
@@ -14,7 +15,7 @@ F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T  # matriz de control pitch
 
-c1 = 1  # -(((2*K)/M) * omega_0)**(-1)
+c1 = (((2*K)/M) * omega_0)**(-1)
 c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
@@ -62,6 +63,7 @@ def simulador(Y, Ze, T, tam):
 
     regresa; arreglo de la posición final
     '''
+    writer = SummaryWriter()
     z_e, psi_e, phi_e, theta_e = Ze
     W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
     X = np.zeros((tam, 12))
@@ -76,29 +78,30 @@ def simulador(Y, Ze, T, tam):
         W = W0 + W1 + W2 + W3 + W4
         Y = step(W, Y, [t[i], t[i+1]])[1]
         X[i+1] = Y
+        writer.add_scalar('t vs z', z, t[i])
+        writer.add_scalars('Rotores', {'W_0':float(W[0]),'W_1':float(W[1]),'W_2': float(W[2]),'W_3':float(W[3])}, t[i])
     return X
 
 
 if __name__ == "__main__":
-    pass
-    #T = 120
-    #tam = 1500
-    #Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
-    # Y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, 0, 0, 0, 10])  
-    #Ze = (10, 0, 0, 0)
-    #X = simulador(Y, Ze, T, tam)
-    #t = np.linspace(0, T, tam)
-    #z = X[:, 11]
-    #y = X[:, 10]
-    #x = X[:, 9]
-    #phi = X[:, 8]
-    #theta = X[:, 7]
-    #psi = X[:, 6]
-    #r = X[:, 5]
-    #q = X[:, 4]
-    #p = X[:, 3]
-    #w = X[:, 2]
-    #escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
-    #imagen(x, y, z)
-    #input()
-    #imagen2d(z, w, psi, r, phi, p, theta, q, t)
+    T = 60 # 120
+    tam = 1500
+    # Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12])
+    # Y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, 0, 0, 0, 10])
+    Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, pi/30, 0, 0, 10])
+    Ze = (5, 0, 0, 0)
+    X = simulador(Y, Ze, T, tam)
+    t = np.linspace(0, T, tam)
+    z = X[:, 11]
+    y = X[:, 10]
+    x = X[:, 9]
+    phi = X[:, 8]
+    theta = X[:, 7]
+    psi = X[:, 6]
+    r = X[:, 5]
+    q = X[:, 4]
+    p = X[:, 3]
+    w = X[:, 2]
+    # escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
+    # imagen(x, y, z)
+    # imagen2d(z, w, psi, r, phi, p, theta, q, t)
