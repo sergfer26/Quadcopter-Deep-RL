@@ -13,6 +13,8 @@ from numpy import pi
 from torch.utils.tensorboard import SummaryWriter
 from time import sleep
 from numpy.linalg import norm
+
+
 omega_0 = np.sqrt((G * M)/(4 * K))
 Ixx, Iyy, Izz = I
 F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # matriz de control z
@@ -20,7 +22,7 @@ F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T  # matriz de control pitch
 
-c1 = 1  # -(((2*K)/M) * omega_0)**(-1)
+c1 = (((2*K)/M) * omega_0)**(-1)
 c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
