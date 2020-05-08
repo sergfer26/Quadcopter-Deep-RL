@@ -293,7 +293,8 @@ class DDPGagent:
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
-env = QuadcopterEnv()
+#env = QuadcopterEnv()
+env = NormalizedEnv(gym.make("Pendulum-v0"))
 agent = DDPGagent(env)
 noise = OUNoise(env.action_space)
 batch_size = 128
