@@ -78,7 +78,7 @@ Low_obs = np.array([0,-10])#z,w
 High_obs = np.array([100,10])
 
 Tiempo_max = 10
-tam = 500
+tam = 20
 
 
 # In[5]:
@@ -95,22 +95,24 @@ class QuadcopterEnv(gym.Env):
         # self.state = np.array([10,0]) #z,w
         self.state = self.reset()
         self.time = np.linspace(0, Tiempo_max, tam)
-        self.z_e = 15
+        self.z_e = 50
 
     def reward_f(self):
         z,w = self.state
         if z <= 0:
             return -1e4
         else:
-            return -np.linalg.norm([z-self.z_e,w])
+            return -np.linalg.norm([z-self.z_e ,w*0])
 
     def is_done(self):
         #Si se te acabo el tiempo
-        if self.i == tam-1:
+        if self.i == tam-2:
             return True
-        elif self.reward_f() < -1e3:
-            return True
+        #elif self.reward_f() < -1e3:
+        #    return True
         elif self.reward_f() > -1e-3:
+            return True
+        elif not (self.state[0] > 0 or self.state[0] < 100):
             return True
         else:
             return False
@@ -167,7 +169,7 @@ import random
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
-    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.3, decay_period=100000):
+    def __init__(self, action_space, mu=53.69, theta=0.15, max_sigma=5.0, min_sigma=0.0, decay_period=100000):
         self.mu           = mu
         self.theta        = theta
         self.sigma        = max_sigma
@@ -386,57 +388,134 @@ class DDPGagent:
 
 # ## Prueba de control en z y w
 
+# env = QuadcopterEnv()
+# #env = NormalizedEnv(gym.make("Pendulum-v0"))
+# env = NormalizedEnv(env)
+# agent = DDPGagent(env)
+# noise = OUNoise(env.action_space)
+# batch_size = 20
+# rewards = []
+# avg_rewards = []
+# 
+# import sys
+# 
+# for episode in range(1000):
+#     state = env.reset()
+#     noise.reset()
+#     episode_reward = 0
+#     step = 0
+#     while True:
+#         action = agent.get_action(state)
+#         #import pdb; pdb.set_trace()
+#         action = noise.get_action(action, step)
+#         actions = action * np.ones(4)
+#         # new_state, reward, done, _ = env.step(action) # pendulo
+#         new_state, reward, done = env.step(actions) 
+#         agent.memory.push(state, action, reward, new_state, done)
+#         if len(agent.memory) > batch_size:
+#             agent.update(batch_size)        
+#         state = new_state
+#         episode_reward += reward
+#         if done:
+#             print('state: ',env.state, 'reward:', reward)
+#             sys.stdout.write("episode: {}, reward: {}, average _reward: {} \n".format(episode, np.round(episode_reward, decimals=2), np.mean(rewards[-10:])))
+#             break
+#             
+#     step += 1
+# 
+#     rewards.append(episode_reward)
+#     avg_rewards.append(np.mean(rewards[-10:]))
+# 
+
 # In[11]:
 
+
+import matplotlib.pyplot as plt
+from time import time
+import sys
+
+fig, ((ax1, ax2)) = plt.subplots(2, 1)
 
 env = QuadcopterEnv()
 #env = NormalizedEnv(gym.make("Pendulum-v0"))
 env = NormalizedEnv(env)
 agent = DDPGagent(env)
 noise = OUNoise(env.action_space)
-batch_size = 128
+batch_size = 20
 rewards = []
 avg_rewards = []
 
-import sys
-
-for episode in range(50):
+t1 = time()
+for episode in range(1000):
     state = env.reset()
     noise.reset()
     episode_reward = 0
-    for step in range(499):
+    #for step in range(499):
+    R = [-5]
+    W = [0]
+    Z = [10]
+    t = env.time
+    A = [50]
+    while True:
         action = agent.get_action(state)
         #import pdb; pdb.set_trace()
-        action = noise.get_action(action, step)
-        actions = action * np.ones(4)
+        #print(action)
+        action = noise.get_action(action, env.i)
+        #print(action)
         # new_state, reward, done, _ = env.step(action) # pendulo
-        new_state, reward, done = env.step(actions) 
+        #W1 = control_feedback(env.state[0]-env.z_e, env.state[1], F1) * c1
+        #control = W1 + W0
+        #new_state, reward, done = env.step(control)
+        new_state, reward, done = env.step(action*np.ones(4)) 
         agent.memory.push(state, action, reward, new_state, done)
+        #print(len(agent.memory),batch_size,len(agent.memory) > batch_size )
         if len(agent.memory) > batch_size:
-            agent.update(batch_size)        
+            # agent.update(batch_size)
+            if episode > 900:
+                z,w = state
+                W.append(w)
+                Z.append(z)
+                R.append(reward)
+                A.append(float(action))
         state = new_state
         episode_reward += reward
-        if step % 100 == 0:
-            print('state: ',env.state, 'reward:', reward)
         if done:
             sys.stdout.write("episode: {}, reward: {}, average _reward: {} \n".format(episode, np.round(episode_reward, decimals=2), np.mean(rewards[-10:])))
+            print(env.state)
             break
-
+    #writer.add_scalar('Episode vs  Episode_Reward', episode, episode_reward)
+    if episode > 0:
+        t = t[0:len(Z)]
+        ax1.set_ylim(-10, 30)
+        ax1.plot(t,Z,'-r',t,W,'--b',t,R,'--g',t,A,alpha = 0.2)
     rewards.append(episode_reward)
     avg_rewards.append(np.mean(rewards[-10:]))
 
+ax2.plot(rewards)
+ax2.plot(avg_rewards)
+#plt.xlabel('Episode')
+#plt.ylabel('Reward')
+#plt.show()
+t2 = time()
+print(t2-t1)
+plt.show()
+
+#writer.close()
+
+
+# 
+# 
+# plt.plot(rewards)
+# plt.plot(avg_rewards)
+# plt.plot()
+# plt.xlabel('Episode')
+# plt.ylabel('Reward')
+# plt.show()
 
 # In[ ]:
 
 
-import matplotlib.pyplot as plt
 
-plt.plot(rewards)
-plt.plot(avg_rewards)
-plt.plot()
-plt.xlabel('Episode')
-plt.ylabel('Reward')
-plt.show()
 
 
 # In[ ]:
