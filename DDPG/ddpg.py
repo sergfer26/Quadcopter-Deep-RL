@@ -2,22 +2,29 @@ import torch
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
-from models import *
+from torch.autograd import Variable
+from models import Actor, Critic
 from utils import Memory
 
+
 class DDPGagent:
-    def __init__(self, hidden_size=5, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=50000):
+    def __init__(self, env, hidden_sizes=[64, 64], actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=10000000):
         # Params
-        self.num_states = 12
-        self.num_actions = 1
+        self.num_states = env.observation_space.shape[0]
+        self.num_actions = env.action_space.shape[0]
         self.gamma = gamma
         self.tau = tau
 
+        sizes_actor = hidden_sizes.copy()
+        sizes_actor.insert(0, self.num_states)
+        sizes_critic = hidden_sizes.copy()
+        sizes_critic.insert(0, self.num_states + self.num_actions)
+
         # Networks
-        self.actor = Actor(self.num_states, hidden_size, self.num_actions)
-        self.actor_target = Actor(self.num_states, hidden_size, self.num_actions)
-        self.critic = Critic(self.num_states + self.num_actions, hidden_size, self.num_actions)
-        self.critic_target = Critic(self.num_states + self.num_actions, hidden_size, self.num_actions)
+        self.actor = Actor(sizes_actor, self.num_actions)
+        self.actor_target = Actor(sizes_actor, self.num_actions)
+        self.critic = Critic(sizes_critic, self.num_actions)
+        self.critic_target = Critic(sizes_critic, self.num_actions)
 
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(param.data)
@@ -30,13 +37,13 @@ class DDPGagent:
         self.critic_criterion  = nn.MSELoss()
         self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
-
+    
     def get_action(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         action = self.actor.forward(state)
         action = action.detach().numpy()[0,0]
         return action
-
+    
     def update(self, batch_size):
         states, actions, rewards, next_states, _ = self.memory.sample(batch_size)
         states = torch.FloatTensor(states)
