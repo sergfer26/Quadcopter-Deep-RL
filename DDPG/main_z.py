@@ -1,9 +1,7 @@
-
 import numpy as np
 import sys
-import argparse
-import torch
 import matplotlib.pyplot as plt
+import torch
 from torch.utils.tensorboard import SummaryWriter
 from quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, control_feedback
 from time import time 
@@ -13,22 +11,16 @@ from time import time
 from numpy.linalg import norm
 
 
-plt.style.use('ggplot')
-
-parser = argparse.ArgumentParser(description="Quadcopter RL") 
-parser.add_argument('--hidden sizes', dest='hidden_sizes', required=False)
-args = parser.parse_args()
-
 env = QuadcopterEnv()
 env = NormalizedEnv(env)
 
-if args.hidden_sizes:
-    hidden_sizes = ast.literal_eval(args.hidden_sizes)
-    agent = DDPGagent(env, hidden_sizes=hidden_sizes)
+if len(sys.argv) == 1:
+    hidden_sizes = [64,64]
 else:
-    agent = DDPGagent(env)
-
-agent = DDPGagent(env)
+    hidden_sizes = sys.argv[1:]
+    hidden_sizes = [int(i) for i in hidden_sizes]
+    
+agent = DDPGagent(env,hidden_sizes)
 noise = OUNoise(env.action_space)
 
 omega_0 = np.sqrt((G * M)/(4 * K))
@@ -90,8 +82,8 @@ def train(episodios,rz,rw):
         rewards.append(episode_reward)
         avg_rewards.append(np.mean(rewards[-10:]))
 
-#ax2.plot(rewards)
-#ax2.plot(avg_rewards)
+ #ax2.plot(rewards)
+ #ax2.plot(avg_rewards)
 #plt.xlabel('Episode')
 #plt.ylabel('Reward')
 #plt.show()
@@ -114,7 +106,6 @@ def Sim(flag):
     t = env.time
     fig, ((ax1, ax2)) = plt.subplots(2, 1)
     state = env.reset()
-    noise.max_sigma = 0
     noise.reset()
     episode_reward = 0
     R = []
@@ -164,17 +155,13 @@ def Sim(flag):
     plt.show()
 
 
-train(10,1,0)
-'''
-input()
-train(100,2,0.3)
-train(100,3,0.5)
-Sim(True)
-train(100,3,0.7)
-train(150,4,1.0)
+train(200,1,0)
+#train(100,2,0.3)
+#train(100,4,0.5)
+#train(100,3,0.7)
+#train(100,4,1.0)
 #train(150,5,1.3)
 #train(200,6,1.5)
-'''
 
 
 def test():
@@ -202,25 +189,50 @@ def ntest(n):
         final_w.append(w)
     return final_z,final_w
 
-def hist(z,w):
-    fig, ((ax1, ax2)) = plt.subplots(1, 2)
-    ax1.hist(z,label = 'Z', color = 'navy')
-    ax2.hist(w,label = 'W')
-    fig.suptitle(' beta  = ' + str(env.beta) + ', ' +'epsilon = ' + str(env.epsilon) , fontsize=16)
-    ax1.legend()
-    ax2.legend()
+def hist(z,w,dim):
+    if dim == 1:
+        fig, ((ax1, ax2)) = plt.subplots(1, 2)
+        ax1.hist(z,label = 'Z', color = 'navy')
+        ax2.hist(w,label = 'W')
+        fig.suptitle(' beta  = ' + str(env.beta) + ', ' +'epsilon = ' + str(env.epsilon) , fontsize=16)
+        ax1.legend()
+        ax2.legend()
+    elif dim == 2:
+        plt.hist2d(z, w, bins=(50, 50), cmap=plt.cm.jet)
+        plt.xlabel('Z')
+        plt.ylabel('W')
     plt.show()
+
+
+def win():
+    state = env.reset()
+    noise.reset()
+    inw = 0
+    while True:
+        state = state
+        z,w = state
+        print(z,w)
+        if 14.9 < z < 15.1 and abs(w) < 0.0:
+            inw+=1
+        action = agent.get_action(state)
+        action = noise.get_action(action, env.time[env.i])
+        control = action*np.ones(4) + W0
+        new_state, reward, done = env.step(control) 
+        state = new_state
+        if done:
+            break
+    return inw 
     
 
-env.rz = 6
-env.rw = 1.2
-# final_z,final_w = ntest(500)
-# hist(final_z,final_w)
+#env.rz = 6
+#env.rw = 1.2
+#final_z,final_w = ntest(500)
+#hist(final_z,final_w,2)
 
-hs = agent.hidden_sizes
-name =''
-for s in hs:
-    name += '_'+str(s)
 
-torch.save(agent.actor.state_dict(), "saved_models/actor"+name+".pth")
-torch.save(agent.critic.state_dict(), "saved_models/critic"+name+".pth")
+#hs = hidden_sizes
+#name = ''
+#for s in hs:
+#    name += '_'+str(s)
+#torch.save(agent.actor.state_dict(), "saved_models/actor"+name+".pth")
+#torch.save(agent.critic.state_dict(), "saved_models/critic"+name+".pth")
