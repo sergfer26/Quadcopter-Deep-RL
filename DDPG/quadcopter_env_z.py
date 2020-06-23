@@ -6,7 +6,19 @@ from numpy.linalg import norm
 from scipy.integrate import odeint
 
 
-# constantes
+# constantes del ambiente
+VEL_MAX = 60 #Velocidad maxima de los motores
+VEL_MIN = -20
+LOW_OBS = np.array([0,-10])#z,w
+HIGH_OBS = np.array([18, 10])
+ZE = 15.00
+BETA = 3
+EPSILON = 0.1
+
+TIME_MAX = 17.00
+SIZE = 500
+
+
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
@@ -17,7 +29,7 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 def f(y, t, w1, w2, w3, w4):
     #El primer parametro es un vector
     #W tambien
-    z,w = y
+    _, w = y
     dz = w
     W = [w1, w2 , w3 , w4]
     dw = G - (K/M) * norm(W) ** 2
@@ -25,73 +37,45 @@ def f(y, t, w1, w2, w3, w4):
     return dz, dw
 
 # ## Diseño del ambiente, step y reward
-r2 = lambda z, w, epsilon : (1 - tanh(z/epsilon)) * w **2
-
-# constantes del ambiente
-Vel_Max = 60 #Velocidad maxima de los motores
-Vel_Min = -20
-Low_obs = np.array([0,-10])#z,w
-High_obs = np.array([18,10])
+r2 = lambda z, w, epsilon : (1 - tanh(z/epsilon)) * w ** 2
 
 
 """Quadcopter Environment that follows gym interface"""
 class QuadcopterEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self):
-        self.action_space = spaces.Box(low = Vel_Min * np.ones(1), high = Vel_Max*np.ones(1))
-        self.observation_space = spaces.Box(low = Low_obs, high = High_obs)
+        self.action_space = spaces.Box(low=VEL_MIN * np.ones(1), high=VEL_MAX * np.ones(1))
+        self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS)
         self.i = 0
-        self.rz, self.rw = [1,0.5]
+        self.rz, self.rw = 1, 0.5 # perturbaciones
         self.state = self.reset()
-        self.time_max = 17
-        self.tam = 500 
+        self.time_max = TIME_MAX
+        self.tam = SIZE
         self.time = np.linspace(0, self.time_max, self.tam)
-        self.z_e = 15
-        self.epsilon = 0.1
-        self.beta = 3
+        self.z_e = ZE
+        self.epsilon = EPSILON # parametro reward
+        self.beta = BETA # 
         self.flag = True
 
     def reward_f(self):
-        z,w = self.state
-        if z <= 0:
-            return -1e2
-        #else:
-        #return -np.linalg.norm([z-self.z_e,2*w])
-            #return -0.5*(abs(z-self.z_e) + abs(w))
-        #return -10e-4*sqrt((z-self.z_e)**2 + w**2 )
-        #return np.tanh(1 - 0.00005*(abs(self.state - np.array([15,0]))).sum()
-        #if 13 < z < 17:
-        #    import pdb; pdb.set_trace()
-            
-        #else:
-        #    return 0
+        z, w = self.state
+        if LOW_OBS[0] < z < HIGH_OBS[0]:
+            return -np.linalg.norm([abs(z - ZE) ** self.beta, r2(abs(z - ZE), 2 * w, self.epsilon)])
         else:
-            return -np.linalg.norm([abs(z-self.z_e)**self.epsilon, r2(abs(z - self.z_e), 2*w,self.epsilon)])
-            #return - abs(z-self.z_e) - r2(abs(z - self.z_e), w)
-            #return -np.linalg.norm([z-self.z_e,w**2])
-            #return -((z-self.z_e)**2 + r2(z-self.z_e, w))
-            
-        
+            return - 1e2
+
     def is_done(self):
-        z,w = self.state
-        #Si se te acabo el tiempo
+        z, _ = self.state
         if self.i == self.tam-2:
+        # Si se te acabo el tiempo
             return True
-        #Si estas muy lejos
-        #elif self.reward_f() < -1e3:
-        #    return True
-        #Si estas muy cerca
-        #elif self.reward_f() > -1e-3:
-        #    return True
         elif self.flag:
-            if z < 0 or z > 18:
-                return True
-            else:
+            if LOW_OBS[0] < z < HIGH_OBS[0]:
                 return False
-            #elif 0 < w < High_obs[1]:
-           #  return True
-          ##else:
-            # return False
+            else:
+                return True
+        else:
+            return False
 
     def step(self,action):
         #import pdb; pdb.set_trace()
@@ -105,7 +89,7 @@ class QuadcopterEnv(gym.Env):
         return delta_y, reward, done
 
     def reset(self):
-        self.state = np.array([max(0, 15 + float(np.random.uniform(-self.rz,self.rz,1))) ,float(np.random.uniform(-self.rw,self.rw,1))])
+        self.state = np.array([max(0, ZE + float(np.random.uniform(-self.rz,self.rz,1))) ,float(np.random.uniform(-self.rw,self.rw,1))])
         #self.state = np.array([10 ,0])
         #self.state = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10])
         self.i = 0
