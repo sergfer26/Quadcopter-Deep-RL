@@ -1,7 +1,7 @@
 import numpy as np
 import gym
 from gym import spaces
-from numpy import pi, tanh
+from numpy import pi, tanh, exp
 from numpy.linalg import norm
 from scipy.integrate import odeint
 
@@ -10,13 +10,14 @@ from scipy.integrate import odeint
 VEL_MAX = 60 #Velocidad maxima de los motores
 VEL_MIN = -20
 LOW_OBS = np.array([0,-10])#z,w
-HIGH_OBS = np.array([18, 10])
+HIGH_OBS = np.array([20, 10])
 ZE = 15.00
-BETA = 3
+BETA = 0.1
 EPSILON = 0.1
+R = 1000
 
 TIME_MAX = 17.00
-SIZE = 500
+STEPS = 500
 
 
 G = 9.81
@@ -39,6 +40,15 @@ def f(y, t, w1, w2, w3, w4):
 # ## Diseño del ambiente, step y reward
 r2 = lambda z, w, epsilon : (1 - tanh(z/epsilon)) * w ** 2
 
+r1 = lambda oz, z, ze: exp(-(abs(oz - ze) - abs(z - ze)))
+
+def r(oz, z, ze):
+    if abs(z -ze) < 1:
+        return R
+    else:
+        return R * (abs(oz - ze) - abs(z - ze)) / 10
+
+
 
 """Quadcopter Environment that follows gym interface"""
 class QuadcopterEnv(gym.Env):
@@ -49,8 +59,9 @@ class QuadcopterEnv(gym.Env):
         self.i = 0
         self.rz, self.rw = 1, 0.5 # perturbaciones
         self.state = self.reset()
+        self.old_state = self.state 
         self.time_max = TIME_MAX
-        self.tam = SIZE
+        self.tam = STEPS
         self.time = np.linspace(0, self.time_max, self.tam)
         self.z_e = ZE
         self.epsilon = EPSILON # parametro reward
@@ -59,10 +70,11 @@ class QuadcopterEnv(gym.Env):
 
     def reward_f(self):
         z, w = self.state
+        oz, _ = self.old_state
         if LOW_OBS[0] < z < HIGH_OBS[0]:
-            return -np.linalg.norm([abs(z - ZE) ** self.beta, r2(abs(z - ZE), 2 * w, self.epsilon)])
+            return r(oz, z, self.z_e) - norm([abs(z - self.z_e) ** self.beta, r2(abs(z - self.z_e), 2 * w, self.epsilon)])
         else:
-            return - 1e2
+            return - 1e5
 
     def is_done(self):
         z, _ = self.state
@@ -82,6 +94,7 @@ class QuadcopterEnv(gym.Env):
         w1, w2, w3, w4 = action
         t = [self.time[self.i], self.time[self.i+1]]
         delta_y = odeint(f, self.state, t, args=(w1, w2, w3, w4))[1]
+        self.old_state = np.copy(self.state)
         self.state = delta_y
         reward = self.reward_f()
         done = self.is_done()
