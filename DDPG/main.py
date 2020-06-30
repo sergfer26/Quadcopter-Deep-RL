@@ -1,14 +1,15 @@
-
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
-from quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, control_feedback
+from .quadcopter_env import QuadcopterEnv, G, M, K, omega_0, control_feedback
 from time import time 
-from utils import NormalizedEnv, OUNoise
-from ddpg import DDPGagent
+from .utils import NormalizedEnv, OUNoise
+from .ddpg import DDPGagent
 from time import time
 from numpy.linalg import norm
+
+plt.style.use('ggplot')
 
 env = QuadcopterEnv()
 env = NormalizedEnv(env)
@@ -44,7 +45,7 @@ def train(episodios,rz,rw):
         while True:
             action = agent.get_action(state)
             action = noise.get_action(action, env.time[env.i])
-            control = action*np.ones(4) + W0
+            control = action + W0
             new_state, reward, done = env.step(control) 
             agent.memory.push(state, action, reward, new_state, done)
             if len(agent.memory) > batch_size :
@@ -74,8 +75,8 @@ def train(episodios,rz,rw):
         rewards.append(episode_reward)
         avg_rewards.append(np.mean(rewards[-10:]))
 
- #ax2.plot(rewards)
- #ax2.plot(avg_rewards)
+#ax2.plot(rewards)
+#ax2.plot(avg_rewards)
 #plt.xlabel('Episode')
 #plt.ylabel('Reward')
 #plt.show()
@@ -98,7 +99,7 @@ def Sim(flag):
     t = env.time
     fig, ((ax1, ax2)) = plt.subplots(2, 1)
     state = env.reset()
-    noise.max_sigma = 0
+    # noise.max_sigma = 0
     noise.reset()
     episode_reward = 0
     R = []
@@ -110,7 +111,7 @@ def Sim(flag):
         state = state 
         action = agent.get_action(state)
         action = noise.get_action(action, env.time[env.i])
-        control = action*np.ones(4) + W0
+        control = action + W0
         new_state, reward, done = env.step(control) 
         z,w = state
         W1.append(w)
@@ -148,17 +149,6 @@ def Sim(flag):
     plt.show()
 
 
-train(100,1,0)
-input()
-train(100,2,0.3)
-train(100,3,0.5)
-Sim(True)
-train(100,3,0.7)
-train(150,4,1.0)
-#train(150,5,1.3)
-#train(200,6,1.5)
-
-
 def test():
     state = env.reset()
     noise.reset()
@@ -175,6 +165,7 @@ def test():
             break
     return state[0]-15,state[1]
 
+
 def ntest(n):
     final_z = []
     final_w = []
@@ -183,6 +174,7 @@ def ntest(n):
         final_z.append(z)
         final_w.append(w)
     return final_z,final_w
+
 
 def hist(z,w):
     fig, ((ax1, ax2)) = plt.subplots(1, 2)
@@ -193,8 +185,3 @@ def hist(z,w):
     ax2.legend()
     plt.show()
     
-
-env.rz = 6
-env.rw = 1.2
-final_z,final_w = ntest(500)
-hist(final_z,final_w)
