@@ -3,8 +3,8 @@ import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
-from models import Actor, Critic
-from utils import Memory
+from .models import Actor, Critic, weights_init
+from .utils import Memory
 
 
 class DDPGagent:
@@ -22,8 +22,10 @@ class DDPGagent:
 
         # Networks
         self.actor = Actor(sizes_actor, self.num_actions)
+        self.actor.apply(weights_init)
         self.actor_target = Actor(sizes_actor, self.num_actions)
         self.critic = Critic(sizes_critic, self.num_actions)
+        self.critic.apply(weights_init)
         self.critic_target = Critic(sizes_critic, self.num_actions)
 
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
