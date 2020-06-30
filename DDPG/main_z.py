@@ -3,19 +3,26 @@ import sys
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, control_feedback
+from env.quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, control_feedback, STEPS
 from time import time 
 from utils import NormalizedEnv, OUNoise
 from ddpg import DDPGagent
 from time import time
 from numpy.linalg import norm
+from tqdm import tqdm 
 
+BATCH_SIZE = 32
 
 env = QuadcopterEnv()
 env = NormalizedEnv(env)
 
+c1 = (((2*K)/M) * omega_0)**(-1)
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T
+
+
 if len(sys.argv) == 1:
-    hidden_sizes = [64,64]
+    hidden_sizes = [64,64] 
 else:
     hidden_sizes = sys.argv[1:]
     hidden_sizes = [int(i) for i in hidden_sizes]
@@ -23,14 +30,61 @@ else:
 agent = DDPGagent(env,hidden_sizes)
 noise = OUNoise(env.action_space)
 
-omega_0 = np.sqrt((G * M)/(4 * K))
-c1 = (((2*K)/M) * omega_0)**(-1)
-W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
-F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T
+writer_train = SummaryWriter()
+writer_test = SummaryWriter()
 
 
+def get_score(state):
+    w, z = state
+    if 14.9 < z < 15.1 and abs(w) < 0.0:
+        return 1
+    else:
+        return 0
 
-def train(episodios,rz,rw):
+def training_loop(agent, noise, pbar, test=False):
+    state = agent.env.reset()
+    noise.reset()
+    episode_reward = 0
+    score = 0.00
+    s = 0
+    while True:
+        action = agent.get_action(state)
+        action = noise.get_action(action, env.time[env.i])
+        control = action * np.ones(4) + W0
+        new_state, reward, done = env.step(control)
+        score += get_score(new_state)
+        episode_reward += reward
+        if not test:
+            agent.memory.push(state, action, reward, new_state, done)
+            if len(agent.memory) > BATCH_SIZE:
+                agent.update(BATCH_SIZE)
+        if s % 10 == 0:
+            z, w = new_state
+            pbar.set_postfix(reward='{:.2f}'.format(episode_reward), z='{:.2f}'.format(z), w='{:.2f}'.format(w))
+            pbar.update(10)
+        if done:
+            break
+        state = new_state
+        s += 1
+    return score / s
+
+def train_episode(agent, noise, episodes, writer_train, writer_test):
+    for episode in range(episodes):
+        start_time = time()
+        with tqdm(total = STEPS, position=0) as pbar_train:
+            pbar_train.set_description(f'Episode {episode + 1}/'+str(episodes)+' - training')
+            pbar_train.set_postfix(reward='0.0', w='0.0', z='0.0')
+            train_score = training_loop(agent, noise, pbar_train)
+            train_time +=  time() - start_time
+            writer_train.add_scalar('episode vs train_score', episode, train_score)
+        with tqdm(total = STEPS, position=0) as pbar_test:
+            pbar_test.set_description(f'Episode {episode + 1}/'+str(episodes)+' - test')
+            pbar_test.set_postfix(reward='0.0', w='0.0', z='0.0')
+            test_score = training_loop(agent, noise, pbar_test, test=True)
+            writer_train.add_scalar('episode vs test_score', episode, test_score)
+
+
+def train(episodios, rz, rw):
     tic = time()
     env.rz = rz
     env.rw = rw
@@ -52,6 +106,7 @@ def train(episodios,rz,rw):
         while True:
             action = agent.get_action(state)
             action = noise.get_action(action, env.time[env.i])
+            print(noise.sigma)
             control = action*np.ones(4) + W0
             new_state, reward, done = env.step(control) 
             agent.memory.push(state, action, reward, new_state, done)
@@ -136,7 +191,7 @@ def Sim(flag):
     state = env.reset()
     env.i = 0
     while True:
-        W1 = control_feedback(env.state[0]-env.z_e, env.state[1], F1) * c1
+        W1 = control_feedback(env.state[0]-env.ze, env.state[1], F1) * c1
         control = W1 + W0
         new_state, reward, done = env.step(control)
         z,w = state
@@ -156,6 +211,7 @@ def Sim(flag):
 
 
 train(200,1,0)
+Sim(True)
 #train(100,2,0.3)
 #train(100,4,0.5)
 #train(100,3,0.7)
@@ -204,24 +260,7 @@ def hist(z,w,dim):
     plt.show()
 
 
-def win():
-    state = env.reset()
-    noise.reset()
-    inw = 0
-    while True:
-        state = state
-        z,w = state
-        print(z,w)
-        if 14.9 < z < 15.1 and abs(w) < 0.0:
-            inw+=1
-        action = agent.get_action(state)
-        action = noise.get_action(action, env.time[env.i])
-        control = action*np.ones(4) + W0
-        new_state, reward, done = env.step(control) 
-        state = new_state
-        if done:
-            break
-    return inw 
+
     
 
 #env.rz = 6
@@ -230,9 +269,4 @@ def win():
 #hist(final_z,final_w,2)
 
 
-#hs = hidden_sizes
-#name = ''
-#for s in hs:
-#    name += '_'+str(s)
-#torch.save(agent.actor.state_dict(), "saved_models/actor"+name+".pth")
-#torch.save(agent.critic.state_dict(), "saved_models/critic"+name+".pth")
+
