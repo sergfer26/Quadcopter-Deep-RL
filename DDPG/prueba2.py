@@ -1,15 +1,16 @@
-import numpy as np
 import sys
-import matplotlib.pyplot as plt
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from .env.quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, control_feedback
 from torch.utils.tensorboard import SummaryWriter
-from quadcopter_env_z import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, control_feedback
-from time import time 
-from utils import NormalizedEnv, OUNoise
-from ddpg import DDPGagent
-from time import time
+from .load_save import load_nets, save_nets
+from .utils import NormalizedEnv, OUNoise
 from numpy.linalg import norm
-from tqdm import tqdm 
+from .ddpg import DDPGagent
+from time import time
+from tqdm import tqdm
+from time import time 
 
 BATCH_SIZE = 32
 
@@ -35,8 +36,8 @@ writer_test = SummaryWriter()
 
 
 def get_score(state):
-    w, z = state
-    if ZE - 0.20 < z < ZE + 0.20 and abs(w) < 0.25:
+    z, w = state
+    if ZE - 0.20 < z < ZE + 0.20 and abs(w) < 0.10:
         return 1
     else:
         return 0
@@ -71,8 +72,10 @@ def training_loop(agent, env, noise, pbar, test=False):
     return score / s
 
 
-def train(agent, env, noise, episodes, writer_train, writer_test):
+def train(agent, rz, rw, env, noise, episodes, writer_train, writer_test=None, valid=False):
     train_time = 0.0
+    env.rz = rz
+    env.rw = rw
     max_sigma = ((16.6/ noise.decay_period) * noise.min_sigma)/( 16.6 /noise.decay_period -1)
     sigmas = np.linspace(noise.sigma, max_sigma, episodes)
     for episode in range(episodes):
@@ -84,11 +87,12 @@ def train(agent, env, noise, episodes, writer_train, writer_test):
             train_score = training_loop(agent, env, noise, pbar_train)
             train_time +=  time() - start_time
             writer_train.add_scalar('episode vs score', train_score, episode)
-        with tqdm(total = STEPS, position=0) as pbar_test:
-            pbar_test.set_description(f'Episode {episode + 1}/'+str(episodes)+' - test')
-            pbar_test.set_postfix(reward='0.0', w='0.0', z='0.0')
-            test_score = training_loop(agent, env, noise, pbar_test, test=True)
-            writer_train.add_scalar('episode vs score', test_score, episode)
+        if valid:
+            with tqdm(total = STEPS, position=0) as pbar_test:
+                pbar_test.set_description(f'Episode {episode + 1}/'+str(episodes)+' - test')
+                pbar_test.set_postfix(reward='0.0', w='0.0', z='0.0')
+                test_score = training_loop(agent, env, noise, pbar_test, test=True)
+                writer_train.add_scalar('episode vs score', test_score, episode)
 
 def Sim(flag, agent, env):
     t = env.time
@@ -107,6 +111,7 @@ def Sim(flag, agent, env):
         control = action*np.ones(4) + W0
         new_state, reward, done = env.step(control) 
         z,w = state
+        z += np.random.normal(0, 0.03)
         W1.append(w)
         Z1.append(z)
         R.append(reward)
@@ -141,12 +146,19 @@ def Sim(flag, agent, env):
     ax2.title.set_text('Control Lineal')
     plt.show()
 
-train(agent, env, noise, 200, writer_train, writer_test)
-Sim(True, agent, env)
 
-hs = hidden_sizes
-name = ''
-for s in hs:
-    name += '_'+str(s)
-torch.save(agent.actor.state_dict(), "ddpg/saved_models/actor"+name+"_.pth")
-torch.save(agent.critic.state_dict(), "ddpg/saved_models/critic"+name+"_.pth")
+rz = 1; rw= 0
+train(agent, rz, rw, env, noise, 10, writer_train)
+
+save_nets(agent, hidden_sizes)
+
+#RZ = [1, 2, 3, 3, 4, 5, 6]
+#RW = [0, 0.3, 0.5, 0.7, 1, 1.3, 1.5]
+
+'''
+for rz, rw in zip(RZ, RW):
+    train(agent, rz, rw, env, noise, 150, writer_train, writer_test)
+    Sim(True, agent, env)
+    noise.max_sigma = 1.0
+    noise.sigma = 0.0
+'''
