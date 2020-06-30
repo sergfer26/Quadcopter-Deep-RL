@@ -1,11 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# # Control continuo con Deep Reinforcement Learning para Cuadricoptero
-
-# In[1]:
-
-
 import numpy as np
 import gym
 from gym import spaces
@@ -15,13 +8,19 @@ from scipy.integrate import odeint
 from numpy import sin
 from numpy import cos
 from numpy import tan
+from numpy import tanh
+from numpy import sqrt
+from numpy import floor
 from numpy.linalg import norm
+from torch.utils.tensorboard import SummaryWriter
+import sys
+import matplotlib.pyplot as plt
+from time import time
+r2 = lambda z, w : (1 - tanh(z)) *w**2
+
 
 
 # ## Sistema dinámico
-
-# In[2]:
-
 
 # constantes
 G = 9.81
@@ -29,9 +28,6 @@ I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
-
-
-# In[3]:
 
 
 def f(y, t, w1, w2, w3, w4):
@@ -68,17 +64,15 @@ def f(y, t, w1, w2, w3, w4):
 
 # ## Diseño del ambiente, step y reward
 
-# In[4]:
-
 
 # constantes del ambiente
-Vel_Max = 55 #Velocidad maxima de los motores
-Vel_Min = 50
+Vel_Max = 60 #Velocidad maxima de los motores
+Vel_Min = -20
 Low_obs = np.array([0,-10])#z,w
-High_obs = np.array([100,10])
+High_obs = np.array([18,10])
 
-Tiempo_max = 10
-tam = 20
+Tiempo_max = 15
+tam = 190
 
 
 # In[5]:
@@ -92,30 +86,50 @@ class QuadcopterEnv(gym.Env):
         self.action_space = spaces.Box(low = Vel_Min * np.ones(1), high = Vel_Max*np.ones(1))
         self.observation_space = spaces.Box(low = Low_obs, high = High_obs)
         self.i = 0
-        # self.state = np.array([10,0]) #z,w
         self.state = self.reset()
-        self.time = np.linspace(0, Tiempo_max, tam)
-        self.z_e = 50
-
+        self.time_max = 17
+        self.tam = 500
+        self.time = np.linspace(0, self.time_max, self.tam)
+        self.z_e = 15
+        self.flag = True
     def reward_f(self):
         z,w = self.state
         if z <= 0:
-            return -1e4
+            return -1e2
+        #else:
+        #return -np.linalg.norm([z-self.z_e,2*w])
+            #return -0.5*(abs(z-self.z_e) + abs(w))
+        #return -10e-4*sqrt((z-self.z_e)**2 + w**2 )
+        #return np.tanh(1 - 0.00005*(abs(self.state - np.array([15,0]))).sum()
+        #if 13 < z < 17:
+        #    import pdb; pdb.set_trace()
+            
+        #else:
+        #    return 0
         else:
-            return -np.linalg.norm([z-self.z_e ,w*0])
-
+            return -np.linalg.norm([z-self.z_e , r2(abs(z - self.z_e), w)])
+        #return - abs(z-self.z_e) - r2(abs(z - self.z_e), w)
+        
     def is_done(self):
+        z,w = self.state
         #Si se te acabo el tiempo
-        if self.i == tam-2:
+        if self.i == self.tam-2:
             return True
+        #Si estas muy lejos
         #elif self.reward_f() < -1e3:
         #    return True
-        elif self.reward_f() > -1e-3:
-            return True
-        elif not (self.state[0] > 0 or self.state[0] < 100):
-            return True
-        else:
-            return False
+        #Si estas muy cerca
+        #elif self.reward_f() > -1e-3:
+        #    return True
+        elif self.flag:
+            if z < 0 or z > 18:
+                return True
+            else:
+                return False
+            #elif 0 < w < High_obs[1]:
+           #  return True
+          ##else:
+            # return False
 
     def step(self,action):
         #import pdb; pdb.set_trace()
@@ -130,7 +144,8 @@ class QuadcopterEnv(gym.Env):
 
     def reset(self):
         self.i = 0
-        self.state = np.array([10,0])
+        #self.state = np.array([10 + float(np.random.uniform(-5,5,1)) ,0])
+        self.state = np.array([10 ,0])
         # self.state = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10])
         return self.state
         
@@ -159,8 +174,6 @@ def control_feedback(x, y, F):
 # $$\mu(s_t) = \mu(s_t | \theta_t^{\mu}) + \mathcal{N}$$
 
 # In[7]:
-
-
 import numpy as np
 import gym
 from collections import deque
@@ -169,7 +182,9 @@ import random
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
-    def __init__(self, action_space, mu=53.69, theta=0.15, max_sigma=5.0, min_sigma=0.0, decay_period=100000):
+    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.8, min_sigma=0.2, decay_period=100000):
+
+        
         self.mu           = mu
         self.theta        = theta
         self.sigma        = max_sigma
@@ -193,6 +208,8 @@ class OUNoise(object):
     def get_action(self, action, t=0):
         ou_state = self.evolve_state()
         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
+        #print(action)
+        #print(action + ou_state)
         return np.clip(action + ou_state, self.low, self.high)
 
 
@@ -236,6 +253,7 @@ class Memory:
         done_batch = []
 
         batch = random.sample(self.buffer, batch_size)
+        
 
         for experience in batch:
             state, action, reward, next_state, done = experience
@@ -244,6 +262,7 @@ class Memory:
             reward_batch.append(reward)
             next_state_batch.append(next_state)
             done_batch.append(done)
+
         
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
@@ -263,7 +282,6 @@ class Memory:
 # $$
 
 # In[9]:
-
 
 import torch
 import torch.nn as nn
@@ -312,7 +330,6 @@ class Actor(nn.Module):
 
 # In[10]:
 
-
 import torch
 import torch.autograd
 import torch.optim as optim
@@ -321,7 +338,7 @@ import torch.nn as nn
 #from utils import *
 
 class DDPGagent:
-    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=50000):
+    def __init__(self, env, hidden_size=256, actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=10000000):
         # Params
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
@@ -367,7 +384,14 @@ class DDPGagent:
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss
-        policy_loss = -self.critic.forward(states, self.actor.forward(states)).mean()
+        lambda2 = torch.tensor(1.)
+        l2_reg = torch.tensor(0.)
+        for param in self.critic.parameters():
+            l2_reg += torch.norm(param)
+        policy_loss = -self.critic.forward(states, self.actor.forward(states)).mean() + lambda2 * l2_reg
+        #import pdb;pdb.set_trace()
+        
+        
         
         # update networks
         self.actor_optimizer.zero_grad()
@@ -386,108 +410,83 @@ class DDPGagent:
             target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
 
 
-# ## Prueba de control en z y w
 
-# env = QuadcopterEnv()
-# #env = NormalizedEnv(gym.make("Pendulum-v0"))
-# env = NormalizedEnv(env)
-# agent = DDPGagent(env)
-# noise = OUNoise(env.action_space)
-# batch_size = 20
-# rewards = []
-# avg_rewards = []
-# 
-# import sys
-# 
-# for episode in range(1000):
-#     state = env.reset()
-#     noise.reset()
-#     episode_reward = 0
-#     step = 0
-#     while True:
-#         action = agent.get_action(state)
-#         #import pdb; pdb.set_trace()
-#         action = noise.get_action(action, step)
-#         actions = action * np.ones(4)
-#         # new_state, reward, done, _ = env.step(action) # pendulo
-#         new_state, reward, done = env.step(actions) 
-#         agent.memory.push(state, action, reward, new_state, done)
-#         if len(agent.memory) > batch_size:
-#             agent.update(batch_size)        
-#         state = new_state
-#         episode_reward += reward
-#         if done:
-#             print('state: ',env.state, 'reward:', reward)
-#             sys.stdout.write("episode: {}, reward: {}, average _reward: {} \n".format(episode, np.round(episode_reward, decimals=2), np.mean(rewards[-10:])))
-#             break
-#             
-#     step += 1
-# 
-#     rewards.append(episode_reward)
-#     avg_rewards.append(np.mean(rewards[-10:]))
-# 
+
+
+
+# ## Prueba de control en z y w
 
 # In[11]:
 
 
-import matplotlib.pyplot as plt
-from time import time
-import sys
-
-fig, ((ax1, ax2)) = plt.subplots(2, 1)
-
-env = QuadcopterEnv()
 #env = NormalizedEnv(gym.make("Pendulum-v0"))
+tic = time()
+env = QuadcopterEnv()
 env = NormalizedEnv(env)
 agent = DDPGagent(env)
 noise = OUNoise(env.action_space)
-batch_size = 20
+
 rewards = []
 avg_rewards = []
+batch_size = 64
 
-t1 = time()
-for episode in range(1000):
+#ewriter = SummaryWriter()
+t = env.time
+fig, ((ax1, ax2)) = plt.subplots(2, 1)
+
+omega_0 = np.sqrt((G * M)/(4 * K))
+c1 = (((2*K)/M) * omega_0)**(-1)
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T
+
+writer_train = SummaryWriter()
+writer_test = SummaryWriter()
+    
+episodios = 300
+for episode in range(episodios):
     state = env.reset()
     noise.reset()
     episode_reward = 0
-    #for step in range(499):
-    R = [-5]
-    W = [0]
-    Z = [10]
+    R = []
+    W = []
+    Z = []
     t = env.time
-    A = [50]
+    A = []
     while True:
+        #if :
+        #    W1 = control_feedback(env.state[0]-env.z_e, env.state[1], F1) * c1
+        #    control = W1 + W0
+        #    new_state, reward, done = env.step(control)
+        #    action = [control[0]]
         action = agent.get_action(state)
-        #import pdb; pdb.set_trace()
-        #print(action)
         action = noise.get_action(action, env.i)
-        #print(action)
-        # new_state, reward, done, _ = env.step(action) # pendulo
-        #W1 = control_feedback(env.state[0]-env.z_e, env.state[1], F1) * c1
-        #control = W1 + W0
-        #new_state, reward, done = env.step(control)
-        new_state, reward, done = env.step(action*np.ones(4)) 
+        #new_state, reward, done = env.step(action*np.ones(4))
+        control = action*np.ones(4) + W0
+        new_state, reward, done = env.step(control) 
         agent.memory.push(state, action, reward, new_state, done)
-        #print(len(agent.memory),batch_size,len(agent.memory) > batch_size )
-        if len(agent.memory) > batch_size:
-            # agent.update(batch_size)
-            if episode > 900:
+        if len(agent.memory) > batch_size :
+            agent.update(batch_size)
+            if episode > 0:
                 z,w = state
                 W.append(w)
                 Z.append(z)
                 R.append(reward)
-                A.append(float(action))
+                #A.append(action)
         state = new_state
         episode_reward += reward
         if done:
             sys.stdout.write("episode: {}, reward: {}, average _reward: {} \n".format(episode, np.round(episode_reward, decimals=2), np.mean(rewards[-10:])))
-            print(env.state)
+            print(state,reward,env.time[env.i])
+            writer.add_scalar('episodio vs Z', state[0], episode)
+            writer.add_scalar('episodio vs W', state[1], episode)
+            writer.add_scalar('episodio vs Tiempo',env.time[env.i],episode)
+            writer.add_scalar('episodio vs Reward', reward, episode)
             break
     #writer.add_scalar('Episode vs  Episode_Reward', episode, episode_reward)
     if episode > 0:
         t = t[0:len(Z)]
         ax1.set_ylim(-10, 30)
-        ax1.plot(t,Z,'-r',t,W,'--b',t,R,'--g',t,A,alpha = 0.2)
+        ax1.plot(t,Z,'-r',t,W,'--b',t,R,alpha = 0.2)
     rewards.append(episode_reward)
     avg_rewards.append(np.mean(rewards[-10:]))
 
@@ -496,29 +495,121 @@ ax2.plot(avg_rewards)
 #plt.xlabel('Episode')
 #plt.ylabel('Reward')
 #plt.show()
-t2 = time()
-print(t2-t1)
+toc = time()
+print('Tiempo de Ejecucion = ',(toc-tic)/60.0,' minutos')
 plt.show()
 
-#writer.close()
-
-
-# 
-# 
-# plt.plot(rewards)
-# plt.plot(avg_rewards)
-# plt.plot()
-# plt.xlabel('Episode')
-# plt.ylabel('Reward')
-# plt.show()
-
-# In[ ]:
 
 
 
+def Sim(flag):
+    t = env.time
+    fig, ((ax1, ax2)) = plt.subplots(2, 1)
+    state = env.reset()
+    noise.reset()
+    episode_reward = 0
+    R = []
+    W1,W2 = [],[]
+    Z1,Z2 = [] ,[]
+    t = env.time
+    A = []
+    env.flag  = flag
+    while True:
+        state = state 
+        action = agent.get_action(state)
+        action = noise.get_action(action, env.i)
+        control = action*np.ones(4) + W0
+        new_state, reward, done = env.step(control) 
+        z,w = state
+        W1.append(w)
+        Z1.append(z)
+        R.append(reward)
+        A.append(action)
+        state = new_state
+        episode_reward += reward
+        if done:
+            break
+    t1 = t[0:len(Z1)]
+    ax1.set_ylim(-10, 30)
+    ax1.plot(t1,Z1,'-r',label = str(round(Z1[-1],4)))
+    ax1.plot(t1,W1,'--b',label = str(round(W1[-1],4)))
+    ax1.plot(t1,15*np.ones(len(t1)), '--')
+    state = env.reset()
+    while True:
+        W1 = control_feedback(env.state[0]-env.z_e, env.state[1], F1) * c1
+        control = W1 + W0
+        new_state, reward, done = env.step(control)
+        z,w = state
+        W2.append(w)
+        Z2.append(z)
+        state = new_state
+        if done:
+            break
+    t2 =  t[0:len(Z2)]
+    ax1.legend()
+    ax2.plot(t2,Z2,'-r',label = str(round(Z2[-1],4)))
+    ax2.plot(t2,W2,'--b',label = str(round(W2[-1],4)))
+    ax2.legend()
+    ax1.title.set_text('DDPG')
+    ax2.title.set_text('Control Lineal')
+    plt.show()
+
+Sim(False)
 
 
-# In[ ]:
+
+def aceptacion_rechazo(m,grafica):
+    aceptados = 0
+    while aceptados < m:
+        episode_reward = 0
+        state = env.reset()
+        noise.reset()
+        state_batch = []
+        action_batch = []
+        reward_batch = []
+        new_state_batch = []
+        done_batch = []
+        Z ,W = [],[]
+        while True:
+            action = agent.get_action(state)
+            action = noise.get_action(action, env.i)
+            control = action*np.ones(4) + W0
+            new_state, reward, done = env.step(control) 
+            state = new_state
+            z,w = state
+            Z.append(z)
+            W.append(w)
+            episode_reward += reward
+            state_batch.append(state)
+            action_batch.append(action)
+            reward_batch.append(reward)
+            new_state_batch.append(new_state)
+            done_batch.append(done)
+            if done:
+                if  state_batch[-1][0] > 10 and env.time[env.i] > 9:
+                    print(aceptados)
+                    t = env.time[0:len(Z)]
+                    if grafica: 
+                        plt.plot(t,Z,'-r',t,W,'--b',alpha = 0.5)
+                    aceptados +=1
+                    for j in range(len(action_batch)):
+                        agent.memory.push(state_batch[j], action_batch[j], reward_batch[j], new_state_batch[j], done_batch[j])
+                    
+                break
+    if grafica:
+        plt.show()
+    print('Hecho')
+
+
+
+
+
+
+
+
+
+
+
 
 
 
