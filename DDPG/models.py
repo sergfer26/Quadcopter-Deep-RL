@@ -42,3 +42,9 @@ class Actor(nn.Module):
             x = F.relu(layer(x))
         x = torch.tanh(self.out(x))
         return x
+
+
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        nn.init.xavier_uniform(m.weight.data)
+        nn.init.xavier_uniform(m.bias.data)
