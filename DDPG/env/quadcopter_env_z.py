@@ -9,22 +9,23 @@ from scipy.integrate import odeint
 # constantes del ambiente
 VEL_MAX = 60 #Velocidad maxima de los motores
 VEL_MIN = -20
-LOW_OBS = np.array([0,-10])#z,w
-HIGH_OBS = np.array([20, 10])
+LOW_OBS = 0 # np.array([0,-10])#z,w
+HIGH_OBS = 22 # np.array([20, 10])
 ZE = 15.00
 BETA = 0.1
 EPSILON = 0.1
-R = 1000
+R = 10
 
 TIME_MAX = 17.00
 STEPS = 500
-
 
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
+
+dt = TIME_MAX/STEPS
 
 # ## Sistema dinámico
 def f(y, t, w1, w2, w3, w4):
@@ -40,15 +41,13 @@ def f(y, t, w1, w2, w3, w4):
 # ## Diseño del ambiente, step y reward
 r2 = lambda z, w, epsilon : (1 - tanh(z/epsilon)) * w ** 2
 
-r1 = lambda oz, z, ze: exp(-(abs(oz - ze) - abs(z - ze)))
-
 
 """Quadcopter Environment that follows gym interface"""
 class QuadcopterEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self):
         self.action_space = spaces.Box(low=VEL_MIN * np.ones(1), high=VEL_MAX * np.ones(1))
-        self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS)
+        self.observation_space = spaces.Box(low=LOW_OBS * np.ones(1), high=HIGH_OBS * np.ones(1))
         self.i = 0
         self.rz, self.rw = 1, 0.5 # perturbaciones
         self.state = self.reset()
@@ -60,21 +59,24 @@ class QuadcopterEnv(gym.Env):
         self.epsilon = EPSILON # parametro reward
         self.beta = BETA # 
         self.flag = True
-        self.umbral = 1
+        self.umbral = 1.0
 
-    def r(self, oz, z):
+    def r1(self, oz, z):
         if abs(z - ZE) < self.umbral:
             return R
         else:
-            return R * (abs(oz - ZE) - abs(z - ZE)) / 10
+            return 0
 
     def reward_f(self):
-        z, w = self.state
+        z, _ = self.state
         oz, _ = self.old_state
-        if LOW_OBS[0] < z < HIGH_OBS[0]:
-            return self.r(oz, z) - norm([abs(z - self.z_e) ** self.beta, r2(abs(z - self.z_e), 2 * w, self.epsilon)])
+        if LOW_OBS < z < HIGH_OBS:
+            u = abs(oz - ZE) - abs(z - ZE)
+            v = abs(z - ZE)
+            # return self.r1(oz, z) - norm([abs(z - self.z_e) ** self.beta, r2(abs(z - self.z_e), 2 * abs(oz - z), self.epsilon)])
+            return self.r1(oz, z) + tanh(1 - self.epsilon * (u ** 2).sum()) + tanh(1 - self.beta * (v ** 2).sum())
         else:
-            return - 1e5
+            return - 1e3
 
     def is_done(self):
         z, _ = self.state
@@ -82,7 +84,7 @@ class QuadcopterEnv(gym.Env):
         # Si se te acabo el tiempo
             return True
         elif self.flag:
-            if LOW_OBS[0] < z < HIGH_OBS[0]:
+            if LOW_OBS < z < HIGH_OBS:
                 return False
             else:
                 return True
@@ -99,7 +101,7 @@ class QuadcopterEnv(gym.Env):
         reward = self.reward_f()
         done = self.is_done()
         self.i += 1
-        return delta_y, reward, done
+        return self.state, reward, done
 
     def reset(self):
         self.state = np.array([max(0, ZE + float(np.random.uniform(-self.rz,self.rz,1))) ,float(np.random.uniform(-self.rw,self.rw,1))])
