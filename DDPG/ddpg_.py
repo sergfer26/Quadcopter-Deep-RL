@@ -3,14 +3,16 @@ import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
-from models import Actor, Critic, weights_init
-from utils import Memory
+from .models import Actor, Critic, weights_init
+from .utils import Memory
 
 BATCH_SIZE = 32
+LAMBDA = 0.1
 
 class DDPGagent:
     def __init__(self, env, hidden_sizes=[64, 64], actor_learning_rate=1e-4, critic_learning_rate=1e-3, gamma=0.99, tau=1e-2, max_memory_size=10000000):
         # Params
+
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
         self.gamma = gamma
@@ -42,6 +44,7 @@ class DDPGagent:
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
     
     def get_action(self, state):
+        # import pdb; pdb.set_trace()
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         action = self.actor.forward(state)
         action = action.detach().numpy()[0,0]
@@ -55,12 +58,17 @@ class DDPGagent:
         next_states = torch.FloatTensor(next_states)
     
         # Critic loss
-        states = torch.reshape(states, (BATCH_SIZE, self.num_actions)) # quitar esto para el general
+        states = torch.reshape(states, (BATCH_SIZE, self.num_actions)) # quitar esto para el general    
         Qvals = self.critic.forward(states, actions)
         next_states = torch.reshape(next_states, (BATCH_SIZE, self.num_actions)) # quitar esto para el general
         next_actions = self.actor_target.forward(next_states)
         next_Q = self.critic_target.forward(next_states, next_actions.detach())
         Qprime = rewards + self.gamma * next_Q
+
+        reg = 0
+        for param in CNN.parameters():
+        reg += 0.5 * (param ** 2).sum()  # you can replace it with abs().sum() to get L1 regularization
+        loss = criterion(CNN(x), y) + reg_lambda * reg  
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss
