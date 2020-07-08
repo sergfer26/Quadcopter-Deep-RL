@@ -37,7 +37,9 @@ class Actor(nn.Module):
         """
         Param state is a torch tensor
         """
+
         x = state
+        # import pdb; pdb.set_trace()
         for layer in self.hidden:
             x = F.relu(layer(x))
         x = torch.tanh(self.out(x))
