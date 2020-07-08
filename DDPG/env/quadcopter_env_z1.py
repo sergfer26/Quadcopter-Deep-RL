@@ -14,6 +14,7 @@ ZE = 15.00
 BETA = 0.1
 EPSILON = 0.1
 R = 100
+
 TIME_MAX = 10.00 # 17.00
 STEPS = 300
 G = 9.81

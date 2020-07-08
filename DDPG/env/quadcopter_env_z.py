@@ -12,7 +12,7 @@ VEL_MIN = -20
 LOW_OBS = 0 # np.array([0,-10])#z,w
 HIGH_OBS = 22 # np.array([20, 10])
 ZE = 15.00
-BETA = 0.1
+BETA = 0.9
 EPSILON = 0.1
 R = 10
 
