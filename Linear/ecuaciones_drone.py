@@ -73,7 +73,9 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     q1.set_ylabel('$ \\theta$')
     q2.plot(t, q)
     q2.set_ylabel(' d$ \\theta$')
-
+    q2.set_ylim(0.001, -0.001)
+    
+    w1.plot(t, cero + 15, '--', c='k', alpha=0.5)
     w2.plot(t, cero, '--', c='k', alpha=0.5)
     r2.plot(t, cero, '--', c='k', alpha=0.5)
     p2.plot(t, cero, '--', c='k', alpha=0.5)
