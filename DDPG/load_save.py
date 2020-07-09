@@ -1,9 +1,15 @@
 from torch import save, load
 
-PATH1 = "DDPG/saved_models/quadcopter/actor__64_64.pth"
-PATH2 = "DDPG/saved_models/quadcopter/critic__64_64.pth"
+def paths(hidden_sizes):
+    hs = hidden_sizes
+    name = ''
+    for s in hs:
+        name += '_'+str(s)
+    return "DDPG/saved_models/quadcopter/actor_"+name+".pth","DDPG/saved_models/quadcopter/critic_"+name+".pth"
+    
 
-def load_nets(agent, path1=PATH1, path2=PATH2):
+def load_nets(agent,hidden_sizes):
+    path1,path2 = paths(hidden_sizes)
     agent.actor.load_state_dict(load(path1))
     agent.critic.load_state_dict(load(path2))
 
