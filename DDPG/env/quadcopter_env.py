@@ -84,8 +84,8 @@ class QuadcopterEnv(gym.Env):
             return R * (norm(self.old_state[9:] - self.goal[9:]) - norm(self.state[9:] - self.goal[9:])) / 10
 
     def get_reward(self):
-        # LOW_OBS[-1] <  self.state[-1] < HIGH_OBS[-1]:
-        if self.observation_space.contains(self.state):
+        if LOW_OBS[-1] <  self.state[-1] < HIGH_OBS[-1]:
+        #if self.observation_space.contains(self.state):
             state = np.copy(self.state); old_state = np.copy(self.old_state)
             state[6:9] = np.remainder(state[6:9], 2 * pi); old_state[6:9] = np.remainder(old_state[6:9], 2 * pi)
             state = np.multiply(state, self.weights); old_state = np.multiply(old_state, self.weights)
