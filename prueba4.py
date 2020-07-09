@@ -136,7 +136,7 @@ noise = OUNoise(env.action_space)
 writer_train = SummaryWriter()
 writer_test = SummaryWriter()
 
-load_nets(agent)
+load_nets(agent,hidden_sizes)
 
 
 RZ = [1, 2, 3, 3, 4, 5, 6]
