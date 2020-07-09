@@ -58,11 +58,11 @@ def training_loop(agent, env, noise, pbar, test=False):
             agent.memory.push(state, action, reward, new_state, done)
             if len(agent.memory) > BATCH_SIZE:
                 agent.update(BATCH_SIZE)
-        u, v, w, p, q, r, psi, theta, phi, x, y, z = new_state
+        _, _, w, p, q, _, _, theta, phi, _, _, z = new_state
         pbar.set_postfix(R='{:.2f}'.format(episode_reward), # u='{:.2f}'.format(u), v='{:.2f}'.format(v), 
             w='{:.2f}'.format(w), p='{:.2f}'.format(p), q='{:2f}'.format(q), # r='{:.2f}'.format(r), psi='{:.2f}'.format(rem(psi, TAU)), 
                 theta='{:.2f}'.format(rem(theta, TAU)), phi='{:.2f}'.format(rem(phi, TAU)), # x='{:.2f}'.format(x), y='{:.2f}'.format(y), 
-                    z='{:.2f}'.format(z))
+                    z='{:.2f}'.format(z), s='{:.4f}'.format(noise.max_sigma))
         # pbar.set_postfix(R='{:.2f}'.format(episode_reward), w='{:.2f}'.format(w), z='{:.2f}'.format(z))
         pbar.update(1)
         if done:
@@ -124,7 +124,7 @@ def Sim(flag, agent, env):
 
 
 if len(sys.argv) == 1:
-    hidden_sizes = [64, 64]
+    hidden_sizes = [64, 256, 64]
 else:
     hidden_sizes = sys.argv[1:]
     hidden_sizes = [int(i) for i in hidden_sizes]
@@ -141,12 +141,11 @@ load_nets(agent)
 
 RZ = [1, 2, 3, 3, 4, 5, 6]
 RW = [0, 0.3, 0.5, 0.7, 1, 1.3, 1.5]
-E = [200, 100, 100, 100, 100, 150, 200]
+E = [1000, 500, 500, 500, 500, 750, 1000]
 
 '''
 train(agent, 1, 0, env, noise, 1000, writer_train, writer_test)
 save_nets(agent, hidden_sizes)
-
 
 for rz, rw, e in zip(RZ, RW, E):
     train(agent, rz, rw, env, noise, e, writer_train, writer_test)
@@ -154,12 +153,11 @@ for rz, rw, e in zip(RZ, RW, E):
     Sim(True, agent, env)
     noise.max_sigma = 1.0
     noise.sigma = 1.0
-
+'''
 
 noise.max_sigma = 0.0
 noise.sigma = 0.0
 reset_time(env, 800, 30)
 Sim(True, agent, env)
-'''
 
 
