@@ -11,7 +11,7 @@ from time import time
 from numpy.linalg import norm
 from tqdm import tqdm
 from DDPG.load_save import load_nets, save_nets
-from tools.tools import imagen2d
+from tools.tools import imagen2d,imagen
 from numpy import pi
 from numpy import remainder as rem
 
