@@ -14,7 +14,7 @@ from DDPG.load_save import load_nets, save_nets
 from tools.tools import imagen2d,imagen
 from numpy import pi
 from numpy import remainder as rem
-
+from progress.bar import Bar, ChargingBar
 TAU = 2 * pi
 BATCH_SIZE = 32
 env = QuadcopterEnv()
@@ -80,7 +80,7 @@ def train(agent, rz, rw, env, noise, episodes, writer_train, writer_test):
     for episode in range(episodes):
         start_time = time()
         noise.max_sigma = sigmas[episode]
-        with tqdm(total = STEPS, position=0) as pbar_train:
+        with tqdm(total = env.tam, position=0) as pbar_train:
             pbar_train.set_description(f'Ep {episode + 1}/'+str(episodes)) #+' - training')
             train_score = training_loop(agent, env, noise, pbar_train)
             train_time +=  time() - start_time
@@ -99,6 +99,7 @@ def Sim(flag, agent, env):
     _, _, w, p, q, r, psi, theta, phi, _, _, z = state
     episode_reward = 0
     Z, W, Psi, R, Phi, P, Theta, Q, T = [], [], [], [], [], [], [], [], []
+    X,Y = [], []
     env.flag  = flag
     while True:
         # oz = z
@@ -106,23 +107,80 @@ def Sim(flag, agent, env):
         # state[2] = (z - oz) * (env.tam / env.time_max)
         action = agent.get_action(state)
         action = noise.get_action(action, env.time[env.i])
-        # print(action)
         control = action + W0
         new_state, reward, done = env.step(control) 
-        _, _, w, p, q, r, psi, theta, phi, _, _, z = state
+        _, _, w, p, q, r, psi, theta, phi, x, y, z = state
         Z.append(z); W.append(w)
         Psi.append(psi); R.append(r)
         Phi.append(phi); P.append(p)
         Theta.append(theta); Q.append(q)
+        X.append(x);Y.append(y)
         state = new_state
         episode_reward += reward
         if done:
             break
     T = t[0:len(Z)]
     imagen2d(Z, W, Psi, R, Phi, P, Theta, Q, T)
+    imagen(X,Y,Z)
+
+
+
+def nsim(flag,n):
+    f, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
+    bar1 = Bar('Procesando:', max=n)
+    alpha = 0.2
+    for _ in range(n):
+        bar1.next()
+        t = env.time
+        state = env.reset()
+        noise.reset()
+        _, _, w, p, q, r, psi, theta, phi, _, _, z = state
+        episode_reward = 0
+        Z, W, Psi, R, Phi, P, Theta, Q, T = [], [], [], [], [], [], [], [], []
+        X,Y = [], []
+        env.flag  = flag
+        while True:
+            action = agent.get_action(state)
+            action = noise.get_action(action, env.time[env.i])
+            control = action + W0
+            new_state, reward, done = env.step(control) 
+            _, _, w, p, q, r, psi, theta, phi, x, y, z = state
+            Z.append(z); W.append(w)
+            Psi.append(psi); R.append(r)
+            Phi.append(phi); P.append(p)
+            Theta.append(theta); Q.append(q)
+            X.append(x);Y.append(y)
+            state = new_state
+            episode_reward += reward
+            if done:
+                break
+        T = t[0:len(Z)]
+        cero = np.zeros(len(Z))
+        w1.plot(T, Z, c='b',alpha = alpha)
+        w1.set_ylabel('z')
+        w2.plot(T, W, c='b',alpha = alpha)
+        w2.set_ylabel('dz') 
+        r1.plot(T, Psi, c='r',alpha = alpha)
+        r1.set_ylabel('$\psi$')
+        r2.plot(T, R, c='r',alpha = alpha)
+        r2.set_ylabel('d$\psi$')
+        p1.plot(T, Phi, c='g',alpha = alpha)
+        p1.set_ylabel('$\phi$')
+        p2.plot(T, P, c='g',alpha = alpha)
+        p2.set_ylabel(' d$\phi$',alpha = alpha)
+        q1.plot(T, Theta,alpha = alpha)
+        q1.set_ylabel('$ \\theta$')
+        q2.plot(T, Q,alpha = alpha)
+        q2.set_ylabel(' d$ \\theta$')
+    w1.plot(T, cero + 15, '--', c='k', alpha=0.5)
+    w2.plot(T, cero, '--', c='k', alpha=0.5)
+    r2.plot(T, cero, '--', c='k', alpha=0.5)
+    p2.plot(T, cero, '--', c='k', alpha=0.5)
+    q2.plot(T, cero, '--', c='k', alpha=0.5)
+    plt.show()
+    bar1.finish()
+        
     
-
-
 if len(sys.argv) == 1:
     hidden_sizes = [64, 256, 64]
 else:
@@ -130,7 +188,7 @@ else:
     hidden_sizes = [int(i) for i in hidden_sizes]
 
 env = QuadcopterEnv()
-env = NormalizedEnv(env)    
+env = NormalizedEnv(env)   
 agent = DDPGagent(env,hidden_sizes)
 noise = OUNoise(env.action_space)
 writer_train = SummaryWriter()
@@ -142,22 +200,31 @@ load_nets(agent,hidden_sizes)
 RZ = [1, 2, 3, 3, 4, 5, 6]
 RW = [0, 0.3, 0.5, 0.7, 1, 1.3, 1.5]
 E = [1000, 500, 500, 500, 500, 750, 1000]
+un_grado = np.pi/180
+#train(agent, 1, 0, env, noise, 250, writer_train, writer_test)
+#agent.memory.remove()
+#train(agent, 1, 0.2, env, noise, 60, writer_train, writer_test)
+#env.p[6]  = un_grado #yaw
+#env.p[7]  = un_grado #pitch
+#env.p[8] = un_grado #roll
+#agent.memory.remove()
+#train(agent, 1, 0.2, env, noise, 250, writer_train, writer_test)
+
+#save_nets(agent, hidden_sizes)
 
 '''
-train(agent, 1, 0, env, noise, 1000, writer_train, writer_test)
-save_nets(agent, hidden_sizes)
-
 for rz, rw, e in zip(RZ, RW, E):
     train(agent, rz, rw, env, noise, e, writer_train, writer_test)
     save_nets(agent, hidden_sizes)
     Sim(True, agent, env)
     noise.max_sigma = 1.0
     noise.sigma = 1.0
-'''
+
 
 noise.max_sigma = 0.0
 noise.sigma = 0.0
 reset_time(env, 800, 30)
 Sim(True, agent, env)
+'''
 
-
+nsim(True,2)
