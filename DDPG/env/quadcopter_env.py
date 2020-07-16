@@ -16,17 +16,18 @@ VELANG_MAX = 10
 LOW_OBS = np.array([-10, -10, -10, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi, 0, 0, 0])
 HIGH_OBS = np.array([10, 10, 10, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi, 22, 22, 22])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
-XE = 15.0; YE = 15.0; ZE = 15.00
+XE = 0.0; YE = 0.0; ZE = 15.0
 
 # parametros de entrenamineto
 BETA = 0.1
 EPSILON = 0.1
 #                   du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
-WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 0.005, 0.005, 1, 1, 0.01, 0.01, 1]) 
+#WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 0.005, 0.005, 1, 1, 0.01, 0.01, 1]) 
+WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 1, 1, 1, 1, 0.01, 0.01, 1])
 R = 1000
 
-TIME_MAX = 17.00
-STEPS = 500
+TIME_MAX = 30.00
+STEPS = 800
 
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
@@ -89,13 +90,17 @@ class QuadcopterEnv(gym.Env):
             state = np.copy(self.state); old_state = np.copy(self.old_state)
             state[6:9] = np.remainder(state[6:9], 2 * pi); old_state[6:9] = np.remainder(old_state[6:9], 2 * pi)
             state = np.multiply(state, self.weights); old_state = np.multiply(old_state, self.weights)
-            d1 = norm(old_state[9:] - self.goal[9:]) - norm(state[9:] - self.goal[9:])
-            d2 = norm(state[0:6])
-            d3 = norm(state[6:9])
-            return self.r() + tanh(1 - self.epsilon * (d1 ** 2).sum()) +  \
-                tanh(1 - self.beta * (d2 ** 2).sum()) + tanh(1 - self.beta * (d3 ** 2).sum())
-        else:
-            return -1e4
+            #d1 = norm(old_state[9:] - self.goal[9:]) - norm(state[9:] - self.goal[9:])
+            #d2 = norm(state[0:6])
+            #d3 = norm(state[6:9])
+            #return self.r() + tanh(1 - self.epsilon * (d1 ** 2).sum()) +  \
+            #    tanh(1 - self.beta * (d2 ** 2).sum()) + tanh(1 - self.beta * (d3 ** 2).sum())
+            d1 = norm([state[6],state[7],state[8]])
+            if abs(state[-1]-15) < 0.5:
+                return float(-(abs(state[-1] - 15)+ d1)*10 + 1e3)
+            else:
+                float(-(abs(state[-1] - 15)+ d1))*10
+        return -1e4
         
     def is_done(self):
         #Si se te acabo el tiempo
