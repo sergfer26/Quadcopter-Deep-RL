@@ -23,7 +23,7 @@ BETA = 0.1
 EPSILON = 0.1
 #                   du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
 #WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 0.005, 0.005, 1, 1, 0.01, 0.01, 1]) 
-WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 1, 1, 1, 1, 0.01, 0.01, 1])
+WEIHGTS = np.array([0.01, 0.01, 1, 1, 1, 1, 1, 10, 10, 0.01, 0.01, 1])
 R = 1000
 
 TIME_MAX = 30.00
@@ -77,6 +77,8 @@ class QuadcopterEnv(gym.Env):
         self.beta = BETA 
         self.flag = True
         self.umbral = 1
+        self.d = 0.5
+        self.lam = 1
 
     def r(self):
         if norm(self.state[9:] - self.goal[9:]) < self.umbral:
@@ -85,9 +87,11 @@ class QuadcopterEnv(gym.Env):
             return R * (norm(self.old_state[9:] - self.goal[9:]) - norm(self.state[9:] - self.goal[9:])) / 10
 
     def get_reward(self):
+        state = np.copy(self.state)
+        #d1 = 1e2 if sum([state[6],state[7],state[8]])  > 1e-4 else -1e3
         if LOW_OBS[-1] <  self.state[-1] < HIGH_OBS[-1]:
         #if self.observation_space.contains(self.state):
-            state = np.copy(self.state); old_state = np.copy(self.old_state)
+            old_state = np.copy(self.old_state)
             state[6:9] = np.remainder(state[6:9], 2 * pi); old_state[6:9] = np.remainder(old_state[6:9], 2 * pi)
             state = np.multiply(state, self.weights); old_state = np.multiply(old_state, self.weights)
             #d1 = norm(old_state[9:] - self.goal[9:]) - norm(state[9:] - self.goal[9:])
@@ -96,10 +100,10 @@ class QuadcopterEnv(gym.Env):
             #return self.r() + tanh(1 - self.epsilon * (d1 ** 2).sum()) +  \
             #    tanh(1 - self.beta * (d2 ** 2).sum()) + tanh(1 - self.beta * (d3 ** 2).sum())
             d1 = norm([state[6],state[7],state[8]])
-            if abs(state[-1]-15) < 0.5:
-                return float(-(abs(state[-1] - 15)+ d1)*10 + 1e3)
+            if abs(state[-1]-15) < self.d:
+                return -(abs(state[-1] - 15) + d1 ) + 1e3
             else:
-                float(-(abs(state[-1] - 15)+ d1))*10
+                -(abs(state[-1] - 15) + d1)
         return -1e4
         
     def is_done(self):
