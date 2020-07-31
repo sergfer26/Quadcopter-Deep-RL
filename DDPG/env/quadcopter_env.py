@@ -87,24 +87,15 @@ class QuadcopterEnv(gym.Env):
             return R * (norm(self.old_state[9:] - self.goal[9:]) - norm(self.state[9:] - self.goal[9:])) / 10
 
     def get_reward(self):
-        state = np.copy(self.state)
-        #d1 = 1e2 if sum([state[6],state[7],state[8]])  > 1e-4 else -1e3
         if LOW_OBS[-1] <  self.state[-1] < HIGH_OBS[-1]:
+            state = np.copy(self.state)
         #if self.observation_space.contains(self.state):
-            old_state = np.copy(self.old_state)
-            state[6:9] = np.remainder(state[6:9], 2 * pi); old_state[6:9] = np.remainder(old_state[6:9], 2 * pi)
-            state = np.multiply(state, self.weights); old_state = np.multiply(old_state, self.weights)
-            #d1 = norm(old_state[9:] - self.goal[9:]) - norm(state[9:] - self.goal[9:])
+            state = np.multiply(state, self.weights)
             #d2 = norm(state[0:6])
             #d3 = norm(state[6:9])
-            #return self.r() + tanh(1 - self.epsilon * (d1 ** 2).sum()) +  \
-            #    tanh(1 - self.beta * (d2 ** 2).sum()) + tanh(1 - self.beta * (d3 ** 2).sum())
             d1 = norm([state[6],state[7],state[8]])
-            if abs(state[-1]-15) < self.d:
-                return -(abs(state[-1] - 15) + d1 ) + 1e3
-            else:
-                -(abs(state[-1] - 15) + d1)
-        return -1e4
+            return 1 - norm(state[-1]- self.goal[-1])** 2 - 1e-1 *d1 
+        return -1e3
         
     def is_done(self):
         #Si se te acabo el tiempo
