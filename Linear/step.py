@@ -20,7 +20,7 @@ c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
 
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
 def step(W, y, t):
     '''
     Obtiene una solución numérica de dy=f(y) para un tiempo t+1
