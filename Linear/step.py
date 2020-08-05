@@ -63,11 +63,12 @@ def simulador(Y, Ze, T, tam):
 
     regresa; arreglo de la posición final
     '''
-    writer = SummaryWriter()
+    #writer = SummaryWriter()
     z_e, psi_e, phi_e, theta_e = Ze
     W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
     X = np.zeros((tam, 12))
     X[0] = Y
+    velocidades = []
     t = np.linspace(0, T, tam)
     for i in range(len(t)-1):
         _, _, w, p, q, r, psi, theta, phi, _, _, z = Y
@@ -76,10 +77,14 @@ def simulador(Y, Ze, T, tam):
         W3 = control_feedback(phi - phi_e, p, F3) * c3  # control roll
         W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
+        tem = W1 + W2 + W3 + W4
+        for v in tem:
+            velocidades.append(float(v))
         Y = step(W, Y, [t[i], t[i+1]])[1]
         X[i+1] = Y
-        writer.add_scalar('t vs z', z, t[i])
-        writer.add_scalars('Rotores', {'W_0':float(W[0]),'W_1':float(W[1]),'W_2': float(W[2]),'W_3':float(W[3])}, t[i])
+        #writer.add_scalar('t vs z', z, t[i])
+        #writer.add_scalars('Rotores', {'W_0':float(W[0]),'W_1':float(W[1]),'W_2': float(W[2]),'W_3':float(W[3])}, t[i])
+    print('vel_min = ',min(velocidades),'vel_max = ',max(velocidades))    
     return X
 
 
