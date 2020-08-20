@@ -4,7 +4,7 @@ from scipy.integrate import odeint
 from numpy import sin
 from numpy import cos
 from numpy import tan
-from ecuaciones_drone import f, escribe, imagen, imagen2d, I, K, B, M, L, G
+from .ecuaciones_drone import f, escribe, imagen, imagen2d, I, K, B, M, L, G
 from numpy import pi
 from torch.utils.tensorboard import SummaryWriter
 
@@ -20,7 +20,9 @@ c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
 
-import pdb; pdb.set_trace()
+W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
+
+
 def step(W, y, t):
     '''
     Obtiene una solución numérica de dy=f(y) para un tiempo t+1
@@ -50,6 +52,15 @@ def control_feedback(x, y, F):
     A = np.array([x, y]).reshape((2, 1))
     return np.dot(F, A)
 
+def get_control(Y, Ze):
+    _, _, w, _, _, z, p, q, _, _, theta, phi = Y
+    psi_e, phi_e, theta_e, z_e = Ze
+    W1 = control_feedback(z - z_e, w, F1) * (c1 ** 2)  # control z
+    W2 = control_feedback(psi - psi_e, r, F2) * c2  # control yaw
+    W3 = control_feedback(phi - phi_e, p, F3) * c3  # control roll
+    W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
+    return W1 + W2 + W3 + W4 
+
 
 def simulador(Y, Ze, T, tam):
     '''
@@ -64,18 +75,11 @@ def simulador(Y, Ze, T, tam):
     regresa; arreglo de la posición final
     '''
     writer = SummaryWriter()
-    z_e, psi_e, phi_e, theta_e = Ze
-    W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
     X = np.zeros((tam, 12))
     X[0] = Y
     t = np.linspace(0, T, tam)
     for i in range(len(t)-1):
-        _, _, w, p, q, r, psi, theta, phi, _, _, z = Y
-        W1 = control_feedback(z - z_e, w, F1) * (c1**2)  # control z
-        W2 = control_feedback(psi - psi_e, r, F2) * c2  # control yaw
-        W3 = control_feedback(phi - phi_e, p, F3) * c3  # control roll
-        W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
-        W = W0 + W1 + W2 + W3 + W4
+        W = get_control(Y, Ze) + W0
         Y = step(W, Y, [t[i], t[i+1]])[1]
         X[i+1] = Y
         writer.add_scalar('t vs z', z, t[i])

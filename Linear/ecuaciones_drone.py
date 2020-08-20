@@ -17,7 +17,7 @@ K = 0.001219  # kt
 def f(y, t, w1, w2, w3, w4):
     #El primer parametro es un vector
     #W,I tambien
-    u, v, w, p, q, r, psi, theta, phi, x, y, z = y
+    u, v, w, x, y, z, p, q, r, psi, theta, phi = y
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
     du = r * v - q * w - G * sin(theta)
@@ -32,7 +32,7 @@ def f(y, t, w1, w2, w3, w4):
     dx = u
     dy = v
     dz = w
-    return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
+    return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
 
 def escribe(X, Y, Z, phi, theta, psi):

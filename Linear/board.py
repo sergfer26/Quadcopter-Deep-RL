@@ -89,6 +89,7 @@ def simulador(Y, z_e, T, tam):
         W3 = control_feedback(phi, p, F3) * c3  # control roll
         W4 = control_feedback(theta, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
+        print(W)
         Y,reward = step(W, Y, [t[i], t[i+1]],z_e)
         R.append(reward)
         X[i+1] = Y
@@ -110,9 +111,9 @@ y que queremos estabilizar en ze
     T = 60 #120
     tam = 1500
     ale = np.random.uniform(-5,5)
-    z_0 = 10
-    Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, pi/30, 0, 0, z_0])
-    z_e = 5
+    z_0 = 20
+    Y = np.array([0, 0, 0, 0, 0, 0, pi * 0.005555555555555556, pi * 0.005555555555555556, pi * 0.005555555555555556, 0, 0, z_0])
+    z_e = 15
     X,R = simulador(Y, z_e, T, tam)
     t = np.linspace(0, T, tam)[0:len(X)]
     z = X[:, 11]
