@@ -2,6 +2,21 @@ import numpy as np
 from matplotlib import pyplot as plt
 import plotly.graph_objects as go
 
+
+def reset_time(env, tamaño, tiempo_max):
+    env.time_max = tiempo_max
+    env.tam = tamaño
+    env.time = np.linspace(0, env.time_max, env.tam)
+
+def get_score(state, env):
+    z = state[-1]
+    w = state[2]
+    if env.goal[-1] - 0.20 < z < env.goal[-1] + 0.20 and abs(w) < 0.25:
+        return 1
+    else:
+        return 0
+
+
 def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     f, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
     cero = np.zeros(len(z))
