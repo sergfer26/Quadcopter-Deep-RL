@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import sys
 import torch
 from DDPG.env.quadcopter_env import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, control_feedback,funcion
@@ -21,6 +22,12 @@ env = NormalizedEnv(env)
 c1 = (((2*K)/M) * omega_0)**(-1)
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T
+
+vector_u, vector_v, vector_w = [],[],[]
+vector_p, vector_q, vector_r = [],[],[]
+vector_psi, vector_theta, vector_phi = [],[],[]
+vector_x, vector_y, vector_z = [],[],[]
+vector_score,vector_tiempo,vector_reward,vector_porcentaje = [],[],[],[]
     
 
 def get_score(state):
@@ -74,11 +81,14 @@ def train(agent, rz, rw, env, noise, episodes):
         train_score,s,train_reward= training_loop(agent, env, noise)
         train_score = train_score/s
         train_time +=  time() - start_time
-        print(['Estado = ',list(env.state)])
-        print(['Score = ',train_score])
-        print(['Tiempo = ',train_time])
-        print(['Reward = ',train_reward])
-        print(['Porcentaje = ',s/(env.tam-1)*100])
+        vector_u.append(env.state[0]);vector_v.append(env.state[1]);vector_w.append(env.state[2])
+        vector_p.append(env.state[3]);vector_q.append(env.state[4]);vector_r.append(env.state[5])
+        vector_psi.append(env.state[6]);vector_theta.append(env.state[7]);vector_phi.append(env.state[8])
+        vector_x.append(env.state[9]);vector_y.append(env.state[10]);vector_z.append(env.state[11])
+        vector_score.append(train_score)
+        vector_tiempo.append(train_time)
+        vector_reward.append(train_reward)
+        vector_porcentaje.append(s/(env.tam-1)*100)
 
 def Sim(flag, agent, env):
     t = env.time
@@ -178,10 +188,6 @@ env = QuadcopterEnv()
 env = NormalizedEnv(env)   
 agent = DDPGagent(env,True,hidden_sizes)
 noise = OUNoise(env.action_space)
-#writer_train = SummaryWriter()
-#writer_test = SummaryWriter()
-
-#load_nets(agent,hidden_sizes)
 
 un_grado = np.pi/180
 env.lam = 0.0
@@ -192,47 +198,17 @@ print('arquitectura = ' + str(hidden_sizes))
 env.p[9:] = np.ones(3)
 train(agent, 1, 0.0, env, noise, 4)
 agent.memory.remove()
-#env.lam = 0.1/2
-#train(agent, 1, 0.0, env, noise, 100)
-#for j in range(3):
-#    v = np.array([0,0,0])
-#    v[j] +=1
-#    noise.sigma = 0.3
-#    env.p[6],env.p[7],env.p[8] = 0.5*un_grado*v
-#    train(agent, 1, 0.2, env, noise, 200)
 
-#env.d = 0.5
+data = pd.DataFrame(columns=('u', 'v', 'w', 'p','q','r','psi','theta','phi','x','y','z','score','tiempo','reward','porcentaje'))
+data.u = vector_u; data.v = vector_v; data.w = vector_w
+data.p = vector_p; data.q = vector_q; data.r = vector_r
+data.psi = vector_psi; data.theta = vector_theta; data.phi = vector_phi
+data.x = vector_x; data.y = vector_y; data.z = vector_z
+data.score = vector_score; data.tiempo = vector_tiempo; data.reward = vector_reward ;data.porcentaje = vector_porcentaje
 
-#for ra in RA:
-#    env.p[6],env.p[7],env.p[8] = ra*un_grado*np.ones(3)
-#    train(agent, 1, 0.2, env, noise, 50)
-
-#save_nets(agent, hidden_sizes)
-
-'''
-for rz, rw, e in zip(RZ, RW, E):
-    train(agent, rz, rw, env, noise, e, writer_train, writer_test)
-    save_nets(agent, hidden_sizes)
-    Sim(True, agent, env)
-    noise.max_sigma = 1.0
-    noise.sigma = 1.0
+data.to_csv('PRUEBA1.csv',index = False)
 
 
-noise.max_sigma = 0.0
-noise.sigma = 0.0
-reset_time(env, 800, 30)
-Sim(True, agent, env)
-'''
-
-def sim():
-    tem = np.copy(env.p)
-    env.p *= 0
-    Sim(True,agent,env)
-    env.p = tem
-
-def clear():
-    for _ in range(100):
-        print(' ')
         
 
 
