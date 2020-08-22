@@ -52,6 +52,31 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     plt.show()
 
 
+def imagen_action(action, t):
+    _, ax = plt.subplots(4, 1)
+    cero = np.zeros(len(action[0])) 
+
+    ax[0].plot(t, action[0], c='b')
+    ax[0].set_ylabel('$a_1$')
+
+    ax[1].plot(t, action[1], c='r')
+    ax[1].set_ylabel('$a_2$')
+
+    ax[2].plot(t, action[2], c='g')
+    ax[2].set_ylabel('$a_3$')
+
+    ax[3].plot(t, action[3])
+    ax[3].set_ylabel('$a_4$')
+
+    ax[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    ax[1].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    ax[2].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    ax[3].plot(t, cero + 15, '--', c='k', alpha=0.5)
+
+    plt.show()
+
+
+
 def imagen(X, Y, Z):
     fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
