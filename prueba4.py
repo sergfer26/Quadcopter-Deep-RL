@@ -108,6 +108,7 @@ def Sim(flag, agent, env):
         action = agent.get_action(state)
         action = noise.get_action(action, env.time[env.i])
         control = action + W0
+        import pdb; pdb.set_trace()
         new_state, reward, done = env.step(control) 
         _, _, w, p, q, r, psi, theta, phi, x, y, z = state
         Z.append(z); W.append(w)
@@ -194,7 +195,7 @@ noise = OUNoise(env.action_space)
 writer_train = SummaryWriter()
 writer_test = SummaryWriter()
 
-load_nets(agent,hidden_sizes)
+#load_nets(agent,hidden_sizes)
 
 
 RZ = [1, 2, 3, 3, 4, 5, 6]
