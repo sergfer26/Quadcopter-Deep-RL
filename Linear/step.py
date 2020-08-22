@@ -19,11 +19,8 @@ c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
 
-<<<<<<< HEAD
 W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
 
-=======
->>>>>>> f6f95599b0c6ec23bc95956d849d8903e5524bfb
 
 def step(W, y, t):
     '''
@@ -76,33 +73,15 @@ def simulador(Y, Ze, T, tam):
 
     regresa; arreglo de la posición final
     '''
-<<<<<<< HEAD
-    writer = SummaryWriter()
-=======
-    z_e, psi_e, phi_e, theta_e = Ze
-    W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
->>>>>>> f6f95599b0c6ec23bc95956d849d8903e5524bfb
     X = np.zeros((tam, 12))
     X[0] = Y
     t = np.linspace(0, T, tam)
     velocidades = [] 
     for i in range(len(t)-1):
-<<<<<<< HEAD
         W = get_control(Y, Ze) + W0
-=======
-        _, _, w, p, q, r, psi, theta, phi, _, _, z = Y
-        W1 = control_feedback(z - z_e, w, F1) * c1  # control z
-        W2 = control_feedback(psi - psi_e, r, F2) * c2  # control yaw
-        W3 = control_feedback(phi - phi_e, p, F3) * c3  # control roll
-        W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
-        W = W0 + W1 + W2 + W3 + W4
-        tem = W1 + W2 + W3 + W4
-        for v in tem:
-            velocidades.append(float(v))
->>>>>>> f6f95599b0c6ec23bc95956d849d8903e5524bfb
         Y = step(W, Y, [t[i], t[i+1]])[1]
         X[i+1] = Y
-    print('vel_min = ',min(velocidades),'vel_max = ',max(velocidades))
+    # print('vel_min = ',min(velocidades),'vel_max = ',max(velocidades))
     return X
 
 
