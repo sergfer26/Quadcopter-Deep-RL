@@ -12,9 +12,10 @@ VEL_MAX = 55 #60 #Velocidad maxima de los motores
 VEL_MIN = -15 #-20
 VELANG_MIN = -10
 VELANG_MAX = 10
-# du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
-LOW_OBS = np.array([-10, -10, -10, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi, 0, 0, 0])
-HIGH_OBS = np.array([10, 10, 10, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi, 22, 22, 22])
+
+# du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+LOW_OBS = np.array([-10, -10, -10,  0, 0, 0, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi])
+HIGH_OBS = np.array([10, 10, 10, 22, 22, 22, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
 XE = 0.0; YE = 0.0; ZE = 15.0
 
@@ -22,7 +23,7 @@ TIME_MAX = 30.00
 STEPS = 800
 
 G = 9.81
-I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
+I = (4.856 * 10 ** -3, 4.856 * 10 ** -3, 8.801 * 10 **-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
@@ -36,6 +37,7 @@ def D(angulos):
         [- sin(y), cos(y) * sin(x), cos(y) * cos(x)]
     ])
     return R
+
 
 def funcion(state):
     angulos = state[9:]
@@ -82,13 +84,17 @@ class QuadcopterEnv(gym.Env):
         self.lam = 1
 
     def get_reward(self,x):
+        vels = x[0:3]
         state = x[3:6]
-        orientacion = x[9:].reshape((3,3))
+        #orientacion = x[9:].reshape((3,3))
         if LOW_OBS[-1] <  self.state[5] < HIGH_OBS[-1]:
             r = 0
-            if norm(orientacion - np.identity(3)) < 0.08:
-                r += 10
-            r += - 50 * norm(orientacion - np.identity(3)) - 6e-1 * norm(state - self.goal[3:6]) #1.2
+            #if norm(orientacion - np.identity(3)) < 0.08:
+            if norm(vels) < 5e-2:
+                if norm(state - self.goal[3:6]) < 1:
+                    r += 10
+            #r += - 50 * norm(orientacion - np.identity(3)) - 6e-1 * norm(state - self.goal[3:6]) #1.2
+            r  += - 8e-1 * norm(vels) - 2e-1 * norm(state - self.goal[3:6])
             return r 
         return -1e5
         
