@@ -4,7 +4,7 @@ from scipy.integrate import odeint
 from numpy import sin
 from numpy import cos
 from numpy import tan
-from .ecuaciones_drone import f, escribe, imagen, imagen2d, I, K, B, M, L, G
+from .ecuaciones_drone import f, escribe, imagen2d, I, K, B, M, L, G
 from numpy import pi
 
 omega_0 = np.sqrt((G * M)/(4 * K))
@@ -51,8 +51,9 @@ def control_feedback(x, y, F):
     A = np.array([x, y]).reshape((2, 1))
     return np.dot(F, A)
 
+
 def get_control(Y, Ze):
-    _, _, w, _, _, z, p, q, _, _, theta, phi = Y
+    _, _, w, _, _, z, p, q, r, psi, theta, phi = Y
     psi_e, phi_e, theta_e, z_e = Ze
     W1 = control_feedback(z - z_e, w, F1) * (c1 ** 2)  # control z
     W2 = control_feedback(psi - psi_e, r, F2) * c2  # control yaw
@@ -86,6 +87,7 @@ def simulador(Y, Ze, T, tam):
 
 
 if __name__ == "__main__":
+    '''
     T = 120
     tam = 3200
     un_grado = np.pi/180.0
@@ -108,3 +110,4 @@ if __name__ == "__main__":
     #imagen(x, y, z)
     #input()
     #imagen2d(z, w, psi, r, phi, p, theta, q, t)
+    '''
