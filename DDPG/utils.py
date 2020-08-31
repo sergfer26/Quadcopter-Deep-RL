@@ -9,7 +9,7 @@ from .env.quadcopter_env_new import QuadcopterEnv
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
-    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=1.0, min_sigma=0.1, decay_period=1e5):
+    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.1, decay_period=1e5):
         self.mu           = mu
         self.theta        = theta
         self.sigma        = max_sigma
