@@ -81,29 +81,45 @@ class QuadcopterEnv(gym.Env):
         self.tam = STEPS
         self.time = np.linspace(0, self.time_max, self.tam)
         self.flag = True
-        self.lam = 1
+        self.d1 = 1
 
-    def get_reward(self,x):
-        vels = x[0:3]
+    '''
+    def get_reward(self, x):
         state = x[3:6]
-        #orientacion = x[9:].reshape((3,3))
-        if LOW_OBS[-1] <  self.state[5] < HIGH_OBS[-1]:
+        orientacion = x[9:].reshape((3,3))
+        if LOW_OBS[5] <  self.state[5] < HIGH_OBS[5]:
             r = 0
-            #if norm(orientacion - np.identity(3)) < 0.08:
-            if norm(vels) < 5e-2:
-                if norm(state - self.goal[3:6]) < 1:
-                    r += 10
-            #r += - 50 * norm(orientacion - np.identity(3)) - 6e-1 * norm(state - self.goal[3:6]) #1.2
-            r  += - 8e-1 * norm(vels) - 2e-1 * norm(state - self.goal[3:6])
-            return r 
-        return -1e5
+            if norm(orientacion - np.identity(3)) < 0.08:
+                r += 10
+
+            if norm(state - self.goal[3:6]) < 1:
+                r += 90
+            #r  += - 8e-1 * norm(vels) - 2e-1 * norm(state - self.goal[3:6])
+            return r - 10 * norm(orientacion - np.identity(3)) - 5e-1 * norm(x[2]) - 1e-1 * norm(state - self.goal[3:6])
+        return - 1e5
+    '''
+
+    def get_reward(self, x):
+        state = x[3:6]
+        orientacion = x[9:].reshape((3,3))
+        if LOW_OBS[5] <  self.state[5] < HIGH_OBS[5]:
+            d2 =  norm(orientacion - np.identity(3))
+            d1 = norm(state - self.goal[3:6]) 
+            if d1 < self.d1:
+                return -(10 * d2) + 100 
+            else:
+                return -(10 * d2 + d1)
+        elif self.flag:
+            return - 1e-5
+        else:
+            return - 100
         
     def is_done(self):
         #Si se te acabo el tiempo
         if self.i == self.tam-2:
             return True
         elif self.flag:
-            if LOW_OBS[-1] < self.state[5] < HIGH_OBS[-1]: #all(aux):
+            if LOW_OBS[5] < self.state[5] < HIGH_OBS[5]: #all(aux):
                 return False
             else:
                 return True
@@ -123,7 +139,8 @@ class QuadcopterEnv(gym.Env):
 
     def reset(self):
         self.i = 0
-        self.state = np.array([max(0, g + unif(-e, e)) for e, g in zip(self.p, self.goal)])
+        self.state = np.array([g + unif(-e, e) for e, g in zip(self.p, self.goal)])
+        # self.state[5] = max(0, self.state[5])
         return self.state
         
     def render(self, mode='human', close=False):
