@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
 from scipy.integrate import odeint
-import plotly.graph_objects as go
+# import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from numpy import sin
 from numpy import cos
@@ -43,12 +43,12 @@ def escribe(X, Y, Z, phi, theta, psi):
     posicion.close()
     angulos.close()
 
-
+'''
 def imagen(X, Y, Z):
     fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
-
+'''
 
 def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     f, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
