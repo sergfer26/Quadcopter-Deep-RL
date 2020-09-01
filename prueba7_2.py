@@ -13,7 +13,7 @@ from DDPG.ddpg import DDPGagent
 from time import time
 from numpy.linalg import norm
 from tqdm import tqdm
-from DDPG.load_save import load_nets, save_nets
+from DDPG.load_save import load_nets, save_nets, remove_nets, save_buffer, remove_buffer
 from tools.tools import imagen2d, reset_time, get_score, imagen_action
 from tools.my_time import my_date
 from numpy import pi, cos, sin
@@ -95,14 +95,18 @@ def train(agent, env, noise, episodes, k=0):
     axs[1].plot(E, S1, label='$p_'+str(k)+'$', c='m')
     axs[2].plot(E, S2, label='$p_'+str(k)+'$', c='y')
 
-    axs[0].set_xlabel("Episodios"); axs[1].set_xlabel("Episodios"); axs[2].set_xlabel("Episodios")
-    axs[0].set_ylabel("Reward promedio"); axs[1].set_ylabel("# objetivos promedio"); axs[2].set_ylabel("# de veces entre (0, 22)")
+    axs[0].set_xlabel("Episodios", fontsize=21); 
+    axs[1].set_xlabel("Episodios", fontsize=21) 
+    axs[2].set_xlabel("Episodios", fontsize=21)
+    axs[0].set_ylabel("Reward promedio", fontsize=21); 
+    axs[1].set_ylabel("# objetivos promedio", fontsize=21) 
+    axs[2].set_ylabel("# de veces entre (0, 22)", fontsize=21)
     axs[0].legend(loc=1)
     axs[1].legend(loc=1)
     axs[2].legend(loc=1)
 
-    fig.set_size_inches(36.,24.)
-    plt.savefig('results/'+day+'/score_reward_p'+str(k)+'.png', dpi=200)
+    fig.set_size_inches(33.,21.)
+    plt.savefig('results/'+day+'/score_reward_p'+str(k)+'.png', dpi=300)
 
 
 def nsim(flag, n, show=True, k=0):
@@ -137,33 +141,34 @@ def nsim(flag, n, show=True, k=0):
         T = t[0:len(Z)]
         cero = np.zeros(len(Z))
         w1.plot(T, Z, c='b',alpha = alpha)
-        w1.set_ylabel('z')
+        w1.set_ylabel('z', fontsize=21)
         w2.plot(T, W, c='b',alpha = alpha)
-        w2.set_ylabel('dz') 
+        w2.set_ylabel('dz', fontsize=21) 
         r1.plot(T, Psi, c='r',alpha = alpha)
-        r1.set_ylabel('$\psi$')
+        r1.set_ylabel('$\psi$', fontsize=21)
         r2.plot(T, R, c='r',alpha = alpha)
-        r2.set_ylabel('d$\psi$')
+        r2.set_ylabel('d$\psi$', fontsize=21)
         p1.plot(T, Phi, c='g',alpha = alpha)
-        p1.set_ylabel('$\phi$')
+        p1.set_ylabel('$\phi$', fontsize=21)
         p2.plot(T, P, c='g',alpha = alpha)
-        p2.set_ylabel(' d$\phi$',alpha = alpha)
+        p2.set_ylabel(' d$\phi$', fontsize=21)
         q1.plot(T, Theta,c = 'k',alpha = alpha)
-        q1.set_ylabel('$ \\theta$')
+        q1.set_ylabel('$ \\theta$', fontsize=21)
         q2.plot(T, Q,c = 'k' ,alpha = alpha)
-        q2.set_ylabel(' d$ \\theta$')
+        q2.set_ylabel(' d$ \\theta$', fontsize=21)
     w1.plot(T, cero + 15, '--', c='k', alpha=0.5)
     w2.plot(T, cero, '--', c='k', alpha=0.5)
     r2.plot(T, cero, '--', c='k', alpha=0.5)
     p2.plot(T, cero, '--', c='k', alpha=0.5)
     q2.plot(T, cero, '--', c='k', alpha=0.5)
 
-    fig.suptitle("Vuelos terminados p="+str(total/n), fontsize=16)
+    fig.suptitle("Vuelos terminados p="+str(total/n), fontsize=24)
     if show:
         plt.show()
     else:
-        fig.set_size_inches(36.,24.)
-        plt.savefig('results/'+day+'/nsim_p'+str(k)+'.png',dpi=200)
+        fig.set_size_inches(33.,21.)
+        plt.savefig('results/'+day+'/nsim_p'+str(k)+'.png', dpi=300)
+    return total/n 
         
     
 if len(sys.argv) == 1:
@@ -186,39 +191,52 @@ p1 = np.zeros(12); p1[-1] = 1 * un_grado
 p2 = np.zeros(12); p2[-2] = 1 * un_grado
 p3 = np.zeros(12); p3[5] = 2
 p4 = np.zeros(12); p4[-1] = 2 * un_grado
-p5 = np.zeros(12); p5[-5] = 2 * un_grado
+p5 = np.zeros(12); p5[-2] = 2 * un_grado
 p6 = np.zeros(12); p6[5] = 3; p6[4] = 1; p6[3] = 1
 p7 = np.zeros(12); p7[-1] = 3 * un_grado
 p8 = np.zeros(12); p8[-1] = 3 * un_grado
 p9 = np.zeros(12); p9[5] = 4; p9[4] = 2; p9[3] = 2
-p10 = np.zeros(12); p10[-1] = 4 * un_grado
-p11 = np.zeros(12); p11[-1] = 4 * un_grado
-p12 = np.zeros(12); p12[5] = 4; p12[4] = 2; p12[3] = 2; p12[-1] = 4 * un_grado; p12[-1] = 4 * un_grado
+p10 = np.zeros(12); p10[-1] = 3.5 * un_grado
+p11 = np.zeros(12); p11[-1] = 3.5 * un_grado
+p12 = np.zeros(12); p12[5] = 2; p12[4] = 2; p12[3] = 2; p12[-1] = 2 * un_grado; p12[-1] = 2 * un_grado
 
 P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]
 E = [500, 500, 500, 750, 750, 750, 1000, 1000, 1000, 1250, 1250, 1250, 1500]
 
 i = 0
-n = 1
+n = 20 # simulaciones
+old_frec = 0
+subpath1 = day + "/best"
+subpath2 = day +  "/recent"
 for p, e in zip(P, E):
     env.p = p
     env.flag = False
     train(agent, env, noise, int(e), k=i)
     reset_time(env, 96000, 3600)
-    nsim(True, n, show=False, k=i)
+    frec = nsim(True, n, show=False, k=i)
+    frec += 0.1
+    if frec > old_frec:
+        remove_nets(subpath1); remove_buffer(subpath1)
+        buffer = agent.memory.buffer
+        save_nets(agent, hidden_sizes, subpath1); save_buffer(buffer, subpath1)
+    if frec >= 0.1:
+        remove_nets(subpath2); remove_buffer(subpath2)
+        buffer = agent.memory.buffer
+        save_nets(agent, hidden_sizes, subpath2); save_buffer(buffer, subpath2)
+
     reset_time(env, 800, 30)
     agent.memory.remove()
     i += 1
 
 
-p13 = np.array([0, 0, 0, 3, 3, 5, 0, 0, 0, 0, 5 * un_grado, 5 * un_grado])
+p13 = np.array([0, 0, 0, 2, 2, 4, 0, 0, 0, 0, 4 * un_grado, 4 * un_grado])
 env.p = p13
 reset_time(env, 96000, 3600)
-nsim(True, 5, show=False, k=i)
+nsim(True, 20, show=False, k=i)
 
 p14 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 5 * un_grado, 5 * un_grado, 5 * un_grado])
 env.p = p14
-nsim(True, 5, show=False, k=i+1)
+nsim(True, 20, show=False, k=i+1)
 
 P.append(p13)
 P.append(p14)
