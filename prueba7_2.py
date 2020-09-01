@@ -214,12 +214,12 @@ for p, e in zip(P, E):
     train(agent, env, noise, int(e), k=i)
     reset_time(env, 96000, 3600)
     frec = nsim(True, n, show=False, k=i)
-    frec += 0.1
-    if frec > old_frec:
+    if frec > old_frec: # salvo la mejor red global
         remove_nets(subpath1); remove_buffer(subpath1)
         buffer = agent.memory.buffer
         save_nets(agent, hidden_sizes, subpath1); save_buffer(buffer, subpath1)
-    if frec >= 0.1:
+        old_frec = frec
+    if frec >= 0.5: # salvo la red del paso anteror si termina la mitad de los vuelos
         remove_nets(subpath2); remove_buffer(subpath2)
         buffer = agent.memory.buffer
         save_nets(agent, hidden_sizes, subpath2); save_buffer(buffer, subpath2)
@@ -232,11 +232,11 @@ for p, e in zip(P, E):
 p13 = np.array([0, 0, 0, 2, 2, 4, 0, 0, 0, 0, 4 * un_grado, 4 * un_grado])
 env.p = p13
 reset_time(env, 96000, 3600)
-nsim(True, 20, show=False, k=i)
+nsim(True, n, show=False, k=i)
 
 p14 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 5 * un_grado, 5 * un_grado, 5 * un_grado])
 env.p = p14
-nsim(True, 20, show=False, k=i+1)
+nsim(True, n, show=False, k=i+1)
 
 P.append(p13)
 P.append(p14)
