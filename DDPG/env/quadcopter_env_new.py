@@ -83,21 +83,6 @@ class QuadcopterEnv(gym.Env):
         self.flag = True
         self.d1 = 1
 
-    '''
-    def get_reward(self, x):
-        state = x[3:6]
-        orientacion = x[9:].reshape((3,3))
-        if LOW_OBS[5] <  self.state[5] < HIGH_OBS[5]:
-            r = 0
-            if norm(orientacion - np.identity(3)) < 0.08:
-                r += 10
-
-            if norm(state - self.goal[3:6]) < 1:
-                r += 90
-            #r  += - 8e-1 * norm(vels) - 2e-1 * norm(state - self.goal[3:6])
-            return r - 10 * norm(orientacion - np.identity(3)) - 5e-1 * norm(x[2]) - 1e-1 * norm(state - self.goal[3:6])
-        return - 1e5
-    '''
 
     def get_reward(self, x):
         state = x[3:6]
@@ -106,7 +91,7 @@ class QuadcopterEnv(gym.Env):
             d2 =  norm(orientacion - np.identity(3))
             d1 = norm(state - self.goal[3:6]) 
             if d1 < self.d1:
-                return -(10 * d2) + 100 
+                return -(10 * d2) + 10
             else:
                 return -(10 * d2 + d1)
         elif self.flag:
