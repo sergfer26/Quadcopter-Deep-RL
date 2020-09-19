@@ -5,8 +5,8 @@ import sys
 import matplotlib.pyplot as plt
 import torch
 from datetime import datetime as dt
-from DDPG.env.quadcopter_env_new import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
-from Linear.step import get_control, control_feedback
+from DDPG.env.quadcopter_env import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
+from Linear.step import control_feedback
 from time import time 
 from DDPG.utils import NormalizedEnv, OUNoise
 from DDPG.ddpg import DDPGagent
@@ -187,21 +187,20 @@ un_grado = np.pi/180
 
 
 p0 = np.zeros(12)
-p1 = np.zeros(12); p1[-1] = 1 * un_grado
-p2 = np.zeros(12); p2[-2] = 1 * un_grado
-p3 = np.zeros(12); p3[5] = 2
-p4 = np.zeros(12); p4[-1] = 2 * un_grado
-p5 = np.zeros(12); p5[-2] = 2 * un_grado
-p6 = np.zeros(12); p6[5] = 3; p6[4] = 1; p6[3] = 1
-p7 = np.zeros(12); p7[-1] = 3 * un_grado
-p8 = np.zeros(12); p8[-1] = 3 * un_grado
-p9 = np.zeros(12); p9[5] = 4; p9[4] = 2; p9[3] = 2
-p10 = np.zeros(12); p10[-1] = 3.5 * un_grado
-p11 = np.zeros(12); p11[-1] = 3.5 * un_grado
-p12 = np.zeros(12); p12[5] = 2; p12[4] = 2; p12[3] = 2; p12[-1] = 2 * un_grado; p12[-1] = 2 * un_grado
+p1 = np.array([0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0.5 * un_grado, 0.5 * un_grado, 0.5 * un_grado])
+p2 = np.array([0, 0, 0, 1, 1, 1, 0, 0, 0, 1 * un_grado, 1 * un_grado, 1 * un_grado])
+p3 = np.array([0, 0, 0, 1.5, 1.5, 1.5, 0, 0, 0, 1.5 * un_grado, 1.5 * un_grado, 1.5 * un_grado])
+p4 = np.array([0, 0, 0, 2, 2, 2, 0, 0, 0, 2 * un_grado, 2 * un_grado, 2 * un_grado])
+p5 = np.array([0, 0, 0, 2.5, 2.5, 2.5, 0, 0, 0, 2.5 * un_grado, 2.5 * un_grado, 2.5 * un_grado])
+p6 = np.array([0, 0, 0, 3, 3, 3, 0, 0, 0, 3 * un_grado, 3 * un_grado, 3 * un_grado])
+p7 = np.array([0, 0, 0, 3.5, 3.5, 3.5, 0, 0, 0, 3.5 * un_grado, 3.5 * un_grado, 3.5 * un_grado])
+p8 = np.array([0, 0, 0, 4, 4, 4, 0, 0, 0, 4 * un_grado, 4 * un_grado, 4 * un_grado])
+p9 = np.array([0, 0, 0, 4.5, 4.5, 4.5, 0, 0, 0, 4.5 * un_grado, 4.5 * un_grado, 4.5 * un_grado])
+p10 = np.array([0, 0, 0, 5, 5, 5, 0, 0, 0, 5 * un_grado, 5 * un_grado, 5 * un_grado])
 
-P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12]
-E = [500, 500, 500, 750, 750, 750, 1000, 1000, 1000, 1250, 1250, 1250, 1500]
+
+P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
+E = [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200]
 
 i = 0
 n = 20 # simulaciones
@@ -229,18 +228,17 @@ for p, e in zip(P, E):
     i += 1
 
 
-p13 = np.array([0, 0, 0, 2, 2, 4, 0, 0, 0, 0, 4 * un_grado, 4 * un_grado])
+p13 = np.array([0, 0, 0, 5, 5, 5, 0, 0, 0, 0, 5 * un_grado, 5 * un_grado])
 env.p = p13
 reset_time(env, 96000, 3600)
 nsim(True, n, show=False, k=i)
 
-p14 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 5 * un_grado, 5 * un_grado, 5 * un_grado])
+p14 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 7 * un_grado, 7 * un_grado, 7 * un_grado])
 env.p = p14
 nsim(True, n, show=False, k=i+1)
 
 P.append(p13)
 P.append(p14)
-save_nets(agent, hidden_sizes, day)
 
 
 data = pd.DataFrame(columns=('u', 'v', 'w', 'p','q','r','psi','theta','phi','x','y','z','score','tiempo','reward','porcentaje'))
