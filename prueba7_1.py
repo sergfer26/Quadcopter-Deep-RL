@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 import torch
-from DDPG.env.quadcopter_env_new import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
+from DDPG.env.quadcopter_env import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
 from Linear.step import get_control, control_feedback
 from time import time 
 from DDPG.utils import NormalizedEnv, OUNoise
