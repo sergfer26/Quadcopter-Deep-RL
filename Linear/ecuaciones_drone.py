@@ -13,6 +13,9 @@ I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219  # kt
 
+sec = lambda x: 1/cos(x)
+
+
 
 def f(y, t, w1, w2, w3, w4):
     #El primer parametro es un vector
@@ -35,6 +38,35 @@ def f(y, t, w1, w2, w3, w4):
     return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
 
+def jac_f(y, t, w1, w2, w3, w4):
+    Ixx, Iyy, Izz = I
+    a1 = (Izz - Iyy)/Ixx
+    a2 = (Ixx - Izz)/Iyy
+    u, v, w, _, _, _, p, q, r, _, theta, phi = y
+
+    ddu = np.zeros(12); ddu[1:3] = [r, -q]
+    ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G * sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
+    ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G * sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
+    ddx = np.zeros(12); ddx[0] = 1
+    ddy = np.zeros(12); ddx[1] = 1
+    ddz = np.zeros(12); ddx[2] = 1
+    ddp = np.zeros(12); ddp[7] = -r * a1; ddp[8] = -q * a1
+    ddq = np.zeros(12); ddq[6] = -r * a2; ddq[8] = -p * a2
+    ddr = np.zeros(12)
+
+    ddpsi = np.zeros(12); ddpsi[7:9] = [sin(phi), cos(phi) * sec(theta)]
+    ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta), (q * cos(phi) - r * sin(phi)) * sec(theta)]
+    
+    ddtheta = np.zeros(12); ddtheta[7:9] = [cos(phi), -sin(phi)]
+    ddtheta[-1] =  -q * sin(phi) -r * cos(phi)
+
+    ddphi = np.zeros(12); ddphi[6:9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
+    ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) ** 2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
+
+    J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp, ddq, ddr, ddpsi, ddtheta, ddphi])
+    return J
+
+
 def escribe(X, Y, Z, phi, theta, psi):
     posicion = open('XYZ.txt','w')
     angulos = open('ang.txt','w')
@@ -43,12 +75,12 @@ def escribe(X, Y, Z, phi, theta, psi):
     posicion.close()
     angulos.close()
 
-'''
+
 def imagen(X, Y, Z):
     fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
-'''
+    
 
 def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     f, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
