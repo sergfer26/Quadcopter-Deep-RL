@@ -3,7 +3,7 @@ import gym
 import random
 from numpy import floor
 from collections import deque
-from .env.quadcopter_env_new import QuadcopterEnv
+from .env.quadcopter_env import QuadcopterEnv
 
 
 # Ornstein-Ulhenbeck Process
