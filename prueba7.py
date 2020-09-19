@@ -3,8 +3,8 @@ import sys
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from DDPG.env.quadcopter_env_new import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
-from Linear.step import get_control, control_feedback
+from DDPG.env.quadcopter_env import QuadcopterEnv, G, M, K, omega_0, STEPS, ZE, funcion
+from Linear.step import control_feedback
 from time import time 
 from DDPG.utils import NormalizedEnv, OUNoise
 from DDPG.ddpg import DDPGagent
@@ -37,7 +37,7 @@ def training_loop(agent, env, noise, pbar):
         #control = W0.T[0] + env.lam * action + (1 - env.lam) * W.T[0]
         control = action + W0
         new_state, reward, done = env.step(control)
-        score += get_score(new_state, env)
+        #score += get_score(new_state, env)
         episode_reward += reward
         agent.memory.push(state, action, reward, new_state, done)
         if len(agent.memory) > BATCH_SIZE:
@@ -52,7 +52,7 @@ def training_loop(agent, env, noise, pbar):
             break
         state = new_state
         s += 1
-    return score/s, episode_reward/s
+    return episode_reward/s
 
 
 def train(agent, env, noise, episodes): #, axs=None):
@@ -198,10 +198,10 @@ env.lam = 1
 
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
-fig, axs = plt.subplots((2, 1), sharex=True, figsize=(100, 50))
+#fig, axs = plt.subplots((2, 1), sharex=True, figsize=(100, 50))
 
 # lambdas = [.05, .1, .4, .7, .8, .85, .9, .95, .97, .98, .99, 1]
-E = 500 * np.ones(7)
+E = 1 * np.ones(7)
 
 p0 = np.zeros(12)
 p1 = np.zeros(12); p1[-1] = 1 * un_grado
@@ -227,13 +227,13 @@ reset_time(env, 96000, 3600)
 Sim(True, agent, env)
 reset_time(env, 800, 30)
 
-
+'''
 axs[0].set_xlabel("Episodios"); axs[1].set_xlabel("Episodios")
 axs[0].set_ylabel("Reward promedio"); axs[1].set_ylabel("# objetivos promedio")
 axs[0].legend(loc=1)
 axs[1].legend(loc=1)
 plt.show()
-
+'''
 
 
 
