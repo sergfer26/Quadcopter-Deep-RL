@@ -6,16 +6,16 @@ from torch import save, load
 from datetime import datetime as dt
 
 
-def paths(hidden_sizes):
+def paths(hidden_sizes, subpath):
     hs = hidden_sizes
     name = ''
     for s in hs:
         name += '_'+str(s)
-    return "saved_models/actor_"+name+".pth","DDPG/saved_models/critic_"+name+".pth"
+    return "saved_models/"+ subpath +"/actor"+ name +".pth", "saved_models/"+ subpath +"/critic"+ name +".pth"
     
 
-def load_nets(agent, hidden_sizes):
-    path1,path2 = paths(hidden_sizes)
+def load_nets(agent, hidden_sizes, subpath):
+    path1, path2 = paths(hidden_sizes, subpath)
     agent.actor.load_state_dict(load(path1))
     agent.critic.load_state_dict(load(path2))
 
@@ -27,8 +27,8 @@ def save_nets(agent, hidden_sizes, subpath):
     for s in hs:
         name += '_'+str(s)
 
-    save(agent.actor.state_dict(), "saved_models/"+ subpath +"/actor"+name+".pth")
-    save(agent.critic.state_dict(), "saved_models/"+ subpath +"/critic"+name+".pth")
+    save(agent.actor.state_dict(), "saved_models/"+ subpath +"/actor"+ name +".pth")
+    save(agent.critic.state_dict(), "saved_models/"+ subpath +"/critic"+ name +".pth")
 
 
 def remove_nets(subpath):
