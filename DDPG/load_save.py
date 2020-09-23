@@ -23,12 +23,16 @@ def load_nets(agent, hidden_sizes, subpath):
 def save_nets(agent, hidden_sizes, subpath):
     pathlib.Path('saved_models/'+ subpath).mkdir(parents=True, exist_ok=True) 
     hs = hidden_sizes
-    name = ''
+    sizes = ''
     for s in hs:
-        name += '_'+str(s)
+        sizes += '_'+str(s)
 
-    save(agent.actor.state_dict(), "saved_models/"+ subpath +"/actor"+ name +".pth")
-    save(agent.critic.state_dict(), "saved_models/"+ subpath +"/critic"+ name +".pth")
+    save_net(agent.actor, "saved_models/"+ subpath, "actor"+ sizes)
+    save_net(agent.critic, "saved_models/"+ subpath, "critic"+ sizes)
+
+
+def save_net(net, path, name):
+    save(net.state_dict(), path+'/'+ name +'.pth')
 
 
 def remove_nets(subpath):
