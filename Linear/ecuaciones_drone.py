@@ -82,8 +82,8 @@ def imagen(X, Y, Z):
     fig.show()
     
 
-def imagen2d(z, w, psi, r, phi, p, theta, q, t):
-    f, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
+def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True, dir_=None):
+    fig, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
     cero = np.zeros(len(z))
 
     w1.plot(t, z, c='b')
@@ -112,8 +112,12 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t):
     r2.plot(t, cero, '--', c='k', alpha=0.5)
     p2.plot(t, cero, '--', c='k', alpha=0.5)
     q2.plot(t, cero, '--', c='k', alpha=0.5)
+    if show:
+        plt.show()
+    else:
+        fig.set_size_inches(33.,21.)
+        plt.savefig(dir_+'/sim.png')
 
-    plt.show()
 
 
 def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):

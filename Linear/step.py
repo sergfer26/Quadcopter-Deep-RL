@@ -22,7 +22,7 @@ c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
 
 
-def imagen_accion(A,t):
+def imagen_accion(A, t, show=True, dir_=None):
     A = np.array(A)
     t = t[0:len(A)]
     fig, ax = plt.subplots(4, 1)
@@ -34,7 +34,10 @@ def imagen_accion(A,t):
     ax[2].set_ylabel('$a_3$')
     ax[3].plot(t, A[:,3])
     ax[3].set_ylabel('$a_4$')
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.savefig(dir_+'/actions.png')
     
 
 def step(W, y, t, jac=None):
