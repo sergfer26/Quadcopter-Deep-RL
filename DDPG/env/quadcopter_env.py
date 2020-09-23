@@ -1,0 +1,179 @@
+import numpy as np
+import gym
+from gym import spaces
+from numpy import pi, tanh, sin, cos, tan
+from numpy.linalg import norm
+from numpy.random import uniform as unif
+from scipy.integrate import odeint
+
+
+# constantes del ambiente
+VEL_MAX = 55 #60 #Velocidad maxima de los motores
+VEL_MIN = -15 #-20
+VELANG_MIN = -10
+VELANG_MAX = 10
+
+# du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+LOW_OBS = np.array([-10, -10, -10,  0, 0, 0, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi])
+HIGH_OBS = np.array([10, 10, 10, 22, 22, 22, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
+PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
+XE = 0.0; YE = 0.0; ZE = 15.0
+
+TIME_MAX = 30.00
+STEPS = 800
+
+# perturbar constantes 10 %
+G = 9.81
+I = (4.856 * 10 ** -3, 4.856 * 10 ** -3, 8.801 * 10 **-3) # perturbar momentos
+B, M, L = 1.140*10**(-6), 1.433, 0.225 
+K = 0.001219  # kt
+omega_0 = np.sqrt((G * M)/(4 * K))
+
+sec = lambda x: 1/cos(x)
+
+
+def D(angulos):
+    '''
+        Obtine la matriz de rotación
+    '''
+    z, y, x = angulos # psi, theta, phi
+    R = np.array([
+        [cos(z) * cos(y), cos(z) * sin(y) * sin(x) - sin(z) * cos(x), 
+        cos(z) * sin(y) * cos(x) + sin(z) * sin(x)],
+        [sin(z) * cos(y), sin(z) * cos(y) * sin(x) + cos(z) * cos(x), 
+        sin(z) * sin(y) * cos(x) - cos(z) * sin(x)], 
+        [- sin(y), cos(y) * sin(x), cos(y) * cos(x)]
+    ])
+    return R
+
+
+def funcion(state):
+    '''
+        Obtiene un estado de 18 posiciones
+    '''
+    angulos = state[9:]
+    state = state[0:9]
+    orientacion = np.matrix.flatten(D(angulos))
+    return np.concatenate([state, orientacion])
+
+
+def jac_f(y, w1, w2, w3, w4):
+    Ixx, Iyy, Izz = I
+    a1 = (Izz - Iyy)/Ixx
+    a2 = (Ixx - Izz)/Iyy
+    u, v, w, _, _, _, p, q, r, _, theta, phi = y
+
+    ddu = np.zeros(12); ddu[1:3] = [r, -q]
+    ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G * sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
+    ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G * sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
+    ddx = np.zeros(12); ddx[0] = 1
+    ddy = np.zeros(12); ddx[1] = 1
+    ddz = np.zeros(12); ddx[2] = 1
+    ddp = np.zeros(12); ddp[7] = -r * a1; ddp[8] = -q * a1
+    ddq = np.zeros(12); ddq[6] = -r * a2; ddq[8] = -p * a2
+    ddr = np.zeros(12)
+
+    ddpsi = np.zeros(12); ddpsi[7:9] = [sin(phi), cos(phi) * sec(theta)]
+    ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta), (q * cos(phi) - r * sin(phi)) * sec(theta)]
+    
+    ddtheta = np.zeros(12); ddtheta[7:9] = [cos(phi), -sin(phi)]
+    ddtheta[-1] =  -q * sin(phi) -r * cos(phi)
+
+    ddphi = np.zeros(12); ddphi[6:9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
+    ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) ** 2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
+
+    J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp, ddq, ddr, ddpsi, ddtheta, ddphi])
+    return J
+
+
+# ## Sistema dinámico
+def f(y, t, w1, w2, w3, w4):
+    #El primer parametro es un vector
+    #W,I tambien
+    u, v, w, _, y, _, p, q, r, _, theta, phi = y
+    Ixx, Iyy, Izz = I
+    W = np.array([w1, w2, w3, w4])
+    du = r * v - q * w - G * sin(theta)
+    dv = p * w - r * u - G * cos(theta) * sin(phi)
+    dw = q * u - p * v + G * cos(phi) * cos(theta) - (K/M) * norm(W) ** 2
+    dp = ((L * B) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
+    dq = ((L * B) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
+    dr = (B/Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
+    dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
+    dtheta = q * cos(phi) - r * sin(phi)
+    dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
+    dx = u; dy = v; dz = w
+    # return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
+    return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+
+
+"""Quadcopter Environment that follows gym interface"""
+class QuadcopterEnv(gym.Env):
+    metadata = {'render.modes': ['human']}
+    def __init__(self):
+        self.action_space = spaces.Box(low = VEL_MIN * np.ones(4), high = VEL_MAX * np.ones(4))
+        self.observation_space = spaces.Box(low = LOW_OBS, high = HIGH_OBS)
+        self.i = 0
+        self.p = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
+        self.state = self.reset()
+        self.time_max = TIME_MAX
+        self.tam = STEPS
+        self.time = np.linspace(0, self.time_max, self.tam)
+        self.flag = True
+        self.d1 = 0.50
+
+    def is_contained(self):
+        x = self.state[3:6]
+        high = self.observation_space.high[3:6]
+        low = self.observation_space.low[3:6]
+        aux = np.logical_and(low <= x, x <= high)
+        return aux.all()
+
+    def get_reward(self, x):
+        state = x[3:6]
+        orientacion = x[9:].reshape((3,3))
+        if self.is_contained():
+            d2 =  norm(orientacion - np.identity(3))
+            d1 = norm(state - self.goal[3:6]) 
+            if d1 < self.d1:
+                return 1 -(10 * d2)
+            else:
+                return -(10 * d2 + d1)
+        elif self.flag:
+            return - 1e5
+        else:
+            return - 100
+        
+    def is_done(self):
+        #Si se te acabo el tiempo
+        if self.i == self.tam-2:
+            return True
+        elif self.flag:
+            if self.is_contained(): 
+                return False
+            else:
+                return True
+        else: 
+            return False
+
+    def step(self, action):
+        w1, w2, w3, w4 = action
+        t = [self.time[self.i], self.time[self.i+1]]
+        delta_y = odeint(f, self.state, t, args=(w1, w2, w3, w4) ,Dfun=jac_f)[1]
+        self.state = delta_y # estado interno del ambiente
+        transformacion = funcion(delta_y) # estado del agente
+        reward = self.get_reward(transformacion)
+        done = self.is_done()
+        self.i += 1
+        return transformacion, reward, done
+
+    def reset(self):
+        self.i = 0
+        self.state = np.array([g + unif(-e, e) for e, g in zip(self.p, self.goal)])
+        # self.state[5] = max(0, self.state[5])
+        return self.state
+        
+    def render(self, mode='human', close=False):
+        pass
+
