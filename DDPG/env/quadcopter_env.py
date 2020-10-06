@@ -7,12 +7,6 @@ from numpy.random import uniform as unif
 from scipy.integrate import odeint
 
 
-# du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([-10, -10, -10,  0, 0, 0, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi])
-HIGH_OBS = np.array([10, 10, 10, 30, 30, 30, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
-PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
-XE = 15.0; YE = 15.0; ZE = 15.0
-
 TIME_MAX = 30.00
 STEPS = 800
 
@@ -28,6 +22,12 @@ VEL_MAX = 150 #60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0
 VELANG_MIN = -10
 VELANG_MAX = 10
+
+# du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+LOW_OBS = np.array([-10, -10, -10,  0, 0, 0, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi])
+HIGH_OBS = np.array([10, 10, 10, 30, 30, 30, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
+PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
+XE = 15.0; YE = 15.0; ZE = 15.0
 
 
 sec = lambda x: 1/cos(x)
@@ -149,7 +149,7 @@ class QuadcopterEnv(gym.Env):
         if self.i == self.tam-2:
             return True
         elif self.flag:
-            if self.is_contained(): 
+            if self.is_contained(self.state[3:6]): 
                 return False
             else:
                 return True
