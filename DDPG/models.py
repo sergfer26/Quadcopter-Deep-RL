@@ -42,7 +42,7 @@ class Actor(nn.Module):
         # import pdb; pdb.set_trace()
         for layer in self.hidden:
             x = F.relu(layer(x))
-        x = self.out(x)
+        x = torch.tanh(self.out(x))
         return x
 
 
