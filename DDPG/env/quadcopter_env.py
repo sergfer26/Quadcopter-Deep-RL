@@ -7,17 +7,11 @@ from numpy.random import uniform as unif
 from scipy.integrate import odeint
 
 
-# constantes del ambiente
-VEL_MAX = 55 #60 #Velocidad maxima de los motores
-VEL_MIN = -15 #-20
-VELANG_MIN = -10
-VELANG_MAX = 10
-
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 LOW_OBS = np.array([-10, -10, -10,  0, 0, 0, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi, -pi, -pi])
-HIGH_OBS = np.array([10, 10, 10, 22, 22, 22, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
+HIGH_OBS = np.array([10, 10, 10, 30, 30, 30, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi, pi, pi])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
-XE = 0.0; YE = 0.0; ZE = 15.0
+XE = 15.0; YE = 15.0; ZE = 15.0
 
 TIME_MAX = 30.00
 STEPS = 800
@@ -28,6 +22,13 @@ I = (4.856 * 10 ** -3, 4.856 * 10 ** -3, 8.801 * 10 **-3) # perturbar momentos
 B, M, L = 1.140*10**(-6), 1.433, 0.225 
 K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
+
+# constantes del ambiente
+VEL_MAX = 150 #60 #Velocidad maxima de los motores 150
+VEL_MIN = - omega_0
+VELANG_MIN = -10
+VELANG_MAX = 10
+
 
 sec = lambda x: 1/cos(x)
 
@@ -57,11 +58,11 @@ def funcion(state):
     return np.concatenate([state, orientacion])
 
 
-def jac_f(y, w1, w2, w3, w4):
+def jac_f(X, t, w1, w2, w3, w4):
     Ixx, Iyy, Izz = I
     a1 = (Izz - Iyy)/Ixx
     a2 = (Ixx - Izz)/Iyy
-    u, v, w, _, _, _, p, q, r, _, theta, phi = y
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
 
     ddu = np.zeros(12); ddu[1:3] = [r, -q]
     ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G * sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
@@ -87,10 +88,10 @@ def jac_f(y, w1, w2, w3, w4):
 
 
 # ## Sistema dinámico
-def f(y, t, w1, w2, w3, w4):
+def f(X, t, w1, w2, w3, w4):
     #El primer parametro es un vector
     #W,I tambien
-    u, v, w, _, y, _, p, q, r, _, theta, phi = y
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
     du = r * v - q * w - G * sin(theta)
@@ -117,29 +118,27 @@ class QuadcopterEnv(gym.Env):
         self.p = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
         self.state = self.reset()
-        self.time_max = TIME_MAX
-        self.tam = STEPS
-        self.time = np.linspace(0, self.time_max, self.tam)
+        self.reset_time(STEPS, TIME_MAX)
         self.flag = True
         self.d1 = 0.50
 
-    def is_contained(self):
-        x = self.state[3:6]
+    def is_contained(self, x):
+        # x = state[3:6]
         high = self.observation_space.high[3:6]
         low = self.observation_space.low[3:6]
         aux = np.logical_and(low <= x, x <= high)
         return aux.all()
 
-    def get_reward(self, x):
-        state = x[3:6]
-        orientacion = x[9:].reshape((3,3))
-        if self.is_contained():
+    def get_reward(self, state):
+        x = state[3:6]
+        orientacion = state[9:].reshape((3,3))
+        if self.is_contained(x):
             d2 =  norm(orientacion - np.identity(3))
-            d1 = norm(state - self.goal[3:6]) 
+            d1 = norm(x - self.goal[3:6]) 
             if d1 < self.d1:
-                return 1 -(10 * d2)
+                return 0.1 -(10 * d2)
             else:
-                return -(10 * d2 + d1)
+                return 0.1 -(10 * d2 + d1 - self.d1)
         elif self.flag:
             return - 1e5
         else:
@@ -160,7 +159,7 @@ class QuadcopterEnv(gym.Env):
     def step(self, action):
         w1, w2, w3, w4 = action
         t = [self.time[self.i], self.time[self.i+1]]
-        delta_y = odeint(f, self.state, t, args=(w1, w2, w3, w4) ,Dfun=jac_f)[1]
+        delta_y = odeint(f, self.state, t, args=(w1, w2, w3, w4))[1]
         self.state = delta_y # estado interno del ambiente
         transformacion = funcion(delta_y) # estado del agente
         reward = self.get_reward(transformacion)
@@ -173,6 +172,11 @@ class QuadcopterEnv(gym.Env):
         self.state = np.array([g + unif(-e, e) for e, g in zip(self.p, self.goal)])
         # self.state[5] = max(0, self.state[5])
         return self.state
+
+    def reset_time(self, steps, time_max):
+        self.time_max = time_max
+        self.tam = steps
+        self.time = np.linspace(0, self.time_max, self.tam)
         
     def render(self, mode='human', close=False):
         pass
