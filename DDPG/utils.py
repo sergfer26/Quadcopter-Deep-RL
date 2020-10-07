@@ -9,7 +9,7 @@ from .env.quadcopter_env import QuadcopterEnv
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
-    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.1, decay_period=1e5):
+    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=1, min_sigma=0.2, decay_period=1e5):
         self.mu           = mu
         self.theta        = theta
         self.sigma        = max_sigma
@@ -44,6 +44,9 @@ class NormalizedEnv(QuadcopterEnv):
         QuadcopterEnv.__init__(self)
 
     def _action(self, action):
+        '''
+        se alimenta de la tanh
+        '''
         act_k = (self.action_space.high - self.action_space.low)/ 2.
         act_b = (self.action_space.high + self.action_space.low)/ 2.
         return act_k * action + act_b
