@@ -22,6 +22,15 @@ TAU = 2 * pi
 BATCH_SIZE = 32
 
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
+
+def agent_action(agent, env, noise, state):
+    action = agent.get_action(state)
+    real_action = env._action(action)
+    real_action = noise.get_action(real_action, env.time[env.i])
+    control = real_action + W0
+    new_state, reward, done = env.step(control)
+    return real_action, action, new_state, reward, done
+
     
 
 def training_loop(agent, env, noise, pbar):
@@ -30,11 +39,7 @@ def training_loop(agent, env, noise, pbar):
     episode_reward = 0
     s = 1
     while True:
-        action = agent.get_action(state)
-        action = noise.get_action(action, env.time[env.i])
-        real_action = env._action(action)
-        control = real_action + W0
-        new_state, reward, done = env.step(control)
+        _, action, new_state, reward, done = agent_action(agent, env, noise, state)
         episode_reward += reward
         agent.memory.push(state, action, reward, new_state, done)
         if len(agent.memory) > BATCH_SIZE:
@@ -74,11 +79,7 @@ def Sim(flag, agent, env):
     acciones = []
     env.flag  = flag
     while True:
-        action = agent.get_action(state)
-        action = noise.get_action(action, env.time[env.i])
-        real_action = env._action(action)
-        control = real_action + W0
-        new_state, reward, done = env.step(control) 
+        real_action, action, new_state, reward, done = agent_action(agent, env, noise, state)
         _, _, w, x, y, z, p, q, r, psi, theta, phi = env.state
         Z.append(z); W.append(w)
         Psi.append(psi); R.append(r)
@@ -110,11 +111,7 @@ def nsim(flag, n):
         X,Y = [], []
         env.flag  = flag
         while True:
-            action = agent.get_action(state)
-            action = noise.get_action(action, env.time[env.i])
-            real_action = env._action(action)
-            control = real_action + W0
-            new_state, reward, done = env.step(control) 
+            _, _, new_state, reward, done = agent_action(agent, env, noise, state)
             _, _, w, x, y, z, p, q, r, psi, theta, phi = env.state
             Z.append(z); W.append(w)
             Psi.append(psi); R.append(r)
@@ -179,7 +176,7 @@ noise = OUNoise(env.action_space)
 
 un_grado = np.pi/180
 env.d = 1
-E = 500 * np.ones(7)
+E = 2 * np.ones(1)
 
 p0 = np.zeros(12)
 p1 = np.zeros(12); p1[-1] = 1 * un_grado
@@ -188,7 +185,7 @@ p3 = np.zeros(12); p3[5] = 2; p3[2] = 0.5
 p4 = np.zeros(12); p4[-1] = 2 * un_grado; p4[-6] = 0.1
 p5 = np.zeros(12); p4[-5] = 2 * un_grado; p4[-5] = 0.1
 p6 = np.array([0, 0, 0.6, 0, 0, 1.5, 0.2, 0.2, 0, 0, 1.5 * un_grado, 1.5 * un_grado])
-P = [p0, p1, p2, p3, p4, p5, p6]
+P = [p0] # , p1, p2, p3, p4, p5, p6]
 
 env.flag = False
 

@@ -46,6 +46,15 @@ vector_x, vector_y, vector_z = [],[],[]
 vector_score,vector_tiempo,vector_reward,vector_porcentaje = [],[],[],[]
 
 
+def agent_action(agent, env, noise, state):
+    action = agent.get_action(state)
+    real_action = env._action(action)
+    real_action = noise.get_action(real_action, env.time[env.i])
+    control = real_action + W0
+    new_state, reward, done = env.step(control)
+    return real_action, action, new_state, reward, done
+
+
 #u, v, w, p, q, r, psi, theta, phi, x, y, z = env.state
 def training_loop(agent, env, noise):
     state = funcion(env.reset())
@@ -55,11 +64,7 @@ def training_loop(agent, env, noise):
     score2 = 0
     s = 1
     while True:
-        action = agent.get_action(state) # falta hacer el proceso inverso de normalización
-        # action_
-        action = noise.get_action(action, env.time[env.i])
-        control = W0 + action 
-        new_state, reward, done = env.step(control)
+        _, action, new_state, reward, done = agent_action(agent, env, noise, state)
         s1, s2 = get_score(env.state, env)
         score1 += s1; score2 += s2
         episode_reward += reward
@@ -123,11 +128,7 @@ def nsim(flag, n, show=True, k=0):
         X,Y = [], []
         env.flag  = flag
         while True:
-            action = agent.get_action(state)
-            real_action = env._action(action)
-            # action = noise.get_action(action, env.time[env.i])
-            control = W0 + real_action
-            new_state, reward, done = env.step(control) 
+            _, _, new_state, reward, done = agent_action(agent, env, noise, state)
             _, _, w, x, y, z, p, q, r, psi, theta, phi = env.state
             Z.append(z); W.append(w)
             Psi.append(psi); R.append(r)
@@ -202,10 +203,10 @@ p10 = np.zeros(12); p10[3:6] = 5; p10[9:] = 5 * un_grado
 
 
 P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
-E = [500, 550, 600, 700, 800, 1000, 1200, 1600, 2000, 2800, 3600]
+E = [500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
 
 i = 0
-n = 20 # simulaciones
+n = 10 # simulaciones
 old_frec = 0
 subpath1 = day + "/best"
 subpath2 = day +  "/recent"
@@ -230,12 +231,12 @@ for p, e in zip(P, E):
     i += 1
 
 
-p13 = np.array([0, 0, 0, 5, 5, 5, 0, 0, 0, 0, 5 * un_grado, 5 * un_grado])
+p13 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 10 * un_grado, 10 * un_grado, 10 * un_grado])
 env.p = p13
 reset_time(env, 96000, 3600)
 nsim(True, n, show=False, k=i)
 
-p14 = np.array([0, 0, 0, 10, 10, 10, 0, 0, 0, 7 * un_grado, 7 * un_grado, 7 * un_grado])
+p14 = np.array([0, 0, 0, 14, 14, 14, 0, 0, 0, 20 * un_grado, 20 * un_grado, 20 * un_grado])
 env.p = p14
 nsim(True, n, show=False, k=i+1)
 
