@@ -129,6 +129,13 @@ class QuadcopterEnv(gym.Env):
         aux = np.logical_and(low <= x, x <= high)
         return aux.all()
 
+    def is_stable(self, x, v):
+        x_ = 0.20 * np.ones(3)
+        v_ = 0.50 * np.ones(3)
+        x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
+        v_st = np.logical_and(self.goal[0:3] - v_ <= v, v <= self.goal[0:3] + v_)
+        return x_st and v_st
+
     def get_reward(self, state):
         x = state[3:6]
         orientacion = state[9:].reshape((3,3))
