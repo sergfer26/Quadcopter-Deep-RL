@@ -37,21 +37,27 @@ from sklearn.preprocessing import StandardScaler
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, Dataset, random_split
 
+from DDPG.env.quadcopter_env import QuadcopterEnv
+from DDPG.utils import NormalizedEnv
 from DDPG.models import Actor
 from Linear.ecuaciones_drone import imagen2d, f, jac_f
 from Linear.step import imagen_accion, step
 from DDPG.env.quadcopter_env import funcion, D
 import numpy as np
 
-def save_net(net, path, name):
-    save(net.state_dict(), path+'/'+ name +'.pth')
+H_SIZES = [18, 64, 64, 64, 64] # dimensión de capas
+ACTIONS = 4
+BATCH_SIZE = 32
+EPOCHS = 100
+P = 0.80 # división de datos
 
+net = Actor(H_SIZES, ACTIONS) # función de activación final tan
 df = pd.read_csv('tabla_2.csv', header=None)
-
 device = "cpu"
 
 if torch.cuda.is_available(): 
     device = "cuda"
+    net.cuda() # para usar el gpu
 
 print(device)
 torch.__version__
@@ -61,11 +67,11 @@ plt.style.use('ggplot')
 dir_ = 'supervisado/'
 pathlib.Path(dir_).mkdir(parents=True, exist_ok=True)
 
-H_SIZES = [18, 64, 64, 64] # dimensión de capas
-ACTIONS = 4
-BATCH_SIZE = 32
-EPOCHS = 100
-P = 0.80 # división de datos
+env = QuadcopterEnv()
+env = NormalizedEnv(env)
+
+def save_net(net, path, name):
+    save(net.state_dict(), path+'/'+ name +'.pth')
 
 class CSV_Dataset(Dataset):
     
@@ -74,7 +80,7 @@ class CSV_Dataset(Dataset):
         x = dataframe.iloc[:, 4:]
         self.sc_x = StandardScaler()
         x_train = self.sc_x.fit_transform(x)
-        y_train = y.to_numpy()
+        y_train = env._reverse_action(y.to_numpy())
         self.x_train = torch.tensor(x_train, dtype=torch.float32)
         self.y_train = torch.tensor(y_train, dtype=torch.float32)
         
@@ -100,12 +106,10 @@ val_loader = DataLoader(val_set, shuffle=False, batch_size=BATCH_SIZE)
 
 """## Training"""
 
-net = Actor(H_SIZES, ACTIONS) # función de activación final tan
-net.cuda() # para usar el gpu
 criterion = nn.MSELoss()
 optimizer = optim.Adam(net.parameters(), lr=0.001, weight_decay=0.0005)
 
-def training_loop(epochs, train_loader, model, optimizer, loss_function, valid=False):
+def training_loop(train_loader, model, optimizer, loss_function, valid=False):
     running_loss = 0.0
     if valid: 
         model.eval() # modo de validación del modelo 
@@ -116,9 +120,13 @@ def training_loop(epochs, train_loader, model, optimizer, loss_function, valid=F
         if not valid:
             optimizer.zero_grad() # reinicia el gradiente
         
-        pred = model(X)
+        Y_hat = model(X)
         # Y = Y.type(torch.LongTensor) # https://stackoverflow.com/questions/60440292/runtimeerror-expected-scalar-type-long-but-found-float
-        loss = loss_function(pred, Y)
+        # norm_hat = Y_hat.norm(p=2, dim=1, keepdim=True); norm = Y.norm(p=2, dim=1, keepdim=True)
+        # Y_hat = Y_hat.div(norm_hat); Y = Y.div(norm)
+        real_y_hat = env._action(np.array(Y_hat)); real_y = env._action(np.array(Y))
+        real_y_hat = torch.tensor(real_y_hat); real_y = torch.tensor(real_y)
+        loss = loss_function(real_y_hat, real_y)
         if not valid:
             loss.backward() # cálcula las derivadas 
             optimizer.step() # paso de optimización 
@@ -134,11 +142,11 @@ def train_model(epochs, model, optimizer, train_loader, val_loader, criterion, n
     epoch_loss = []
     val_loss = []
 
-    for epoch in range(epochs):
+    for _ in range(epochs):
         start_time = time.time()
-        loss_train = training_loop(epochs, train_loader, model, optimizer, criterion, valid=False)
+        loss_train = training_loop(train_loader, model, optimizer, criterion, valid=False)
         train_time +=  time.time() - start_time
-        loss_val = training_loop(epochs, val_loader, model, None, criterion, valid=True)
+        loss_val = training_loop(val_loader, model, None, criterion, valid=True)
         epoch_loss.append(loss_train)
         val_loss.append(loss_val)
 
@@ -193,11 +201,13 @@ epoch_loss, val_loss = train_model(EPOCHS, net, optimizer, train_loader, val_loa
 plot_loss(epoch_loss, val_loss, show=False, dir_=dir_)
 save_net(net, dir_, 'net')
 
+'''
 Y = np.zeros(12); Y[5] = 15
 X, acciones = simulador(Y, 30, 800)
 
 z, w, psi, r, phi, p, theta, q = X[:, 5], X[:, 2], X[:, 9], X[:, 8], X[:, 11], X[:, 6], X[:, 10], X[:, 7]
 t = np.linspace(0, 30, 800)
 
-imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True, dir_=dir_)
+imagen2d(z, w, psi, r, phi, p, theta, q, t, show=False, dir_=dir_)
 imagen_accion(acciones, t, show=False, dir_=dir_)
+'''
