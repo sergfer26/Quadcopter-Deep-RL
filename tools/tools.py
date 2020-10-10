@@ -9,14 +9,12 @@ def reset_time(env, tamaño, tiempo_max):
     env.time = np.linspace(0, env.time_max, env.tam)
 
 def get_score(state, env):
-    z = state[5]
-    w = state[2]
     score1 = 0
     score2 = 0
-    if env.goal[5] - 0.20 < z < env.goal[5] + 0.20 and abs(w) < 0.5:
-        score1 = 1
-    if env.observation_space.low[5] < z < env.observation_space.high[5]:
+    if env.is_contained(state[3:6]):
         score2 = 1
+        if env.is_stable(state[3:6], state[0:3]):
+            score1 = 1
     return score1, score2
 
 def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True):
@@ -90,7 +88,7 @@ def imagen(X, Y, Z):
     fig.show()
 
 
-def hist(z,w):
+def hist(z,w, env):
     fig, ((ax1, ax2)) = plt.subplots(1, 2)
     ax1.hist(z,label = 'Z', color = 'navy')
     ax2.hist(w,label = 'W')
