@@ -3,7 +3,8 @@ import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
-from .models import Actor, Critic, weights_init
+from .models_merge import Actor, Critic, weights_init
+# from .models import Critic, weights_init
 from .utils import Memory
 
 
