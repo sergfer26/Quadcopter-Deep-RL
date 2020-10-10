@@ -161,7 +161,7 @@ def clear():
 
 
 if len(sys.argv) == 1:
-    hidden_sizes = [64, 256, 64]
+    hidden_sizes = [64, 64, 64, 64]
 else:
     hidden_sizes = sys.argv[1:]
     hidden_sizes = [int(i) for i in hidden_sizes]
@@ -169,7 +169,7 @@ else:
 
 env = QuadcopterEnv()
 env = NormalizedEnv(env)   
-agent = DDPGagent(env, hidden_sizes)
+agent = DDPGagent(env, hidden_sizes=hidden_sizes)
 noise = OUNoise(env.action_space)
 
 #load_nets(agent,hidden_sizes)
@@ -196,7 +196,7 @@ for p, e in zip(P, E):
     nsim(True, 20)
     env.flag = False
     reset_time(env, 800, 30)
-    # agent.memory.remove()
+    agent.memory.remove()
 
 
 reset_time(env, 96000, 3600)
