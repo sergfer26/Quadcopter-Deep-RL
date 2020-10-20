@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 import random
+import torch
 from numpy import floor
 from collections import deque
 from .env.quadcopter_env import QuadcopterEnv
@@ -47,14 +48,27 @@ class NormalizedEnv(QuadcopterEnv):
         '''
         se alimenta de la tanh
         '''
-        act_k = (self.action_space.high - self.action_space.low)/ 2.
-        act_b = (self.action_space.high + self.action_space.low)/ 2.
+        high = self.action_space.high
+        low = self.action_space.low
+        if torch.is_tensor(action):
+            high = torch.tensor(high)
+            low = torch.tensor(low)
+
+        act_k = (high - low)/ 2.
+        act_b = (high + low)/ 2.
         return act_k * action + act_b
 
     def _reverse_action(self, action):
+        high = self.action_space.high
+        low = self.action_space.low
+        if torch.is_tensor(action):
+            high = torch.tensor(high)
+            low = torch.tensor(low)
+
         act_k_inv = 2./(self.action_space.high - self.action_space.low)
         act_b = (self.action_space.high + self.action_space.low)/ 2.
         return act_k_inv * (action - act_b)
+
         
 
 class Memory:
