@@ -48,7 +48,7 @@ import numpy as np
 H_SIZES = [18, 64, 64, 64, 64] # dimensión de capas
 ACTIONS = 4
 BATCH_SIZE = 32
-EPOCHS = 100
+EPOCHS = 2
 P = 0.80 # división de datos
 
 net = Actor(H_SIZES, ACTIONS) # función de activación final tan
@@ -79,7 +79,7 @@ class CSV_Dataset(Dataset):
         y = dataframe.iloc[:, 0:4]
         x = dataframe.iloc[:, 4:]
         self.sc_x = StandardScaler()
-        x_train = self.sc_x.fit_transform(x)
+        x_train = x.to_numpy() # self.sc_x.fit_transform(x)
         y_train = env._reverse_action(y.to_numpy())
         self.x_train = torch.tensor(x_train, dtype=torch.float32)
         self.y_train = torch.tensor(y_train, dtype=torch.float32)
@@ -124,8 +124,7 @@ def training_loop(train_loader, model, optimizer, loss_function, valid=False):
         # Y = Y.type(torch.LongTensor) # https://stackoverflow.com/questions/60440292/runtimeerror-expected-scalar-type-long-but-found-float
         # norm_hat = Y_hat.norm(p=2, dim=1, keepdim=True); norm = Y.norm(p=2, dim=1, keepdim=True)
         # Y_hat = Y_hat.div(norm_hat); Y = Y.div(norm)
-        real_y_hat = env._action(np.array(Y_hat)); real_y = env._action(np.array(Y))
-        real_y_hat = torch.tensor(real_y_hat); real_y = torch.tensor(real_y)
+        real_y_hat = env._action(Y_hat); real_y = env._action(Y)
         loss = loss_function(real_y_hat, real_y)
         if not valid:
             loss.backward() # cálcula las derivadas 
@@ -198,7 +197,7 @@ def simulador(Y, T, tam, jac=None):
 
 
 epoch_loss, val_loss = train_model(EPOCHS, net, optimizer, train_loader, val_loader, criterion, n_train, n_val)
-plot_loss(epoch_loss, val_loss, show=False, dir_=dir_)
+plot_loss(epoch_loss, val_loss, show=True, dir_=dir_)
 save_net(net, dir_, 'net')
 
 '''
