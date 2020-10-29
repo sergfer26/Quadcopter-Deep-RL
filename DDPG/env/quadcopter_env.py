@@ -18,8 +18,8 @@ K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
 
 # constantes del ambiente
-VEL_MAX = 150 #60 #Velocidad maxima de los motores 150
-VEL_MIN = - omega_0
+VEL_MAX = omega_0  #60 #Velocidad maxima de los motores 150
+VEL_MIN = - omega_0 
 VELANG_MIN = -10
 VELANG_MAX = 10
 
@@ -118,7 +118,7 @@ class QuadcopterEnv(gym.Env):
         self.p = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
         self.state = self.reset()
-        self.reset_time(STEPS, TIME_MAX)
+        self.set_time(STEPS, TIME_MAX)
         self.flag = True
         self.d1 = 0.50
 
@@ -134,7 +134,16 @@ class QuadcopterEnv(gym.Env):
         v_ = 0.50 * np.ones(3)
         x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
         v_st = np.logical_and(self.goal[0:3] - v_ <= v, v <= self.goal[0:3] + v_)
-        return x_st and v_st
+        return x_st.all() and v_st.all()
+
+    def get_score(self, state):
+        score1 = 0
+        score2 = 0
+        if self.is_contained(state[3:6]):
+            score2 = 1
+            if self.is_stable(state[3:6], state[0:3]):
+                score1 = 1
+        return score1, score2
 
     def get_reward(self, state):
         x = state[3:6]
@@ -143,9 +152,9 @@ class QuadcopterEnv(gym.Env):
             d2 =  norm(orientacion - np.identity(3))
             d1 = norm(x - self.goal[3:6]) 
             if d1 < self.d1:
-                return 0.1 -(10 * d2)
+                return 1 -(10 * d2)
             else:
-                return 0.1 -(10 * d2 + d1 - self.d1)
+                return -(10 * d2 + d1)
         elif self.flag:
             return - 1e5
         else:
@@ -180,7 +189,7 @@ class QuadcopterEnv(gym.Env):
         # self.state[5] = max(0, self.state[5])
         return self.state
 
-    def reset_time(self, steps, time_max):
+    def set_time(self, steps, time_max):
         self.time_max = time_max
         self.tam = steps
         self.time = np.linspace(0, self.time_max, self.tam)
