@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
@@ -6,6 +7,10 @@ from torch.autograd import Variable
 from .models_merge import Actor, Critic, weights_init
 # from .models import Critic, weights_init
 from .utils import Memory
+
+
+A = np.array([[1, 1, 1, 1], [1, 0, -1, 0], [0, 1, 0, -1], [1, -1, 1, -1]]).T # base
+B = torch.tensor(A, dtype=torch.float32) 
 
 
 class DDPGagent:
@@ -44,13 +49,23 @@ class DDPGagent:
         self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
     
-    def get_action(self, state):
+    def get_action(self, state, tensor=False):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
-        action = self.actor.forward(state)
-        action = action.detach().numpy()[0,:]
+        lambdas = self.actor.forward(state)
+        if not tensor:
+            lambdas = lambdas.detach().numpy()[0,:]
+        action = self.lambdas_to_action(lambdas)
+        return lambdas, action
+
+    def lambdas_to_action(self, lambdas):
+        if torch.is_tensor(lambdas):
+            action = torch.matmul(lambdas, B.T)
+        else:
+            action = np.matmul(lambdas, A.T)
         return action
-    
+
     def update(self, batch_size):
+        # actions -> lambdas
         states, actions, rewards, next_states, _ = self.memory.sample(batch_size)
         states = torch.FloatTensor(states)
         actions = torch.FloatTensor(actions)
