@@ -14,7 +14,7 @@ def actions_to_lambdas(actions):
     return lambdas
 
 
-df = pd.read_csv('tabla.csv', header=None)
+df = pd.read_csv('tabla_2.csv', header=None)
 actions = df.values[:, 0:4]
 lambdas = actions_to_lambdas(actions)
 
@@ -22,6 +22,6 @@ new_data = np.hstack([lambdas, df.values[:, 4:]])
 
 new_df = pd.DataFrame(new_data)
 
-new_df.to_csv('tabla_lambdas.csv')
+new_df.to_csv('tabla_2_lambdas.csv')
 
 
