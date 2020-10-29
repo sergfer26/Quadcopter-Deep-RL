@@ -3,83 +3,135 @@ from matplotlib import pyplot as plt
 import plotly.graph_objects as go
 
 
-def reset_time(env, tamaño, tiempo_max):
-    env.time_max = tiempo_max
-    env.tam = tamaño
-    env.time = np.linspace(0, env.time_max, env.tam)
+def sub_plot_state(t, x, y, z, axis, axis_labels, labels =[None, None, None], c=['k', 'k', 'k'], alpha=1):
+    axis[0].plot(t, x, c=c[0], label=labels[0], alpha=alpha)
+    axis[0].set_ylabel(axis_labels[0])
+    axis[1].plot(t, y, c=c[1], label=labels[1], alpha=alpha)
+    axis[1].set_ylabel(axis_labels[1])
+    axis[2].plot(t, z, c=c[2], label=labels[2], alpha=alpha)
+    axis[1].set_ylabel(axis_labels[2])
+    if labels[0]:
+        axis[0].legend()
+    if labels[1]:
+        axis[1].legend()
+    if labels[2]:
+        axis[2].legend()
 
-def get_score(state, env):
-    score1 = 0
-    score2 = 0
-    if env.is_contained(state[3:6]):
-        score2 = 1
-        if env.is_stable(state[3:6], state[0:3]):
-            score1 = 1
-    return score1, score2
+'''
+def sub_plot_state(t, x, u, ax, dy, y, c='k', labels=[None, None], alpha=1):
+    ax[0].plot(t, x, c=c, label=labels[0], alpha=alpha)
+    ax[0].set_ylabel(y)
+    ax[1].plot(t, u, c=c, label=labels[1], alpha=alpha)
+    ax[1].set_ylabel(dy)
+    if labels[0]:
+        ax[0].legend()
+    if labels[1]:
+        ax[1].legend()
+'''
+    
 
-def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True):
-    fig, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
+def imagen2d(X, t,show=True, path=None):
+    u, v, w, x, y, z, p, q, r, psi, theta, phi = X
+    # _, (U, V, W, R, P, Q) = plt.subplots(6, 2)
+    fig, (X, dX, Phi, dPhi) = plt.subplots(4, 3)
     cero = np.zeros(len(z))
 
-    w1.plot(t, z, c='b',label = str(round(z[-1],4)))
-    w1.set_ylabel('z')
-    w2.plot(t, w, c='b',label = str(round(w[-1],4)))
-    w2.set_ylabel('dz')
-    w1.legend()
-    w2.legend()
+    '''
+    labels = (str(round(x[-1], 4)), str(round(u[-1], 4)))
+    sub_plot_state(t, x, u, U, 'dx', 'x', c='y', labels=labels)
 
-    r1.plot(t, psi, c='r')
-    r1.set_ylabel('$\psi$')
-    r2.plot(t, r, c='r')
-    r2.set_ylabel('d$\psi$')
+    labels = (str(round(y[-1], 4)), str(round(v[-1], 4)))
+    sub_plot_state(t, y, v, V, 'dy', 'y', c='c', labels=labels)
 
-    p1.plot(t, phi, c='g')
-    p1.set_ylabel('$\phi$')
-    p2.plot(t, p, c='g')
-    p2.set_ylabel(' d$\phi$')
+    labels = (str(round(z[-1], 4)), str(round(w[-1], 4)))
+    sub_plot_state(t, z, w, W, 'dz', 'z', c='b', labels=labels)
 
-    q1.plot(t, theta)
-    q1.set_ylabel('$ \\theta$')
-    q2.plot(t, q)
-    q2.set_ylabel(' d$ \\theta$')
+    labels = (str(round(psi[-1], 4)), str(round(r[-1], 4)))
+    sub_plot_state(t, psi, r, R, 'd$\psi$', '$\psi$', c='r', labels=labels)
 
-    w1.plot(t, cero + 15, '--', c='k', alpha=0.5)
-    w2.plot(t, cero, '--', c='k', alpha=0.5)
-    r2.plot(t, cero, '--', c='k', alpha=0.5)
-    p2.plot(t, cero, '--', c='k', alpha=0.5)
-    q2.plot(t, cero, '--', c='k', alpha=0.5)
+    labels = (str(round(theta[-1], 4)), str(round(q[-1], 4)))
+    sub_plot_state(t, theta, q, Q, 'd$ \\theta$', '$ \\theta$', c='k', labels=labels)
+
+    labels = (str(round(phi[-1], 4)), str(round(p[-1], 4)))
+    sub_plot_state(t, phi, p, P, ' d$\phi$', '$\phi$', c='g', labels=labels)
+    '''
+    labels = (str(round(x[-1], 4)), str(round(y[-1], 4)), str(round(z[-1], 4)))
+    sub_plot_state(t, x, y, z, X, axis_labels=['x', 'y', 'z'], c=['y', 'c', 'b'], labels=labels)
+
+    labels = (str(round(u[-1], 4)), str(round(v[-1], 4)), str(round(w[-1], 4)))
+    sub_plot_state(t, u, v, w, dX, axis_labels=['dx', 'dy', 'dz'], c=['y', 'c', 'b'], labels=labels)
+
+    labels = (str(round(psi[-1], 4)), str(round(theta[-1], 4)), str(round(phi[-1], 4)))
+    sub_plot_state(t, psi, theta, phi, Phi, axis_labels=['$\psi$', '$\\theta$', '$\phi$'], c=['r', 'k', 'g'], labels=labels)
+
+    labels = (str(round(r[-1], 4)), str(round(q[-1], 4)), str(round(p[-1], 4)))
+    sub_plot_state(t, r, q, p, dPhi, axis_labels=['$d\psi$', '$d\\theta$', '$d\phi$'], c=['r', 'k', 'g'], labels=labels)
+
+    X[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    X[1].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    X[2].plot(t, cero + 15, '--', c='k', alpha=0.5)
+
+    dX[0].plot(t, cero, '--', c='k', alpha=0.5)
+    dX[1].plot(t, cero, '--', c='k', alpha=0.5)
+    dX[2].plot(t, cero, '--', c='k', alpha=0.5)
+
+    Phi[0].plot(t, cero, '--', c='k', alpha=0.5)
+    Phi[1].plot(t, cero, '--', c='k', alpha=0.5)
+    Phi[2].plot(t, cero, '--', c='k', alpha=0.5)
+
+    dPhi[0].plot(t, cero, '--', c='k', alpha=0.5)
+    dPhi[1].plot(t, cero, '--', c='k', alpha=0.5)
+    dPhi[2].plot(t, cero, '--', c='k', alpha=0.5)
+
+
+
+
+    '''
+    U[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    V[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    W[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    U[1].plot(t, cero, '--', c='k', alpha=0.5)
+    V[1].plot(t, cero, '--', c='k', alpha=0.5)
+    W[1].plot(t, cero, '--', c='k', alpha=0.5)
+    R[1].plot(t, cero, '--', c='k', alpha=0.5)
+    P[1].plot(t, cero, '--', c='k', alpha=0.5)
+    Q[1].plot(t, cero, '--', c='k', alpha=0.5)
+    '''
 
     if show:
         plt.show()
-    else: 
-        fig.save
+    else:
+        fig.set_size_inches(18.5, 10.5)
+        plt.savefig(path + '/sim.png' , dpi=300)
 
 
-def imagen_action(action, t):
+def imagen_action(action, t, show=True, path=None):
     _, ax = plt.subplots(4, 1)
-    cero = np.zeros(len(action[0])) 
-
-    ax[0].plot(t, action[0], c='b')
+    #cero = np.zeros(len(action[0])) 
+    action = np.array(action)
+    ax[0].plot(t, action[:, 0], c='b')
     ax[0].set_ylabel('$a_1$')
 
-    ax[1].plot(t, action[1], c='r')
+    ax[1].plot(t, action[:, 1], c='r')
     ax[1].set_ylabel('$a_2$')
 
-    ax[2].plot(t, action[2], c='g')
+    ax[2].plot(t, action[:, 2], c='g')
     ax[2].set_ylabel('$a_3$')
 
-    ax[3].plot(t, action[3])
+    ax[3].plot(t, action[:, 3])
     ax[3].set_ylabel('$a_4$')
 
+    '''
     ax[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
     ax[1].plot(t, cero + 15, '--', c='k', alpha=0.5)
     ax[2].plot(t, cero + 15, '--', c='k', alpha=0.5)
     ax[3].plot(t, cero + 15, '--', c='k', alpha=0.5)
+    '''
 
-    plt.show()
-
-
-
+    if show:
+        plt.show()
+    else: 
+        plt.savefig(path + '/actions.png', dpi=300)
 
 
 def imagen(X, Y, Z):
