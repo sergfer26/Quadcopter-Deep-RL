@@ -99,7 +99,7 @@ def simulador(Y, Ze, T, tam,jac=None):
         acciones.append(tem)
         Y = step(W, Y, [t[i], t[i+1]],jac=jac)[1]
         X[i+1] = Y
-    return X,acciones
+    return X, acciones
 
 
 if __name__ == "__main__":
