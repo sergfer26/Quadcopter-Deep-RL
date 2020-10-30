@@ -15,10 +15,11 @@ Original file is located at
 !rm -rf Quadcopter-Deep-RL  # in case you need to refresh after pushing changes 
 !git clone -b sergio_branch https://github.com/sergfer26/Quadcopter-Deep-RL.git
 '''
-
+import os
 import torch
 import pathlib
 import time
+import glob
 import pandas as pd
 import numpy as np
 import torch.nn as nn
@@ -63,11 +64,13 @@ ACTIONS = 4
 BATCH_SIZE = 32
 EPOCHS = 50
 P = 0.80 # división de datos
+LAMBDA = 10 # regularization
 
 env = QuadcopterEnv()
-env = NormalizedEnv(env)   
+env = NormalizedEnv(env)
 agent = DDPGagent(env, hidden_sizes=H_SIZES)
 noise = OUNoise(env.action_space)
+noise.max_sigma = 0.0; noise.min_sigma = 0.0; noise.sigma = 0.0 
 un_grado = np.pi/180
 env.d = 1
 
@@ -115,11 +118,11 @@ class CSV_Dataset(Dataset):
     def __getitem__(self, idx):
         return self.x_train[idx], self.y_train[idx]
 
+
 """## From CSV to Dataset"""
 
 dataset = CSV_Dataset(df)
 n_samples = len(df[0])
-
 
 n_train = int(P * n_samples)
 n_val = n_samples - n_train
@@ -132,6 +135,7 @@ val_loader = DataLoader(val_set, shuffle=False, batch_size=BATCH_SIZE)
 
 criterion = nn.MSELoss()
 optimizer = optim.Adam(agent.actor.parameters(), lr=0.001, weight_decay=0.0005)
+
 
 def training_loop(train_loader, model, optimizer, loss_function, valid=False):
     running_loss = 0.0
@@ -149,7 +153,12 @@ def training_loop(train_loader, model, optimizer, loss_function, valid=False):
         actions_hat = agent.lambdas_to_action(Y_hat)
         actions = env._action(actions)
         actions_hat = env._action(actions_hat)
-        loss = loss_function(actions, actions_hat)
+
+        lam = torch.tensor(LAMBDA)
+        l2_reg = torch.tensor(0.)
+        for param in model.parameters():
+            l2_reg += torch.norm(param)
+        loss = loss_function(actions, actions_hat) + lam * l2_reg
         if not valid:
             loss.backward() # cálcula las derivadas 
             optimizer.step() # paso de optimización 
@@ -159,6 +168,7 @@ def training_loop(train_loader, model, optimizer, loss_function, valid=False):
         avg_loss = running_loss/(i + 1)
         
     return avg_loss
+
 
 def train_model(epochs, model, optimizer, train_loader, val_loader, criterion, n_train, n_val):
     train_time = 0
@@ -178,10 +188,15 @@ def train_model(epochs, model, optimizer, train_loader, val_loader, criterion, n
         r = agent_vs_linear(False, agent, env, noise, show=False, paths=paths)
         if best < r:
             best = r
-            save_net(agent.actor, PATH, 'best_actor')
+            save_net(agent.actor, PATH, 'actor')
+        else:
+            imgs = glob.glob(PATH +'/*_'+ str(k) +'.png')
+            for img in imgs:
+                os.remove(img)
 
     print("--- %s seconds ---", train_time)
     return epoch_loss, val_loss
+
 
 def plot_loss(epoch_loss, val_loss, show=True, path=PATH):
     plt.plot(epoch_loss)
