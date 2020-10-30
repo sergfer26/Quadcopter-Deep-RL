@@ -111,15 +111,19 @@ def imagen_action(action, t, show=True, path=None):
     action = np.array(action)
     ax[0].plot(t, action[:, 0], c='b')
     ax[0].set_ylabel('$a_1$')
+    ax[0].set_ylim([-5, 5])
 
     ax[1].plot(t, action[:, 1], c='r')
     ax[1].set_ylabel('$a_2$')
+    ax[1].set_ylim([-5, 5])
 
     ax[2].plot(t, action[:, 2], c='g')
     ax[2].set_ylabel('$a_3$')
+    ax[2].set_ylim([-5, 5])
 
     ax[3].plot(t, action[:, 3])
     ax[3].set_ylabel('$a_4$')
+    ax[3].set_ylim([-5, 5])
 
     '''
     ax[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
