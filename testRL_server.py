@@ -1,5 +1,6 @@
 import pathlib
 import pandas as pd
+import numpy as np
 from trainRL import *
 from time import time
 from tools.my_time import my_date
@@ -46,7 +47,8 @@ def nsim(flag, n, k=0):
     path = PATH + '/nsims'
     file_path = path +'/nsim_p'+ str(k) +'.png'
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-    nSim(flag, agent, env, noise, n, show=False, path=file_path)
+    mean_reward = nSim(flag, agent, env, noise, n, show=False, path=file_path)
+    return mean_reward
 
 
 def train(agent, env, noise, episodes, path=PATH, k=0):
@@ -86,70 +88,68 @@ def train(agent, env, noise, episodes, path=PATH, k=0):
 
 
 p0 = np.zeros(12)
-p1 = np.zeros(12); p1[3:6] = 0.5; p1[9:] = 0.5 * un_grado
-p2 = np.zeros(12); p2[3:6] = 1; p2[9:] = 1 * un_grado
-p3 = np.zeros(12); p3[3:6] = 1.5; p3[9:] = 1.5 * un_grado
-p4 = np.zeros(12); p4[3:6] = 2; p4[9:] = 2 * un_grado
-p5 = np.zeros(12); p5[3:6] = 2.5; p5[9:] = 2.5 * un_grado
-p6 = np.zeros(12); p6[3:6] = 3; p6[9:] = 3 * un_grado
-p7 = np.zeros(12); p7[3:6] = 3.5; p7[9:] = 3.5 * un_grado
-p8 = np.zeros(12); p8[3:6] = 4; p8[9:] = 4 * un_grado
-p9 = np.zeros(12); p9[3:6] = 4.5; p9[9:] = 4.5 * un_grado
-p10 = np.zeros(12); p10[3:6] = 5; p10[9:] = 5 * un_grado
+p1 = np.zeros(12); p1[3:6] = 0.5
+p2 = np.zeros(12); p2[3:6] = 1
+p3 = np.zeros(12); p3[3:6] = 1.5
+p4 = np.zeros(12); p4[3:6] = 2
+p5 = np.zeros(12); p5[3:6] = 2.5
+p6 = np.zeros(12); p6[3:6] = 3
+p7 = np.zeros(12); p7[3:6] = 3.5
+p8 = np.zeros(12); p8[3:6] = 4
+p9 = np.zeros(12); p9[3:6] = 4.5
+p10 = np.zeros(12); p10[3:6] = 5
+p11 = np.zeros(12); p11[3:6] = 5; p11[9:] = 0.5 * un_grado
+p12 = np.zeros(12); p12[3:6] = 5; p12[9:] = 1 * un_grado
+p13 = np.zeros(12); p13[3:6] = 6; p13[9:] = 1 * un_grado
 
 
-P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10]
-E = [500 , 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000]
+P = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13]
+E = [250 , 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850]
 
 
 
 i = 0
 n = 10 # simulaciones
 old_frec = 0
-subpath1 = DAY + "/best"
-subpath2 = DAY +  "/recent"
+subpath1 = PATH + "/models/best"; subpath1_ = PATH + "/buffer/best"
+subpath2 = PATH +  "/models/recent"; subpath2_ = PATH +  "/buffer/recent"
+best_reward = - np.inf
 for p, e in zip(P, E):
     env.p = p
     env.flag = False
     train(agent, env, noise, e, k=i)
     env.set_time(96000, 3600)
-    nsim(True, 20, k=i)
+    mean_reward = nsim(True, 10, k=i)
+    if best_reward <= mean_reward:
+        best_reward = mean_reward
+        buffer = agent.memory.buffer
+        save_nets(agent, hidden_sizes, subpath1)
+        save_buffer(buffer, subpath1_)
     env.set_time(800, 30)
     agent.memory.remove()
     i += 1
 
 buffer = agent.memory.buffer
-save_nets(agent, hidden_sizes, PATH); save_buffer(buffer, PATH)
+save_nets(agent, hidden_sizes, subpath2)
+save_buffer(buffer, subpath2_)
 
 
 env.set_time(96000, 3600)
 sim(True)
 env.set_time(800, 30)
 
+data = pd.DataFrame(columns=('u', 'v', 'w', 'p','q','r','psi','theta','phi','x','y','z','score','tiempo','reward','porcentaje'))
+data.u = vector_u; data.v = vector_v; data.w = vector_w
+data.p = vector_p; data.q = vector_q; data.r = vector_r
+data.psi = vector_psi; data.theta = vector_theta; data.phi = vector_phi
+data.x = vector_x; data.y = vector_y; data.z = vector_z
+data.score = vector_score; data.tiempo = vector_tiempo; data.reward = vector_reward ;data.porcentaje = vector_porcentaje
 
-'''
-i = 0
-n = 10 # simulaciones
-old_frec = 0
-subpath1 = day + "/best"
-subpath2 = day +  "/recent"
-for p, e in zip(P, E):
-    env.p = p
-    env.flag = False
-    train(agent, env, noise, int(e), k=i)
-    env.set_time(96000, 3600)
-    frec = nsim(True, n, show=False, k=i)
-    if frec > old_frec: # salvo la mejor red global
-        remove_nets(subpath1); remove_buffer(subpath1)
-        buffer = agent.memory.buffer
-        save_nets(agent, hidden_sizes, subpath1); save_buffer(buffer, subpath1)
-        old_frec = frec
-    if frec >= 0.5: # salvo la red del paso anteror si termina la mitad de los vuelos
-        remove_nets(subpath2); remove_buffer(subpath2)
-        buffer = agent.memory.buffer
-        save_nets(agent, hidden_sizes, subpath2); save_buffer(buffer, subpath2)
+data.to_csv('resultsRL/'+DAY+'/final_state.csv', index=False)
 
-    set_time(env, 800, 30)
-    agent.memory.remove()
-    i += 1
-'''
+
+data_p = pd.DataFrame(np.array(P), columns=['u', 'v', 'w', 'x', 'y', 'z', 'p', 'q', 'r', 'psi', 'theta', 'phi'])
+data_p.to_csv('resultsRL/'+DAY+'/perturbations.csv', index=False)
+
+print('terminó:', my_date())
+
