@@ -74,7 +74,7 @@ noise.max_sigma = 0.0; noise.min_sigma = 0.0; noise.sigma = 0.0
 un_grado = np.pi/180
 env.d = 1
 
-df = pd.read_csv('tabla_2.csv', header=None)
+df = pd.read_csv('tabla_3.csv', header=None)
 device = "cpu"
 
 if torch.cuda.is_available(): 
@@ -149,10 +149,13 @@ def training_loop(train_loader, model, optimizer, loss_function, valid=False):
             optimizer.zero_grad() # reinicia el gradiente
         
         Y_hat = model(X)
-        actions = agent.lambdas_to_action(Y)
-        actions_hat = agent.lambdas_to_action(Y_hat)
-        actions = env._action(actions)
-        actions_hat = env._action(actions_hat)
+        
+        actions = agent.lambdas_to_action(Y); actions_hat = agent.lambdas_to_action(Y_hat)
+        actions = env._action(actions); actions_hat = env._action(actions_hat)
+        
+        #import pdb; pdb.set_trace()
+        #Y /= torch.norm(Y)
+        #Y_hat /= torch.norm(Y_hat)
 
         lam = torch.tensor(LAMBDA)
         l2_reg = torch.tensor(0.)
@@ -205,10 +208,12 @@ def plot_loss(epoch_loss, val_loss, show=True, path=PATH):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
+    plt.title('$\lambda ={}$'.format(LAMBDA))
     if show:
         plt.show()
     else:
         plt.savefig(path+'/loss.png')
+        plt.close()
 
 
 epoch_loss, val_loss = train_model(EPOCHS, agent.actor, optimizer, train_loader, val_loader, criterion, n_train, n_val)
