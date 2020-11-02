@@ -132,6 +132,7 @@ def plot_agent_vs_linear(X, Y, t, title=None, show=True, path=None):
     else:
         fig.set_size_inches(18.5, 10.5)
         plt.savefig(path, dpi=300)
+        plt.close()
 
 
 def actions_agent_vs_linear(X, Y, t, title=None, show=True, path=None):
@@ -160,6 +161,7 @@ def actions_agent_vs_linear(X, Y, t, title=None, show=True, path=None):
     else:
         fig.set_size_inches(18.5, 10.5)
         plt.savefig(path, dpi=300)
+        plt.close()
 
 
 
@@ -208,6 +210,7 @@ def nSim(flag, agent, env, noise, n, bar=None, show=True, path=None):
     # fig, (aX, aY, aZ, aPsi, aTheta, aPhi) = plt.subplots(6, 2)
     fig, (aX, adX, aPhi, adPhi) = plt.subplots(4, 3)
     alpha = 0.2
+    mean_reward = 0.0
     for _ in range(n):
         if bar:
             bar.next()
@@ -234,54 +237,24 @@ def nSim(flag, agent, env, noise, n, bar=None, show=True, path=None):
             if done:
                 _, score = env.get_score(state)
                 total += score
+                mean_reward += episode_reward
                 break
         T = t[0:len(Z)]
-
+        
         sub_plot_state(T, X, Y, Z, aX, axis_labels=['x', 'y', 'z'], c=['y', 'c', 'b'], alpha=alpha)
         sub_plot_state(T, U, V, W, adX, axis_labels=['dx', 'dy', 'dz'], c=['y', 'c', 'b'], alpha=alpha)
         sub_plot_state(T, Psi, Theta, Phi, aPhi, axis_labels=['$\psi$', '$\\theta$', '$\phi$'], c=['r', 'k', 'g'], alpha=alpha)
         sub_plot_state(T, R, Q, P, adPhi, axis_labels=['$d\psi$', '$d\\theta$', '$d\phi$'], c=['r', 'k', 'g'], alpha=alpha)
-        '''
-        sub_plot_state(T, X, U, aX, 'dx', 'x', c='y', alpha=alpha)
-        sub_plot_state(T, Y, V, aY, 'dy', 'y', c='c', alpha=alpha)
-        sub_plot_state(T, Z, W, aZ, 'dz', 'z', c='b', alpha=alpha)
-        sub_plot_state(T, Psi, R, aPsi, 'd$\psi$', '$\psi$', c='r', alpha=alpha)
-        sub_plot_state(T, Theta, Q, aTheta, 'd$\\theta$', '$\\theta$', c='k', alpha=alpha)
-        sub_plot_state(T, Phi, P, aPhi, 'd$\phi$', '$\phi$', c='g', alpha=alpha)
-        '''
-    # cero = np.zeros(len(Z))
-    '''
-    aX[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    aY[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    aZ[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    aX[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aY[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aZ[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aPsi[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aPhi[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aTheta[1].plot(t, cero, '--', c='k', alpha=0.5)
     
-    aX[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    aX[1].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    aX[2].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    adX[0].plot(t, cero, '--', c='k', alpha=0.5)
-    adX[1].plot(t, cero, '--', c='k', alpha=0.5)
-    adX[2].plot(t, cero, '--', c='k', alpha=0.5)
-
-    aPhi[0].plot(t, cero, '--', c='k', alpha=0.5)
-    aPhi[1].plot(t, cero, '--', c='k', alpha=0.5)
-    aPhi[2].plot(t, cero, '--', c='k', alpha=0.5)
-    adPhi[0].plot(t, cero, '--', c='k', alpha=0.5)
-    adPhi[1].plot(t, cero, '--', c='k', alpha=0.5)
-    adPhi[2].plot(t, cero, '--', c='k', alpha=0.5)
-    '''
-
-    fig.suptitle("Vuelos terminados f="+str(total/n), fontsize=12)
+    mean_reward /= n
+    title = "Vuelos terminados $f =$ {}, $G_t (media) = ${}".format(total/n, mean_reward)
+    fig.suptitle(title, fontsize=12)
     if show:
         plt.show()
     else:
         fig.set_size_inches(18.5, 10.5)
         plt.savefig(path, dpi=300)
+        plt.close()
 
-    return total/n 
+    return mean_reward
 
