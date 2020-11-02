@@ -21,14 +21,14 @@ def load_nets(agent, hidden_sizes, subpath):
 
 
 def save_nets(agent, hidden_sizes, path):
-    pathlib.Path(path + '/saved_models').mkdir(parents=True, exist_ok=True) 
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
     hs = hidden_sizes
     sizes = ''
     for s in hs:
         sizes += '_'+str(s)
 
-    save_net(agent.actor, path +"/saved_models", "actor"+ sizes)
-    save_net(agent.critic, path +"/saved_models", "critic"+ sizes)
+    save_net(agent.actor, path, "actor"+ sizes)
+    save_net(agent.critic, path, "critic"+ sizes)
 
 
 def save_net(net, path, name):
@@ -42,13 +42,13 @@ def remove_nets(path):
 
 
 def save_buffer(buffer, path):
-    pathlib.Path(path +'/saved_buffers').mkdir(parents=True, exist_ok=True)
-    with open(path +'/saved_buffers/buffer.pickle', 'wb') as handle:
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    with open(path +'/buffer.pickle', 'wb') as handle:
         pickle.dump(buffer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_buffer(path):
-    with open(path +'/saved_buffers/buffer.pickle', 'rb') as handle:
+    with open(path +'/buffer.pickle', 'rb') as handle:
         b = pickle.load(handle)
     return b
 
