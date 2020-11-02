@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-import plotly.graph_objects as go
+# import plotly.graph_objects as go
 
 
 def sub_plot_state(t, x, y, z, axis, axis_labels, labels =[None, None, None], c=['k', 'k', 'k'], alpha=1):
@@ -16,18 +16,6 @@ def sub_plot_state(t, x, y, z, axis, axis_labels, labels =[None, None, None], c=
         axis[1].legend()
     if labels[2]:
         axis[2].legend()
-
-'''
-def sub_plot_state(t, x, u, ax, dy, y, c='k', labels=[None, None], alpha=1):
-    ax[0].plot(t, x, c=c, label=labels[0], alpha=alpha)
-    ax[0].set_ylabel(y)
-    ax[1].plot(t, u, c=c, label=labels[1], alpha=alpha)
-    ax[1].set_ylabel(dy)
-    if labels[0]:
-        ax[0].legend()
-    if labels[1]:
-        ax[1].legend()
-'''
     
 
 def imagen2d(X, t,show=True, path=None):
@@ -36,25 +24,6 @@ def imagen2d(X, t,show=True, path=None):
     fig, (X, dX, Phi, dPhi) = plt.subplots(4, 3)
     cero = np.zeros(len(z))
 
-    '''
-    labels = (str(round(x[-1], 4)), str(round(u[-1], 4)))
-    sub_plot_state(t, x, u, U, 'dx', 'x', c='y', labels=labels)
-
-    labels = (str(round(y[-1], 4)), str(round(v[-1], 4)))
-    sub_plot_state(t, y, v, V, 'dy', 'y', c='c', labels=labels)
-
-    labels = (str(round(z[-1], 4)), str(round(w[-1], 4)))
-    sub_plot_state(t, z, w, W, 'dz', 'z', c='b', labels=labels)
-
-    labels = (str(round(psi[-1], 4)), str(round(r[-1], 4)))
-    sub_plot_state(t, psi, r, R, 'd$\psi$', '$\psi$', c='r', labels=labels)
-
-    labels = (str(round(theta[-1], 4)), str(round(q[-1], 4)))
-    sub_plot_state(t, theta, q, Q, 'd$ \\theta$', '$ \\theta$', c='k', labels=labels)
-
-    labels = (str(round(phi[-1], 4)), str(round(p[-1], 4)))
-    sub_plot_state(t, phi, p, P, ' d$\phi$', '$\phi$', c='g', labels=labels)
-    '''
     labels = (str(round(x[-1], 4)), str(round(y[-1], 4)), str(round(z[-1], 4)))
     sub_plot_state(t, x, y, z, X, axis_labels=['x', 'y', 'z'], c=['y', 'c', 'b'], labels=labels)
 
@@ -83,26 +52,12 @@ def imagen2d(X, t,show=True, path=None):
     dPhi[1].plot(t, cero, '--', c='k', alpha=0.5)
     dPhi[2].plot(t, cero, '--', c='k', alpha=0.5)
 
-
-
-
-    '''
-    U[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    V[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    W[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    U[1].plot(t, cero, '--', c='k', alpha=0.5)
-    V[1].plot(t, cero, '--', c='k', alpha=0.5)
-    W[1].plot(t, cero, '--', c='k', alpha=0.5)
-    R[1].plot(t, cero, '--', c='k', alpha=0.5)
-    P[1].plot(t, cero, '--', c='k', alpha=0.5)
-    Q[1].plot(t, cero, '--', c='k', alpha=0.5)
-    '''
-
     if show:
         plt.show()
     else:
         fig.set_size_inches(18.5, 10.5)
         plt.savefig(path + '/sim.png' , dpi=300)
+        plt.close()
 
 
 def imagen_action(action, t, show=True, path=None):
@@ -125,24 +80,18 @@ def imagen_action(action, t, show=True, path=None):
     ax[3].set_ylabel('$a_4$')
     ax[3].set_ylim([-5, 5])
 
-    '''
-    ax[0].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    ax[1].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    ax[2].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    ax[3].plot(t, cero + 15, '--', c='k', alpha=0.5)
-    '''
-
     if show:
         plt.show()
     else: 
         plt.savefig(path + '/actions.png', dpi=300)
+        plt.close()
 
-
+'''
 def imagen(X, Y, Z):
     fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
-
+'''
 
 def hist(z,w, env):
     fig, ((ax1, ax2)) = plt.subplots(1, 2)
