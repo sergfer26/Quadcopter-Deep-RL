@@ -197,7 +197,7 @@ lambdas = [1, 5, 10, 25, 50, 150, 500, 1000]
 
 
 for lam in lambdas:
-    path = PATH + 'lam_'+ str(lam)
+    path = PATH + '/lam_'+ str(lam)
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
     epoch_loss, val_loss = train_model(EPOCHS, agent.actor, optimizer, train_loader, val_loader, criterion, n_train, n_val, path=path, lam=lam)
     plot_loss(epoch_loss, val_loss, show=False, path=path)
