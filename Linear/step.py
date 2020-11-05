@@ -50,7 +50,6 @@ def step(W, y, t, jac=None):
 
     regresa: y para el siguiente paso de tiempo
     '''
-    #import pdb; pdb.set_trace()
     w1, w2, w3, w4 = W
     return odeint(f, y, t, args=(w1, w2, w3, w4) ,Dfun=jac)
 
