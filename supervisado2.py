@@ -162,8 +162,8 @@ def train_model(epochs, model, optimizer, train_loader, val_loader, criterion, n
         loss_val = training_loop(val_loader, model, None, criterion, lam=LAMBDA, valid=True)
         epoch_loss.append(loss_train)
         val_loss.append(loss_val)
-        path1 = PATH + '/sim_'+ str(k) +'.png'
-        path2 = PATH + '/actions_'+ str(k) +'.png'
+        path1 = path + '/sim_'+ str(k) +'.png'
+        path2 = path + '/actions_'+ str(k) +'.png'
         paths =[path1, path2]
         r = agent_vs_linear(False, agent, env, noise, show=False, paths=paths)
         if best < r:
