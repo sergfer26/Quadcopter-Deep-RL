@@ -97,49 +97,34 @@ def simulador(Y, Ze, T, tam,jac=None):
         tem = W1 + W2 + W3 + W4
         acciones.append(tem)
         Y = step(W, Y, [t[i], t[i+1]],jac=jac)[1]
+
         X[i+1] = Y
-    return X, acciones
+    return X, acciones 
 
-
-if __name__ == "__main__":
-    T = 120
-    tam = 3200
-    un_grado = np.pi/180.0
-    Y = np.zeros(12)
-    Y[2] = 15
-    # Y[9:12] = 4*un_grado*np.ones(3)
-    # Y = np.array([0, 0, 0, 0, 0, 0, pi/100, pi/100, 0, 0, 0, 10])  
-    Ze = (10, 0, 0, 0)
-
-    start = process_time() 
-    X, A = simulador(Y, Ze, T, tam,jac=jac_f)
-    end = process_time()
-    print("Elapsed time during the whole simulation using jac in seconds:", \
-        end - start)
-
-    start = process_time()  
-    X, A = simulador(Y, Ze, T, tam)
-    end = process_time()
-    print("Elapsed time during the whole simulation without jac in seconds:", \
-        end - start)
-
-
-    '''
-    t = np.linspace(0, T, tam)
-    w = X[:, 2]
-    x = X[:, 3]
-    y = X[:, 4]
-    z = X[:, 5]
-    p = X[:, 6]
-    q = X[:, 7]
-    r = X[:, 8]
-    psi = X[:, 9]
-    theta = X[:, 10]
-    phi = X[:, 11]
-    #escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
-    #imagen(x, y, z)
-    imagen2d(z, w, psi, r, phi, p, theta, q, t)
-    #imagen_accion(A,t)
-    '''
+'''
+T = 120
+tam = 3200
+un_grado = np.pi/180.0
+Y = np.zeros(12)
+Y[5] = 10 
+Ze = (15, 0, 0, 0)
+start = process_time() 
+X, A = simulador(Y, Ze, T, tam,jac=jac_f)
+t = np.linspace(0, T, tam)
+w = X[:, 2]
+x = X[:, 3]
+y = X[:, 4]
+z = X[:, 5]
+p = X[:, 6]
+q = X[:, 7]
+r = X[:, 8]
+psi = X[:, 9]
+theta = X[:, 10]
+phi = X[:, 11]
+#escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
+#imagen(x, y, z)
+imagen2d(z, w, psi, r, phi, p, theta, q, t)
+#imagen_accion(A,t)
+'''
     
     
