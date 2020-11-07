@@ -39,11 +39,11 @@ def vuelos(numero):
         Y = np.array([g + unif(-e, e) for e, g in zip(perturbacion, goal)])
         vuelo, acciones = simulador(Y, Ze, 30, 800, jac=jac_f)
         for estado, accion in zip(vuelo, acciones):
-            accion = np.abs(accion)
+            # accion = np.abs(accion) porque le quito W0
             nuevo_estado = funcion(estado)
             muestra.append(np.concatenate((accion, nuevo_estado), axis=None))
     with open('tabla_1.csv', 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(muestra)
 
-vuelos(300)
+vuelos(3)
