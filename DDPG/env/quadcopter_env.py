@@ -18,8 +18,8 @@ K = 0.001219  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
 
 # constantes del ambiente
-VEL_MAX = omega_0 * 0.20  #60 #Velocidad maxima de los motores 150
-VEL_MIN = - omega_0 * 0.20
+VEL_MAX = omega_0 * 0.40  #60 #Velocidad maxima de los motores 150
+VEL_MIN = - omega_0 * 0.40 
 VELANG_MIN = -10
 VELANG_MAX = 10
 
