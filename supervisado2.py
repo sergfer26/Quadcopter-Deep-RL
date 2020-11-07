@@ -86,10 +86,8 @@ def actions_to_lambdas(actions):
 class CSV_Dataset(Dataset):
     
     def __init__(self, dataframe):
-        actions = dataframe.values[:, 0:4]
-        actions_ = env._reverse_action(actions)
         x_train = dataframe.values[:, 4:]
-        y_train = actions_to_lambdas(actions_) # lambdas
+        y_train = dataframe.values[:, 0:4] # acciones reales
         self.x_train = torch.tensor(x_train, dtype=torch.float32)
         self.y_train = torch.tensor(y_train, dtype=torch.float32)
         
@@ -128,17 +126,16 @@ def training_loop(train_loader, model, optimizer, loss_function, lam=LAMBDA, val
         Y = Y.to(device)
         if not valid:
             optimizer.zero_grad() # reinicia el gradiente
-        
-        Y_hat = model(X)
-        
-        actions = agent.lambdas_to_action(Y); actions_hat = agent.lambdas_to_action(Y_hat)
-        actions = env._action(actions); actions_hat = env._action(actions_hat)
+                
+        lambdas_hat = model(X)
+        actions_hat = agent.lambdas_to_action(lambdas_hat)
+        actions = env._action(actions_hat)
 
         lam = torch.tensor(lam)
         l2_reg = torch.tensor(0.)
         for param in model.parameters():
             l2_reg += torch.norm(param)
-        loss = loss_function(actions, actions_hat) + lam * l2_reg
+        loss = loss_function(actions, Y) + lam * l2_reg
         if not valid:
             loss.backward() # cálcula las derivadas 
             optimizer.step() # paso de optimización 
