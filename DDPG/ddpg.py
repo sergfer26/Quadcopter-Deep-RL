@@ -8,9 +8,9 @@ from .models_merge import Actor, Critic, weights_init
 # from .models import Critic, weights_init
 from .utils import Memory
 
-
-A = np.array([[1, 1, 1, 1], [1, 0, -1, 0], [0, 1, 0, -1], [1, -1, 1, -1]]).T # base
-B = torch.tensor(A, dtype=torch.float32) 
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
 
 
 class DDPGagent:
@@ -36,6 +36,11 @@ class DDPGagent:
         self.critic = Critic(sizes_critic, self.num_actions)
         self.critic.apply(weights_init)
         self.critic_target = Critic(sizes_critic, self.num_actions)
+        if torch.cuda.is_available():
+            self.actor.cuda()
+            self.actor_target.cuda()
+            self.critic.cuda()
+            self.critic_target.cuda()
 
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(param.data)
@@ -49,19 +54,10 @@ class DDPGagent:
         self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
     
-    def get_action(self, state, tensor=False):
+    def get_action(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
-        lambdas = self.actor.forward(state)
-        if not tensor:
-            lambdas = lambdas.detach().numpy()[0,:]
-        action = self.lambdas_to_action(lambdas)
-        return lambdas, action
-
-    def lambdas_to_action(self, lambdas):
-        if torch.is_tensor(lambdas):
-            action = torch.matmul(lambdas, B.T)
-        else:
-            action = np.matmul(lambdas, A.T)
+        action = self.actor.forward(state.to(device))
+        action = action.detach().cpu().numpy()[0,:]
         return action
 
     def update(self, batch_size):
@@ -74,13 +70,13 @@ class DDPGagent:
     
         # Critic loss        
         Qvals = self.critic.forward(states, actions)
-        next_actions = self.actor_target.forward(next_states)
-        next_Q = self.critic_target.forward(next_states, next_actions.detach())
+        next_actions = self.actor_target.forward(next_states.to(device))
+        next_Q = self.critic_target.forward(next_states.to(device), next_actions.to(device)).detach()
         Qprime = rewards + self.gamma * next_Q
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss
-        policy_loss = -self.critic.forward(states, self.actor.forward(states)).mean()
+        policy_loss = -self.critic.forward(states.to(device), self.actor.forward(states.to(device))).mean()
         
         # update networks
         self.actor_optimizer.zero_grad()
