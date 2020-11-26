@@ -19,12 +19,12 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
 def agent_action(agent, env, noise, state):
-    lambdas, action = agent.get_action(state)
+    action = agent.get_action(state)
     real_action = env._action(action)
     real_action = noise.get_action(real_action, env.time[env.i])
     control = W0 + real_action
     new_state, reward, done = env.step(control)
-    return real_action, action, lambdas, new_state, reward, done
+    return real_action, action, new_state, reward, done
 
 
 def linear_action(env, state):
@@ -46,10 +46,10 @@ def training_loop(agent, env, noise, pbar=None):
     episode_reward = 0
     s = 1
     while True:
-        _, _, lambdas, new_state, reward, done = agent_action(agent, env, noise, state)
+        _, action, new_state, reward, done = agent_action(agent, env, noise, state)
         episode_reward += reward
         s1, s2 = env.get_score(env.state)
-        agent.memory.push(state, lambdas, reward, new_state, done)
+        agent.memory.push(state, action, reward, new_state, done)
         if len(agent.memory) > BATCH_SIZE:
             agent.update(BATCH_SIZE)
         _, _, w, _, _, z, p, q, _, _, theta, phi = env.state
@@ -77,7 +77,7 @@ def Sim(flag, agent, env, noise, show=True, path=None):
     acciones = []
     env.flag  = flag
     while True:
-        real_action, _, _, new_state, reward, done = agent_action(agent, env, noise, state)
+        real_action, _, new_state, reward, done = agent_action(agent, env, noise, state)
         u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
         Z.append(z); W.append(w)
         Psi.append(psi); R.append(r)
@@ -164,7 +164,6 @@ def actions_agent_vs_linear(X, Y, t, title=None, show=True, path=None):
         plt.close()
 
 
-
 def agent_vs_linear(flag, agent, env, noise, show=True, paths=[None, None]):
     env.flag = flag
     t = env.time
@@ -179,7 +178,7 @@ def agent_vs_linear(flag, agent, env, noise, show=True, paths=[None, None]):
     episode_reward_agent = 0.0
 
     while True:
-        real_action, _, _, new_state, reward, done = agent_action(agent, env, noise, state)
+        real_action, _, new_state, reward, done = agent_action(agent, env, noise, state)
         agent_states = np.vstack([agent_states, env.state])
         state = new_state
         episode_reward_agent += reward
@@ -199,8 +198,8 @@ def agent_vs_linear(flag, agent, env, noise, show=True, paths=[None, None]):
         if done:
             break
     
-    title1 = 'Linear $G_T =$ {}, Agent $G_T =$ {}'.format(episode_reward_linear, episode_reward_agent)
-    title2 = '$\sigma \max =$ {}, $\sigma \min =$ {}'.format(noise.max_sigma, noise.min_sigma)
+    title1 = 'Linear '+r'$\overline{R}_{Total} =$'+'{}'.format(episode_reward_linear) +', Agent '+r'$\overline{R}_{Total} =$'+'{}'.format(episode_reward_agent)
+    title2 = r'$\sigma_{\max} =$' + '{},'.format(noise.max_sigma) + r'$\sigma_{\min} =$' + '{}'.format(noise.min_sigma)
     plot_agent_vs_linear(linear_states, agent_states, t, title=title1, show=show, path=paths[0])
     actions_agent_vs_linear(linear_actions, agent_actions, t, title=title2, show=show, path=paths[1])
     return episode_reward_agent
@@ -224,7 +223,7 @@ def nSim(flag, agent, env, noise, n, bar=None, show=True, path=None):
         env.flag  = flag
         total = 0
         while True:
-            _, _, _, new_state, reward, done = agent_action(agent, env, noise, state)
+            _, _, new_state, reward, done = agent_action(agent, env, noise, state)
             u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
             Z.append(z); W.append(w)
             Psi.append(psi); R.append(r)
@@ -247,7 +246,7 @@ def nSim(flag, agent, env, noise, n, bar=None, show=True, path=None):
         sub_plot_state(T, R, Q, P, adPhi, axis_labels=['$d\psi$', '$d\\theta$', '$d\phi$'], c=['r', 'k', 'g'], alpha=alpha)
     
     mean_reward /= n
-    title = "Vuelos terminados $f =$ {}, $G_t (media) = ${}".format(total/n, mean_reward)
+    title = "Vuelos terminados $f =$ {}, $ \overline R = ${}".format(total/n, mean_reward)
     fig.suptitle(title, fontsize=12)
     if show:
         plt.show()

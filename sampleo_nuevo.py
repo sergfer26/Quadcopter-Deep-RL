@@ -46,4 +46,4 @@ def vuelos(numero):
         writer = csv.writer(csvfile)
         writer.writerows(muestra)
 
-vuelos(3)
+vuelos(175)

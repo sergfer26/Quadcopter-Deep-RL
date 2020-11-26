@@ -10,7 +10,7 @@ import torch.autograd
 import torch.nn.functional as F
 import torch.optim as optim
 
-from torch import save
+from torch import save, Tensor
 from tqdm import tqdm
 from numpy import sin, cos, tan
 from numpy.linalg import norm, solve
@@ -19,6 +19,7 @@ from scipy.integrate import odeint
 
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, Dataset, random_split
+from torch.nn.modules.loss import _Loss 
 
 from DDPG.env.quadcopter_env import QuadcopterEnv
 from DDPG.utils import NormalizedEnv, OUNoise
@@ -44,9 +45,10 @@ pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
 H_SIZES = [64, 64, 64] # dimensión de capas
 ACTIONS = 4
 BATCH_SIZE = 32
-EPOCHS = 50
+EPOCHS = 100
 P = 0.80 # división de datos
 LAMBDA = 50 # regularization
+DROPOUT = False
 
 env = QuadcopterEnv()
 env = NormalizedEnv(env)
@@ -74,22 +76,13 @@ def save_net(net, path, name):
     save(net.state_dict(), path+'/'+ name +'.pth')
 
 
-def actions_to_lambdas(actions):
-    n, _ = actions.shape
-    lambdas = np.zeros((n, 4))
-    for i in range(n):
-        x = solve(A, actions[i, :])
-        lambdas[i, :] = x
-    return lambdas
-    
 
 class CSV_Dataset(Dataset):
     
     def __init__(self, dataframe):
-        #actions = dataframe.values[:, 0:4]
-        #actions_ = env._reverse_action(actions)
+        actions = dataframe.values[:, 0:4]
+        y_train = env._reverse_action(actions) # acciones escaladas
         x_train = dataframe.values[:, 4:]
-        y_train =  dataframe.values[:, 0:4]# acciones reales
         self.x_train = torch.tensor(x_train, dtype=torch.float32)
         self.y_train = torch.tensor(y_train, dtype=torch.float32)
         
@@ -114,11 +107,36 @@ val_loader = DataLoader(val_set, shuffle=False, batch_size=BATCH_SIZE)
 
 """## Training"""
 
-criterion = nn.MSELoss()
+class Tanh_MaxLikelihood(_Loss):
+    '''
+    https://stats.stackexchange.com/questions/38225/neural-net-cost-function-for-hyperbolic-tangent-activation
+    '''
+    __constants__ = ['reduction']
+
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
+        super(Tanh_MaxLikelihood, self).__init__(size_average, reduce, reduction)
+        self.set_scale_function()
+
+    def set_scale_function(self, name='uniform'):
+        if name == 'sigmoid':
+            self.scale = nn.Sigmoid()
+        elif name == 'softmax':
+            self.scale = nn.Softmax()
+        else:
+            self.scale = lambda x: (x + 1)/2
+        
+        self.scale_name = name
+
+    def forward(self, y_hat: Tensor, y: Tensor) -> Tensor:
+        n = y.shape[-1]
+        vec = - self.scale(y) * torch.log(self.scale(y_hat)) - (1 - self.scale(y)) * torch.log(1 - self.scale(y_hat))
+        return torch.sum(vec)/n
+
+criterion = Tanh_MaxLikelihood()
 optimizer = optim.Adam(agent.actor.parameters(), lr=0.001, weight_decay=0.0005)
 
 
-def training_loop(train_loader, model, optimizer, loss_function, lam=LAMBDA, valid=False):
+def training_loop(train_loader, model, optimizer, criterion=nn.MSELoss(), lam=LAMBDA, valid=False):
     running_loss = 0.0
     if valid: 
         model.eval() # modo de validación del modelo 
@@ -129,15 +147,12 @@ def training_loop(train_loader, model, optimizer, loss_function, lam=LAMBDA, val
         if not valid:
             optimizer.zero_grad() # reinicia el gradiente
         
-        lambdas_hat = model(X)
-        actions_hat = agent.lambdas_to_action(lambdas_hat)
-        actions = env._action(actions_hat)
-        import pdb; pdb.set_trace()
-        lam = torch.tensor(lam)
-        l2_reg = torch.tensor(0.)
+        Y_hat = model(X) # acciones escaladas estimadas
+        lam = torch.tensor(lam).to(device)
+        l2_reg = torch.tensor(0.).to(device)
         for param in model.parameters():
             l2_reg += torch.norm(param)
-        loss = loss_function(actions, Y) + lam * l2_reg
+        loss = criterion(Y_hat, Y) + lam * l2_reg
         if not valid:
             loss.backward() # cálcula las derivadas 
             optimizer.step() # paso de optimización 
@@ -173,7 +188,7 @@ def train_model(epochs, model, optimizer, train_loader, val_loader, criterion, n
             for img in imgs:
                 os.remove(img)
 
-    print("--- %s seconds ---", train_time)
+    print("--- {} seconds ---".format(train_time))
     return epoch_loss, val_loss
 
 
@@ -184,7 +199,7 @@ def plot_loss(epoch_loss, val_loss, lam=LAMBDA, show=True, path=PATH):
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.title('$\lambda ={}$'.format(lam))
+    plt.title('$\lambda={}$, scale function: {}, dropout$=${} '.format(lam, criterion.scale_name, DROPOUT))
     if show:
         plt.show()
     else:

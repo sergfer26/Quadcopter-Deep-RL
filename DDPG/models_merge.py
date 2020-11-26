@@ -8,6 +8,8 @@ from torch.autograd import Variable
 class Actor(nn.Module):
     def __init__(self, h_sizes, output_size, learning_rate=3e-4):
         super(Actor, self).__init__()
+        self.dropout = False
+        self.p = 0.5
         h_sizes[0] = 9
         size1, self.hidden1 = self.get_hidden_layers(h_sizes)
         size2, self.hidden2 = self.get_hidden_layers(h_sizes[0:-1])
@@ -30,9 +32,13 @@ class Actor(nn.Module):
         x1 = state[:, 0:9]; x2 = state[:, 9:]
         for layer in self.hidden1:
             x1 = F.relu(layer(x1))
+            if self.dropout:
+                x1 = F.dropout(x1, p=self.p, training=self.training)
         
         for layer in self.hidden2:
             x2 = layer(x2)
+            if self.droput:
+                x2 = F.dropout(x2, p=self.p, training=self.training)
 
         x = torch.cat((x1, x2), dim=1)
         x = F.relu(self.mid(x))
