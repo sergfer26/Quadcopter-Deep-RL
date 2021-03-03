@@ -16,15 +16,15 @@ c1, c2, c3, c4 = C
 F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 BATCH_SIZE = 32
-EPOCHS = 500
-N = 1000 # vuelos simulados
+EPOCHS = 100
+N = 50# vuelos simulados
 
 DEVICE = "cpu"
 DTYPE = torch.float32
 
 env = AgentEnv(QuadcopterEnv())
 agent = DDPGagent(env)
-agent.noise_on = False
+env.noise_on = False
 agent.tau = 1.0
 if torch.cuda.is_available(): 
     DEVICE = "cuda"
@@ -77,7 +77,7 @@ def get_experience(env, memory, n):
             obs = env.reverse_observation(state)
             real_action = get_action(obs, goal)
             action = env.reverse_action(real_action)
-            new_state, reward, done = env.step(action)
+            _, reward, new_state, done = env.step(action)
             memory.push(state, action, reward, new_state, done)
             state = new_state
             if done:
