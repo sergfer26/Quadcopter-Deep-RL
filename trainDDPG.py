@@ -19,7 +19,7 @@ from datetime import datetime
 
 
 BATCH_SIZE = 32
-EPISODES = 100
+EPISODES = 50
 TAU = 2 * pi
 SHOW = True
 
@@ -38,16 +38,15 @@ if not SHOW:
 def train(agent, env):
     #s = 1
     R = []
+    env.reset()
     for episode in range(EPISODES):
-        agent.noise.reset()
         with tqdm(total=env.steps, position=0) as pbar:
             pbar.set_description(f'Ep {episode + 1}/'+str(EPISODES))
             state = env.reset()
             episode_reward = 0
             while True:
                 action = agent.get_action(state)
-                breakpoint()
-                new_state, reward, done = env.step(action)
+                action, reward, new_state, done = env.step(action)
                 episode_reward += reward
                 agent.memory.push(state, action, reward, new_state, done)
                 if len(agent.memory) > BATCH_SIZE:
@@ -78,9 +77,9 @@ def sim(flag, agent, env):
     i = 0
     while True:
         action = agent.get_action(state)
-        new_state, reward, done = env.step(action)
+        action, reward, new_state, done = env.step(action)
         episode_reward += reward
-        states[i, :] = env.reverse_observation(state)
+        states[i, :] = env.state
         actions[i, :] = env.action(action)
         scores[i, :] = np.array([reward, episode_reward, env.is_stable(new_state), env.is_contained(new_state)])
         state = new_state
@@ -104,7 +103,7 @@ def nSim(flag, agent, env, n):
         i = 0
         while True:
             action = agent.get_action(state)
-            new_state, reward, done = env.step(action)
+            action, reward, new_state, done = env.step(action)
             episode_reward += reward
             states[i + 1, :, k] = env.state
             actions[i, :, k] = env.action(action)
