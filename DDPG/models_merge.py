@@ -37,7 +37,7 @@ class Actor(nn.Module):
         
         for layer in self.hidden2:
             x2 = layer(x2)
-            if self.droput:
+            if self.dropout:
                 x2 = F.dropout(x2, p=self.p, training=self.training)
 
         x = torch.cat((x1, x2), dim=1)
