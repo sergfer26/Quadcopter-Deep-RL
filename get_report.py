@@ -76,6 +76,7 @@ for line in textLines:
 
 pdf.drawText(text)
 
+
 table = Table(data_ddpg)
 table.setStyle(style)
 table.setStyle(ts)
