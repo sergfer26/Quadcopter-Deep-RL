@@ -8,10 +8,10 @@ from gym import spaces
 from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
 from scipy.integrate import odeint
+from param import PARAMS_ENV 
 
-
-TIME_MAX = 30.00
-STEPS = 800
+TIME_MAX = PARAMS_ENV['TIME_MAX']
+STEPS = PARAMS_ENV['TIME_MAX']
 
 # perturbar constantes 10 %
 G = 9.81
@@ -22,8 +22,9 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 # constantes del ambiente
-VEL_MAX = omega_0 * 0.40  #60 #Velocidad maxima de los motores 150
-VEL_MIN = - omega_0 * 0.40 
+omega0_per = PARAMS_ENV['omega0_per']
+VEL_MAX = omega_0 * omega0_per  #60 #Velocidad maxima de los motores 150
+VEL_MIN = - omega_0 * omega0_per 
 VELANG_MIN = -0.2
 VELANG_MAX = 0.2
 
