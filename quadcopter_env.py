@@ -39,7 +39,13 @@ sec = lambda x: 1/cos(x)
 
 def rotation_matrix(angles):
     '''
-        Obtine la matriz de rotación
+        rotation_matrix obtine la matriz de rotación de los angulos de Euler
+        https://en.wikipedia.org/wiki/Rotation_matrix;
+
+        angles: son los angulos de Euler psi, theta y phi con respecto a los 
+        ejes x, y, z;
+
+        regresa: la matriz R.
     '''
     z, y, x = angles # psi, theta, phi
     R = np.array([
@@ -53,6 +59,16 @@ def rotation_matrix(angles):
 
 
 def jac_f(X, t, w1, w2, w3, w4):
+    '''
+        jac_f calcula el jacobiano de la funcion f;
+
+        X: es un vector de 12 posiciones;
+        t: es un intervalo de tiempo [t1, t2];
+        wi: es un parametro de control, i = 1, 2, 3, 4;
+
+        regrasa la matriz J.
+
+    '''
     Ixx, Iyy, Izz = I
     a1 = (Izz - Iyy)/Ixx
     a2 = (Ixx - Izz)/Iyy
@@ -83,8 +99,15 @@ def jac_f(X, t, w1, w2, w3, w4):
 
 # ## Sistema dinámico
 def f(X, t, w1, w2, w3, w4):
-    #El primer parametro es un vector
-    #W,I tambien
+    '''
+        f calcula el vector dot_x = f(x, t, w) (sistema dinamico);
+        
+        X: es un vector de 12 posiciones;
+        t: es un intervalo de tiempo [t1, t2];
+        wi: es un parametro de control, i = 1, 2, 3, 4;
+
+        regresa dot_x
+    '''
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
@@ -98,7 +121,6 @@ def f(X, t, w1, w2, w3, w4):
     dtheta = q * cos(phi) - r * sin(phi)
     dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
     dx = u; dy = v; dz = w
-    # return du, dv, dw, dp, dq, dr, dpsi, dtheta, dphi, dx, dy, dz
     return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
 
