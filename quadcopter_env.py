@@ -2,6 +2,7 @@ import numpy as np
 import gym
 import numba
 import torch
+from DDPG.utils import OUNoise
 from numba import cuda
 from gym import spaces
 from numpy import pi, sin, cos, tan
@@ -124,7 +125,6 @@ class QuadcopterEnv(gym.Env):
 
     def is_contained(self, state):
         x = state[3:6]
-        # x = state[3:6]
         high = self.observation_space.high[3:6]
         low = self.observation_space.low[3:6]
         aux = np.logical_and(low <= x, x <= high)
@@ -144,8 +144,7 @@ class QuadcopterEnv(gym.Env):
         score2 = 0
         if self.is_contained(state[3:6]):
             score2 = 1
-            vel = np.concatenate([state[0:3], state[6:9]])
-            if self.is_stable(state[3:6], vel):
+            if self.is_stable(state):
                 score1 = 1
         return score1, score2
 
@@ -160,14 +159,14 @@ class QuadcopterEnv(gym.Env):
         d1 = norm(x - self.goal[3:6])
         d2 = norm(vel)
         d3 = norm(rotation_matrix(state[9:]))
-        return r - (0.01 * d2 + 0.01 * d1)
+        return r - (0.01 * d2 + 0.01 * d1 + 0.5 * d3)
 
     def is_done(self):
         #Si se te acabo el tiempo
         if self.i == self.steps-2:
             return True
         elif self.flag:
-            if self.is_contained(self.state[3:6]): 
+            if self.is_contained(self.state): 
                 return False
             else:
                 return True
@@ -175,15 +174,14 @@ class QuadcopterEnv(gym.Env):
             return False
 
     def step(self, action):
-        breakpoint()
         w1, w2, w3, w4 = action + W0
         t = [self.time[self.i], self.time[self.i+1]]
-        delta_y = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[1]#, Dfun=self.jac)[1]
-        self.state = delta_y # estado interno del ambiente 
-        reward = self.get_reward(delta_y)
+        y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[1]#, Dfun=self.jac)[1]
+        self.state = y_dot # estado interno del ambiente 
+        reward = self.get_reward(y_dot)
         done = self.is_done()
         self.i += 1
-        return self.state, reward, done
+        return action, reward, self.state, done
 
     def reset(self):
         self.i = 0
@@ -205,6 +203,8 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
         high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
         self.observation_space = spaces.Box(low=low, high=high)
+        self.noise = OUNoise(env.action_space)
+        self.noise_on = True
 
     def observation(self, obs):
         angles = obs[9:]
@@ -231,7 +231,11 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
 
         act_k = (high - low)/ 2.
         act_b = (high + low)/ 2.
-        return act_k * action + act_b
+        action = act_k * action + act_b
+        if self.noise_on:
+            action = self.noise.get_action(action, self.i)
+        
+        return action
 
     def reverse_action(self, action):
         high = self.action_space.high
@@ -244,10 +248,12 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         act_b = (high + low)/ 2.
         return act_k_inv * (action - act_b)
 
-    def step(self, action):
-        state, reward, done = super().step(action)
+    def step(self, a):
+        action, reward, state, done = super().step(a)
+        breakpoint()
         state = self.observation(state)
-        return state, reward, done
+        action = self.reverse_action(action)
+        return action, reward, state, done
 
     def reset(self):
         state = super().reset()
