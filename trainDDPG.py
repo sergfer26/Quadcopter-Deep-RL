@@ -21,7 +21,7 @@ from datetime import datetime
 BATCH_SIZE = 32
 EPISODES = 50
 TAU = 2 * pi
-SHOW = True
+SHOW = False
 
 if not SHOW:
     tz = pytz.timezone('America/Mexico_City')
@@ -121,6 +121,7 @@ if __name__ == "__main__":
     agent = DDPGagent(env)
     CR_t = train(agent, env)
     agent.noise_on = False
+    agent.save(PATH)
     states, actions, scores = sim(True, agent, env)
     plt.plot(CR_t)
     plt.xlabel('episodes')
