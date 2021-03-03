@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import torch
+import pytz
+import pathlib
+from datetime import datetime
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader, Dataset, random_split
 from quadcopter_env import QuadcopterEnv, AgentEnv
@@ -21,15 +24,28 @@ N = 50# vuelos simulados
 
 DEVICE = "cpu"
 DTYPE = torch.float32
+SHOW = False
 
 env = AgentEnv(QuadcopterEnv())
 agent = DDPGagent(env)
 env.noise_on = False
 agent.tau = 1.0
+
 if torch.cuda.is_available(): 
     DEVICE = "cuda"
     agent.actor.cuda() # para usar el gpu
     agent.critic.cuda()
+
+if not SHOW:
+    tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now(tz)
+    month = mexico_now.month
+    day = mexico_now.day
+    hour = mexico_now.hour
+    minute = mexico_now.minute
+
+    PATH = 'results_super/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
+    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)   
 
 
 class Memory_Dataset(Dataset):
@@ -116,16 +132,24 @@ dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
 data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
 Loss, Scores = train(agent, env, data_loader)
+agent.save(PATH)
 
 data_loss = pd.DataFrame(Loss, columns=list(Loss.keys()))
 data_scores = pd.DataFrame(Scores, columns=list(Scores.keys()))
 
 
 data_loss.plot(subplots=True, layout=(1, 2), figsize=(10, 7), title='Training loss')
-plt.show()
+if SHOW:
+    plt.show()
+else:
+    plt.savefig(PATH + '/loss.png')
+
 
 data_scores.plot(subplots=True, layout=(2, 2), figsize=(10, 7), title='Validation scores')
-plt.show()
+if SHOW:
+    plt.show()
+else:
+    plt.savefig(PATH + '/validation_scores.png')
 
 
 
