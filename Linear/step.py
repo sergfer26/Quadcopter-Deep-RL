@@ -16,10 +16,13 @@ F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T  # matriz de control pitch
 
-c1 = (((2*K)/M) * omega_0)**(-1) 
-c3 = (((L * B) / Ixx) * omega_0)**(-1)
-c4 = (((L * B) / Iyy) * omega_0)**(-1)
-c2 = (((2 * B) / Izz) * omega_0)**(-1)
+c1 = (((2*K)/M) * omega_0)**(-1)  # z
+c3 = (((L * B) / Ixx) * omega_0)**(-1) # roll
+c4 = (((L * B) / Iyy) * omega_0)**(-1) # pitch
+c2 = (((2 * B) / Izz) * omega_0)**(-1) # yaw
+
+C = c1, c2, c3, c4
+F = F1, F2, F3, F4
 
 
 def imagen_accion(A, t, show=True, dir_=None):
@@ -95,6 +98,7 @@ def simulador(Y, Ze, T, tam,jac=None):
         W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
         tem = W1 + W2 + W3 + W4
+        print(W)
         acciones.append(tem)
         Y = step(W, Y, [t[i], t[i+1]],jac=jac)[1]
 
