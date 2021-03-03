@@ -4,13 +4,12 @@ import random
 import torch
 from numpy import floor
 from collections import deque
-from .env.quadcopter_env import QuadcopterEnv
 
 
 # Ornstein-Ulhenbeck Process
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
-    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=1, min_sigma=0.2, decay_period=1e5):
+    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.5, min_sigma=0.2, decay_period=1e5):
         self.mu           = mu
         self.theta        = theta
         self.sigma        = max_sigma
@@ -38,13 +37,14 @@ class OUNoise(object):
 
 
 # https://github.com/openai/gym/blob/master/gym/core.py
-class NormalizedEnv(QuadcopterEnv):
+class NormalizedEnv(gym.ActionWrapper):
     """ Wrap action """
 
     def __init__(self, env):
-        QuadcopterEnv.__init__(self)
+        super().__init__(env)
+        #QuadcopterEnv.__init__(self)
 
-    def _action(self, action):
+    def action(self, action):
         '''
         se alimenta de la tanh
         '''
@@ -58,7 +58,7 @@ class NormalizedEnv(QuadcopterEnv):
         act_b = (high + low)/ 2.
         return act_k * action + act_b
 
-    def _reverse_action(self, action):
+    def reverse_action(self, action):
         high = self.action_space.high
         low = self.action_space.low
         if torch.is_tensor(action):
