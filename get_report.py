@@ -4,8 +4,9 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-data_ddpg = [[v, str(k)] for v, k in list(PARAMS_DDPG.items())]
-data_ddpg.insert(0, ['Param', 'Valor'])
+
+
+
 fileName = 'MyDoc.pdf'
 documentTitle = 'Document title!'
 title = 'Tasmanian devil'
@@ -76,18 +77,21 @@ for line in textLines:
 
 pdf.drawText(text)
 
+def dic_to_list(data):
+    lista = [[v, str(k)] for v, k in list(data.items())]
+    lista.insert(0, ['Param', 'Valor'])
+    return lista
 
-table = Table(data_ddpg)
-table.setStyle(style)
-table.setStyle(ts)
-width = 400
-height = 100
-table.wrapOn(pdf, width, height)
-table.drawOn(pdf, 200, 600)
+def add_table(data,x,y):
+    data = dic_to_list(data)
+    table = Table(data)
+    table.setStyle(style)
+    table.setStyle(ts)
+    table.wrapOn(pdf,400,100)
+    table.drawOn(pdf, x, y)
 
 # pdf.drawInlineImage(image, 130, 400)
-
-
-
+add_table(PARAMS_DDPG,200,600)
+add_table(PARAMS_UTILS,200,550)
 
 pdf.save()
