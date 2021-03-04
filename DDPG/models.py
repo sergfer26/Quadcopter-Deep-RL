@@ -25,7 +25,7 @@ class Critic(nn.Module):
         return x
 
 class Actor(nn.Module):
-    def __init__(self, h_sizes, output_size, learning_rate=3e-4):
+    def __init__(self, h_sizes, output_size):
         super(Actor, self).__init__()
         self.hidden = nn.ModuleList()
         for k in range(len(h_sizes) - 1):

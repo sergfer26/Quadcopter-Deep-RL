@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 
 class Actor(nn.Module):
-    def __init__(self, h_sizes, output_size, learning_rate=3e-4):
+    def __init__(self, h_sizes, output_size):
         super(Actor, self).__init__()
         self.dropout = False
         self.p = 0.5
