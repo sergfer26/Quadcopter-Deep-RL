@@ -106,6 +106,37 @@ add_table(PARAMS_ENV,100,200)
 
 pdf.showPage()
 #Siguiente pagina
+
 pdf.drawString(200, 100, "Some text in second page.")
+
+drawMyRuler(pdf)
+add_text(['Perdida de  funcion'],100,750)
+pdf.drawInlineImage('1.png', 100, 400,400,400,preserveAspectRatio=True)
+#drawImage(image, x, y, width=None, height=None, mask=None, preserveAspectRatio=True, anchor='c')
+
+
+add_text(['Validación'],100, 400)
+pdf.drawInlineImage('1.png', 100, 50,400,400,preserveAspectRatio=True)
+
 pdf.showPage()
+pdf.drawString(200, 100, "Some text in second page.")
+
+
+drawMyRuler(pdf)
+add_text(['Estados del ambiente'],100, 750)
+pdf.drawInlineImage('1.png', 100, 400,400,400,preserveAspectRatio=True)
+#drawImage(image, x, y, width=None, height=None, mask=None, preserveAspectRatio=True, anchor='c')
+
+
+add_text(['Acciones'],100, 400)
+pdf.drawInlineImage('1.png', 100, 50,400,400,preserveAspectRatio=True)
+
+pdf.showPage()
+pdf.drawString(200, 100, "Some text in second page.")
+
+add_text(['10 vuelos en R3'],100, 750)
+pdf.drawInlineImage('1.png', 100, 400,400,400,preserveAspectRatio=True)
+
 pdf.save()
+
+print('Ya acabe')
