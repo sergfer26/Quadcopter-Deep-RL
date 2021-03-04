@@ -13,6 +13,7 @@ documentTitle = 'Document title!'
 title = 'Reporte de Entrenamiento'
 subTitle = ''
 pdf = canvas.Canvas(fileName)
+
 pdf.setTitle(documentTitle)
 pdf.drawCentredString(300, 770, title)
 # RGB - Red Green and Blue
@@ -103,6 +104,8 @@ add_table(PARAMS_UTILS,100, 350)
 add_text(['Parámetros del Ambiente'],100, 300)
 add_table(PARAMS_ENV,100,200)
 
-
-
+pdf.showPage()
+#Siguiente pagina
+pdf.drawString(200, 100, "Some text in second page.")
+pdf.showPage()
 pdf.save()
