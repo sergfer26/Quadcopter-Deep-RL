@@ -8,7 +8,7 @@ from gym import spaces
 from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
 from scipy.integrate import odeint
-from param import PARAMS_ENV 
+from params import PARAMS_ENV 
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['TIME_MAX']
@@ -273,7 +273,6 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
 
     def step(self, a):
         action, reward, state, done = super().step(a)
-        breakpoint()
         state = self.observation(state)
         action = self.reverse_action(action)
         return action, reward, state, done
