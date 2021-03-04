@@ -101,6 +101,34 @@ def get_experience(env, memory, n):
     bar.finish()
 
 
+def nsim3D(n, agent, env):
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    for _ in range(n):
+        state = env.reset()
+        env.noise.reset()
+        x, y, z = env.state[3:6]
+        X,Y,Z = [],[],[]
+        while True:
+            #action = agent.get_action(state)
+            action = get_action(env.state, env.goal)
+            state = env.observation(env.state)
+            action = env.reverse_action(action)
+            _, _, new_state, done = env.step(action)
+            x, y, z = env.state[3:6]
+            Z.append(z);X.append(x);Y.append(y)
+            state = new_state
+            if done:
+                break
+        ax.plot(X, Y, Z,'.b',alpha = 0.3,markersize=1)
+    fig.suptitle('Vuelos' , fontsize=16)        
+    if SHOW:
+        plt.show()
+    else: 
+        fig.set_size_inches(33.,21.)
+        plt.savefig(PATH + '/vuelos.png', dpi=300)
+
+
 def train(agent, env, data_loader):
     n_batches = len(data_loader)
     Scores = {'$Cr_t$': list(), 'stable': list(), 'contained': list()}
@@ -117,7 +145,7 @@ def train(agent, env, data_loader):
                 pbar.update(states.shape[0])
 
             if epoch % 10 == 0:
-                _, _, scores = sim(True, agent, env) # r_t, Cr_t, stable, contained
+                states, actions, scores = sim(True, agent, env) # r_t, Cr_t, stable, contained
                 Scores['$Cr_t$'].append(scores[1, -1])
                 Scores['stable'].append(np.sum(scores[2, :]))
                 Scores['contained'].append(np.sum(scores[3, :]))
@@ -126,7 +154,7 @@ def train(agent, env, data_loader):
     Loss['critic'] /= n_batches
     return Loss, Scores
   
-
+'''
 get_experience(env, agent.memory, N)
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
@@ -150,6 +178,10 @@ if SHOW:
     plt.show()
 else:
     plt.savefig(PATH + '/validation_scores.png')
+'''
+
+nsim3D(5, agent, env)
+
 
 
 
