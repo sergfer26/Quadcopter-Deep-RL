@@ -6,3 +6,6 @@ supervisado/
 results_ddpg/
 __pycache__/
 odeint_gpu_vs_cpu.py
+*.csv
+best
+*.pth
