@@ -108,4 +108,6 @@ pdf.showPage()
 #Siguiente pagina
 pdf.drawString(200, 100, "Some text in second page.")
 pdf.showPage()
+image = 'supervisado/10_30_1959/actions_0.png'
+pdf.drawInlineImage(image, 130, 400)
 pdf.save()
