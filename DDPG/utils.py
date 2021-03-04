@@ -4,7 +4,7 @@ import random
 import torch
 from numpy import floor
 from collections import deque
-from params import PARAMS_UTILS
+from .params import PARAMS_UTILS
 
 
 # Ornstein-Ulhenbeck Process
