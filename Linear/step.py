@@ -10,6 +10,7 @@ from .ecuaciones_drone import f, jac_f, escribe, imagen, imagen2d, I, K, B, M, L
 from numpy import pi
 
 omega_0 = np.sqrt((G * M)/(4 * K))
+W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
 Ixx, Iyy, Izz = I
 F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # matriz de control z
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
@@ -85,7 +86,6 @@ def simulador(Y, Ze, T, tam,jac=None):
     regresa; arreglo de la posición final
     '''
     z_e, psi_e, phi_e, theta_e = Ze
-    W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
     X = np.zeros((tam, 12))
     X[0] = Y
     t = np.linspace(0, T, tam)
@@ -98,20 +98,44 @@ def simulador(Y, Ze, T, tam,jac=None):
         W4 = control_feedback(theta - theta_e, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
         tem = W1 + W2 + W3 + W4
-        print(W)
         acciones.append(tem)
         Y = step(W, Y, [t[i], t[i+1]],jac=jac)[1]
 
         X[i+1] = Y
     return X, acciones 
 
+def nsim3D(n):
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    high = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/16, pi/16, pi/16])
+    low = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, -0.05, -0.05, -0.05, -pi/16, -pi/16, -pi/16])
+    t = np.linspace(0, 30, 800)
+    for _ in range(n):
+        state = np.array([np.random.uniform(x, y) for x, y in zip(low, high)])
+        X,Y,Z = [],[],[]
+        for i in range(len(t)-1):
+            u, v, w, x, y, z, p, q, r, psi, theta, phi = state
+            W1 = control_feedback(z, w, F1) * c1  # control z
+            W2 = control_feedback(psi, r, F2) * c2  # control yaw
+            W3 = control_feedback(phi, p, F3) * c3  # control roll
+            W4 = control_feedback(theta, q, F4) * c4  # control pitch
+            W = W0 + W1 + W2 + W3 + W4
+            Z.append(z);X.append(x);Y.append(y)
+            new_state = step(W, state, [t[i], t[i+1]])[1]
+            state = new_state
+        ax.plot(X, Y, Z,'.b',alpha = 0.3,markersize=1)
+    fig.suptitle('Vuelos' , fontsize=16)  
+    ax.plot(0, 0, 0,'.r',alpha = 0.3,markersize=1)      
+    plt.show()
+
 '''
 T = 120
 tam = 3200
 un_grado = np.pi/180.0
-Y = np.zeros(12)
-Y[5] = 10 
-Ze = (15, 0, 0, 0)
+high = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/8, pi/8, pi/8])
+low = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, -0.05, -0.05, -0.05, -pi/8, -pi/8, -pi/8])
+Y = np.array([np.random.uniform(x, y) for x, y in zip(low, high)])
+Ze = (0, 0, 0, 0)
 start = process_time() 
 X, A = simulador(Y, Ze, T, tam,jac=jac_f)
 t = np.linspace(0, T, tam)
@@ -128,7 +152,6 @@ phi = X[:, 11]
 #escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
 #imagen(x, y, z)
 imagen2d(z, w, psi, r, phi, p, theta, q, t)
-#imagen_accion(A,t)
-'''
-    
-    
+imagen_accion(A,t)
+'''  
+#nsim3D(10)
