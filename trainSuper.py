@@ -19,12 +19,12 @@ c1, c2, c3, c4 = C
 F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 BATCH_SIZE = 32
-EPOCHS = 100
-N = 50# vuelos simulados
+EPOCHS = 250
+N = 100# vuelos simulados
 
 DEVICE = "cpu"
 DTYPE = torch.float32
-SHOW = False
+SHOW = True
 
 env = AgentEnv(QuadcopterEnv())
 agent = DDPGagent(env)
@@ -49,14 +49,12 @@ if not SHOW:
 
 
 class Memory_Dataset(Dataset):
-    
     def __init__(self, buffer, env):
         K = len(buffer)
         self.states = torch.zeros(K, int(env.observation_space.shape[0]), dtype=DTYPE, device=DEVICE)
         self.actions = torch.zeros(K, int(env.action_space.shape[0]), dtype=DTYPE, device=DEVICE)
         self.rewards = torch.zeros(K, 1, dtype=DTYPE, device=DEVICE)
         self.next_states = torch.zeros(K, int(env.observation_space.shape[0]), dtype=DTYPE, device=DEVICE)
-
         for k in range(K):
             s, a, r, ns, _ = buffer[k]
             self.states[k, :] = torch.tensor(s, dtype=DTYPE, device=DEVICE)
@@ -86,42 +84,47 @@ def get_experience(env, memory, n):
     print('Learning from observations')
     goal = env.goal
     bar = Bar('Processing', max=n)
+    k = 0
     for _ in range(n):
         bar.next()
         state = env.reset()
         for _ in range(env.steps):
-            obs = env.reverse_observation(state)
-            real_action = get_action(obs, goal)
+            real_action = get_action(env.state, goal)
             action = env.reverse_action(real_action)
             _, reward, new_state, done = env.step(action)
-            memory.push(state, action, reward, new_state, done)
+            if (abs(real_action) < env.action_space.high[0]).all():
+                memory.push(state, action, reward, new_state, done)
+
             state = new_state
+    
             if done:
                 break
     bar.finish()
+    print(k)
 
 
 def nsim3D(n, agent, env):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
+    mean_episode_reward = 0.0
     for _ in range(n):
         state = env.reset()
         env.noise.reset()
         x, y, z = env.state[3:6]
-        X,Y,Z = [],[],[]
+        X, Y, Z = [x], [y], [z]
         while True:
-            #action = agent.get_action(state)
-            action = get_action(env.state, env.goal)
-            state = env.observation(env.state)
-            action = env.reverse_action(action)
-            _, _, new_state, done = env.step(action)
+            action = agent.get_action(state)
+            #action = get_action(env.state, env.goal)
+            _, reward, new_state, done = env.step(action)
             x, y, z = env.state[3:6]
             Z.append(z);X.append(x);Y.append(y)
             state = new_state
+            mean_episode_reward += reward
             if done:
                 break
-        ax.plot(X, Y, Z,'.b',alpha = 0.3,markersize=1)
-    fig.suptitle('Vuelos' , fontsize=16)        
+        ax.plot(X, Y, Z,'.b', alpha=0.3, markersize=1)
+    fig.suptitle('Vuelos' , fontsize=16)  
+    ax.plot(0, 0, 0,'.r', alpha=0.3, markersize=1)      
     if SHOW:
         plt.show()
     else: 
@@ -154,8 +157,9 @@ def train(agent, env, data_loader):
     Loss['critic'] /= n_batches
     return Loss, Scores
   
-'''
+
 get_experience(env, agent.memory, N)
+'''
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
 data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
@@ -179,8 +183,7 @@ if SHOW:
 else:
     plt.savefig(PATH + '/validation_scores.png')
 '''
-
-nsim3D(5, agent, env)
+#nsim3D(10, agent, env)
 
 
 
