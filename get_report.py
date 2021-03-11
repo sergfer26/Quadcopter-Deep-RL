@@ -6,8 +6,6 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
 
-
-
 fileName = 'MyDoc.pdf'
 documentTitle = 'Document title!'
 title = 'Reporte de Entrenamiento'
