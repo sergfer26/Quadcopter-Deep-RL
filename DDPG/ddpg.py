@@ -110,24 +110,24 @@ class DDPGagent:
 
         return policy_loss, critic_loss
 
-        def save(self, path):
-            pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-            torch.save(self.critic.state_dict(), path + "/critic")
-            torch.save(self.critic_optimizer.state_dict(), path + "/critic_optimizer")
-            torch.save(self.actor.state_dict(), path + "/actor")
-            torch.save(self.actor_optimizer.state_dict(), path + "/actor_optimizer")
-            with open(path +'/memory.pickle', 'wb') as handle:
-                pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    def save(self, path):
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
+        torch.save(self.critic.state_dict(), path + "/critic")
+        torch.save(self.critic_optimizer.state_dict(), path + "/critic_optimizer")
+        torch.save(self.actor.state_dict(), path + "/actor")
+        torch.save(self.actor_optimizer.state_dict(), path + "/actor_optimizer")
+        with open(path +'/memory.pickle', 'wb') as handle:
+            pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-        def load(self, path):
-            self.critic.load_state_dict(torch.load(path + "/critic"))
-            self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer"))
-            self.critic_target = copy.deepcopy(self.critic)
-            self.actor.load_state_dict(torch.load(path + "/actor"))
-            self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer"))
-            self.actor_target = copy.deepcopy(self.actor)
-            #with open(path +'/memory.pickle', 'rb') as handle:
-            #    self.memory.pickle.load(handle)
+    def load(self, path):
+        self.critic.load_state_dict(torch.load(path + "/critic"))
+        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer"))
+        self.critic_target = copy.deepcopy(self.critic)
+        self.actor.load_state_dict(torch.load(path + "/actor"))
+        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer"))
+        self.actor_target = copy.deepcopy(self.actor)
+        #with open(path +'/memory.pickle', 'rb') as handle:
+        #    self.memory.pickle.load(handle)
 
 '''
 def remove_nets(path):
