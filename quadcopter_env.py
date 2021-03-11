@@ -10,8 +10,9 @@ from numpy.linalg import norm
 from scipy.integrate import odeint
 from params import PARAMS_ENV 
 
+
 TIME_MAX = PARAMS_ENV['TIME_MAX']
-STEPS = PARAMS_ENV['TIME_MAX']
+STEPS = PARAMS_ENV['STEPS']
 
 # perturbar constantes 10 %
 G = 9.81
@@ -25,12 +26,12 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  #60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per 
-VELANG_MIN = -0.2
-VELANG_MAX = 0.2
+VELANG_MIN = -0.05
+VELANG_MAX = 0.05
 
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([-0.2, -0.2, -0.2,  -5, -5, -5, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/8, -pi/8, -pi/8])
-HIGH_OBS = np.array([0.2, 0.2, 0.2, 5, 5, 5, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/8, pi/8, pi/8])
+LOW_OBS = np.array([0, 0, -0.1,  0, 0, -5, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/16, -pi/16, -pi/16])
+HIGH_OBS = np.array([0, 0, 0.1, 0, 0, 5, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/16, pi/16, pi/16])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
 XE = 0.0; YE = 0.0; ZE = 0.0
 
@@ -131,7 +132,6 @@ class QuadcopterEnv(gym.Env):
     def __init__(self):
         self.action_space = spaces.Box(low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4))
         self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS)
-        self.p = np.zeros(12)
         self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
         self.state = self.reset()
         self.set_time(STEPS, TIME_MAX)
@@ -230,11 +230,27 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         self.noise_on = True
 
     def observation(self, obs):
+        '''
+            observation transforma un estado de R^12 a un estado de 
+            R^18;
+
+            obs: estado de R^12;
+
+            regresa un estado en R^18.
+        '''
         angles = obs[9:]
         ori = np.matrix.flatten(rotation_matrix(angles))
         return np.concatenate([obs[0:9], ori])
 
     def reverse_observation(self, obs):
+        '''
+            reverse_observation transforma un estado de R^18 a un estado de
+            R^12;
+
+            obs: estado en R^18
+
+            regresa un estado en R^12
+        '''
         mat = obs[9:].reshape((3, 3))
         psi = np.arctan(mat[1, 0]/mat[0, 0])
         theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
@@ -244,7 +260,13 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
 
     def action(self, action):
         '''
-        se alimenta de la tanh
+            action transforma una accion de valores entre [-1, 1] a
+            los valores [VEL_MIN, VEL_MAX];
+
+            action: arreglo de 4 posiciones con valores entre [-1, 1];
+
+            regresa una acción entre [VEL_MIN, VEL_MAX].
+
         '''
         high = self.action_space.high
         low = self.action_space.low
