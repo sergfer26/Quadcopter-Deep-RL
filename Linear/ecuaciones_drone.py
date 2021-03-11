@@ -15,6 +15,30 @@ K = 0.001219  # kt
 
 sec = lambda x: 1/cos(x)
 
+def nsim3D(flag,n,k=0):
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    for _ in range(n):
+        state = funcion(env.reset())
+        noise.reset()
+        x, y, z = env.state[9:]
+        X,Y,Z = [],[],[]
+        env.flag  = flag
+        while True:
+            action = agent.get_action(state)
+            action = noise.get_action(action, env.time[env.i])
+            control = W0 + action
+            new_state, _, done = env.step(control)
+            x, y, z = env.state[9:]
+            Z.append(z);X.append(x);Y.append(y)
+            state = new_state
+            if done:
+                break
+        ax.plot(X, Y, Z,'.b',alpha = 0.3,markersize=1)
+    fig.suptitle('Vuelos' , fontsize=16)
+    fig.set_size_inches(33.,21.)
+    plt.savefig('results/'+day+'/vuelos_'+str(k)+'.png', dpi=300)
+
 
 
 def f(y, t, w1, w2, w3, w4):
