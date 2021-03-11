@@ -1,1 +1,1 @@
-PARAMS_ENV = {'TIME_MAX': 30, 'STEPS': 800, 'omega0_per': 0.40}
+PARAMS_ENV = {'TIME_MAX': 30, 'STEPS': 800, 'omega0_per': 0.60}
