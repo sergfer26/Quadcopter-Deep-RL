@@ -4,8 +4,13 @@ pycache__/
 nohup.out
 supervisado/
 results_ddpg/
+results_super/
+resultsRL/
+supervisado/
 __pycache__/
 odeint_gpu_vs_cpu.py
 *.csv
 best
 *.pth
+*pth
+MyDoc.pdf
