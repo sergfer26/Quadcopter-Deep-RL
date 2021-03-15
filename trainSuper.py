@@ -19,17 +19,17 @@ c1, c2, c3, c4 = C
 F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 BATCH_SIZE = 32
-EPOCHS = 250
+EPOCHS = 300
 N = 100# vuelos simulados
 
 DEVICE = "cpu"
 DTYPE = torch.float32
-SHOW = True
+SHOW = False
 
 env = AgentEnv(QuadcopterEnv())
 agent = DDPGagent(env)
 env.noise_on = False
-agent.tau = 1.0
+agent.tau = 0.75
 
 if torch.cuda.is_available(): 
     DEVICE = "cuda"
@@ -159,7 +159,6 @@ def train(agent, env, data_loader):
   
 
 get_experience(env, agent.memory, N)
-'''
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
 data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
@@ -182,10 +181,8 @@ if SHOW:
     plt.show()
 else:
     plt.savefig(PATH + '/validation_scores.png')
-'''
-#nsim3D(10, agent, env)
 
-
+nsim3D(10, agent, env)
 
 
 
