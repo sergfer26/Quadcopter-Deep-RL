@@ -171,18 +171,19 @@ class QuadcopterEnv(gym.Env):
                 score1 = 1
         return score1, score2
 
-    def get_reward(self, state):
+    def get_reward(self, state, action):
         x = state[3:6]
         x_ = 5 * np.ones(3)
         r = 0.0
         vel = np.concatenate([state[0:3], state[6:9]])
-        x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
-        if x_st.all():
-            r = 1
+        #x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
+        #if x_st.all():
+        #    r = 1
         d1 = norm(x - self.goal[3:6])
         d2 = norm(vel)
         d3 = norm(rotation_matrix(state[9:]))
-        return r - (0.01 * d2 + 0.01 * d1 + 0.5 * d3)
+        d4 = norm(action)
+        return - (0.02 * d2 + 0.01 * d1 + 0.5 * d3 + 0.005 * d4)
 
     def is_done(self):
         #Si se te acabo el tiempo
@@ -201,7 +202,7 @@ class QuadcopterEnv(gym.Env):
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[1]#, Dfun=self.jac)[1]
         self.state = y_dot # estado interno del ambiente 
-        reward = self.get_reward(y_dot)
+        reward = self.get_reward(y_dot, action)
         done = self.is_done()
         self.i += 1
         return action, reward, self.state, done
