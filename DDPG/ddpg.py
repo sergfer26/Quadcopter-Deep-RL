@@ -30,8 +30,6 @@ class DDPGagent:
         self.num_actions = env.action_space.shape[0]
         self.gamma = gamma
         self.tau = tau
-        self.noise = OUNoise(env.action_space)
-        self.noise_on = True
         self.env = env
 
         sizes_actor = hidden_sizes.copy()
@@ -68,8 +66,6 @@ class DDPGagent:
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         action = self.actor.forward(state.to(device))
         action = action.detach().cpu().numpy()[0,:]
-        if self.noise_on:
-            action = self.noise.get_action(action, self.env.i)
         return action
 
     def update(self, batch_size):

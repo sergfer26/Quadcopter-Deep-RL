@@ -29,6 +29,7 @@ DTYPE = torch.float32
 SHOW = True
 
 env = AgentEnv(QuadcopterEnv())
+env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS)
 agent = DDPGagent(env)
 env.noise_on = False
 agent.tau = 1.0
@@ -160,7 +161,7 @@ def train(agent, env, data_loader):
     return Loss, Scores
   
 
-Sget_experience(env, agent.memory, N)
+get_experience(env, agent.memory, N)
 
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)

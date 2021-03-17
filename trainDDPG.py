@@ -74,14 +74,14 @@ def sim(flag, agent, env):
     states = np.zeros((int(env.steps + 1), env.observation_space.shape[0] - 6))
     actions = np.zeros((int(env.steps), env.action_space.shape[0]))
     scores = np.zeros((int(env.steps), 4)) # r_t, Cr_t, stable, contained
-    # states[0, :]= env.reverse_observation(state)
+    states[0, :]= env.reverse_observation(state)
     episode_reward = 0
     i = 0
     while True:
         action = agent.get_action(state)
         action, reward, new_state, done = env.step(action)
         episode_reward += reward
-        states[i, :] = env.state
+        states[i + 1, :] = env.state
         actions[i, :] = env.action(action)
         scores[i, :] = np.array([reward, episode_reward, env.is_stable(new_state), env.is_contained(new_state)])
         state = new_state
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         plt.savefig(PATH + '/sim_states.png')
         plt.close()
     columns=('$a_1$', '$a_2$', '$a_3$', '$a_4$')
-    actionsDF = pd.DataFrame(states, columns=columns)
+    actionsDF = pd.DataFrame(actions, columns=columns)
     actionsDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
     if SHOW:
         plt.show()
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         plt.close()
     columns=('$r_t$', '$Cr_t$', 'Stable', 'Contained')
     scoresDF = pd.DataFrame(scores, columns=columns)
-    statesDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
+    scoresDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
     if SHOW:
         plt.show()
     else:
