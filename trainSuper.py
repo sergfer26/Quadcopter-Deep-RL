@@ -3,6 +3,7 @@ import pandas as pd
 import torch
 import pytz
 import pathlib
+import gym
 from datetime import datetime
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader, Dataset, random_split
@@ -21,23 +22,26 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 BATCH_SIZE = 32
 EPOCHS = 250
 N = 100 # vuelos simulados
-LOW_OBS = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, 0.05, 0.05, 0.05, -pi/16, -pi/16, -pi/16])
-HIGH_OBS = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/16, pi/16, pi/16])
+LOW_OBS = np.array([-0.05, -0.05, -0.05,  -5, -5, -5, 0.05, 0.05, 0.05, -np.pi/32, -np.pi/32, -np.pi/32])
+HIGH_OBS = np.array([0.05, 0.05, 0.05, 5, 5, 5, 0.05, 0.05, 0.05, np.pi/32, np.pi/32, np.pi/32])
 
 DEVICE = "cpu"
 DTYPE = torch.float32
-SHOW = True
+SHOW = False
 
-env = AgentEnv(QuadcopterEnv())
+env = QuadcopterEnv()
 env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS)
+env = AgentEnv(env)
 agent = DDPGagent(env)
 env.noise_on = False
-agent.tau = 1.0
+agent.tau = 0.125
+
 
 if torch.cuda.is_available(): 
     DEVICE = "cuda"
     agent.actor.cuda() # para usar el gpu
     agent.critic.cuda()
+
 
 if not SHOW:
     tz = pytz.timezone('America/Mexico_City')
@@ -126,8 +130,8 @@ def nsim3D(n, agent, env):
             if done:
                 break
         ax.plot(X, Y, Z,'.b', alpha=0.3, markersize=1)
-    fig.suptitle(r'$c\overline{R_t} = $'+ '{}'.format(mean_episode_reward/n) , fontsize=16)  
-    ax.plot(0, 0, 0,'.r', alpha=0.3, markersize=1)      
+    fig.suptitle(r'$\overline{Cr}_t = $'+ '{}'.format(mean_episode_reward/n) , fontsize=20)  
+    ax.plot(0, 0, 0,'.r', alpha=0.8, markersize=1)      
     if SHOW:
         plt.show()
     else: 
@@ -159,35 +163,36 @@ def train(agent, env, data_loader):
     Loss['policy'] /= n_batches
     Loss['critic'] /= n_batches
     return Loss, Scores
-  
-
-get_experience(env, agent.memory, N)
-
-dataset = Memory_Dataset(agent.memory.buffer, env)
-n_samples = len(agent.memory.buffer)
-data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
-Loss, Scores = train(agent, env, data_loader)
-agent.save(PATH)
-
-data_loss = pd.DataFrame(Loss, columns=list(Loss.keys()))
-data_scores = pd.DataFrame(Scores, columns=list(Scores.keys()))
 
 
-data_loss.plot(subplots=True, layout=(1, 2), figsize=(10, 7), title='Training loss')
-if SHOW:
-    plt.show()
-else:
-    plt.savefig(PATH + '/loss.png')
+if __name__ == "__main__":
+
+    get_experience(env, agent.memory, N)
+
+    dataset = Memory_Dataset(agent.memory.buffer, env)
+    n_samples = len(agent.memory.buffer)
+    data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
+    Loss, Scores = train(agent, env, data_loader)
+    agent.save(PATH)
+
+    data_loss = pd.DataFrame(Loss, columns=list(Loss.keys()))
+    data_scores = pd.DataFrame(Scores, columns=list(Scores.keys()))
 
 
-data_scores.plot(subplots=True, layout=(2, 2), figsize=(10, 7), title='Validation scores')
-if SHOW:
-    plt.show()
-else:
-    plt.savefig(PATH + '/validation_scores.png')
+    data_loss.plot(subplots=True, layout=(1, 2), figsize=(10, 7), title='Training loss')
+    if SHOW:
+        plt.show()
+    else:
+        plt.savefig(PATH + '/loss.png')
 
 
-nsim3D(10, agent, env)
+    data_scores.plot(subplots=True, layout=(2, 2), figsize=(10, 7), title='Validation scores')
+    if SHOW:
+        plt.show()
+    else:
+        plt.savefig(PATH + '/validation_scores.png')
+    
+    nsim3D(10, agent, env)
 
 
 
