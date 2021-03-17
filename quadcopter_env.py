@@ -26,12 +26,12 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  #60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per 
-VELANG_MIN = -0.05
-VELANG_MAX = 0.05
+VELANG_MIN = -0.5
+VELANG_MAX = 0.5
 
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([0, 0, -0.1,  0, 0, -5, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/16, -pi/16, -pi/16])
-HIGH_OBS = np.array([0, 0, 0.1, 0, 0, 5, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/16, pi/16, pi/16])
+LOW_OBS = np.array([-1, -1, -1,  -20, -20, -20, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/4, -pi/4, -pi/4])
+HIGH_OBS = np.array([1, 1, 1, 20, 20, 20, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/4, pi/4, pi/4])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
 XE = 0.0; YE = 0.0; ZE = 0.0
 
@@ -173,7 +173,7 @@ class QuadcopterEnv(gym.Env):
 
     def get_reward(self, state):
         x = state[3:6]
-        x_ = 5 * np.ones(3)
+        x_ = 2 * np.ones(3)
         r = 0.0
         vel = np.concatenate([state[0:3], state[6:9]])
         x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
@@ -182,7 +182,7 @@ class QuadcopterEnv(gym.Env):
         d1 = norm(x - self.goal[3:6])
         d2 = norm(vel)
         d3 = norm(rotation_matrix(state[9:]))
-        return r - (0.01 * d2 + 0.01 * d1 + 0.5 * d3)
+        return r - (0.01 * d2 + 0.01 * d1 + 0.1 * d3)
 
     def is_done(self):
         #Si se te acabo el tiempo
@@ -208,7 +208,8 @@ class QuadcopterEnv(gym.Env):
 
     def reset(self):
         self.i = 0
-        return self.observation_space.sample()
+        self.state = self.observation_space.sample()
+        return self.state
 
     def set_time(self, steps, time_max):
         self.time_max = time_max
