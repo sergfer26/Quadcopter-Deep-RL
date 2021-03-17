@@ -27,9 +27,10 @@ DTYPE = torch.float32
 SHOW = False
 
 env = AgentEnv(QuadcopterEnv())
+
 agent = DDPGagent(env)
 env.noise_on = False
-agent.tau = 0.75
+agent.tau = 0.5
 
 if torch.cuda.is_available(): 
     DEVICE = "cuda"
@@ -157,7 +158,7 @@ def train(agent, env, data_loader):
     Loss['critic'] /= n_batches
     return Loss, Scores
   
-
+'''
 get_experience(env, agent.memory, N)
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
@@ -184,7 +185,7 @@ else:
 
 nsim3D(10, agent, env)
 
-
+'''
 
 
 
