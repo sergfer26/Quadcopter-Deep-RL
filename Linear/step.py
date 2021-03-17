@@ -105,10 +105,11 @@ def simulador(Y, Ze, T, tam,jac=None):
     return X, acciones 
 
 def nsim3D(n):
+    degree = pi/180
     fig = plt.figure()
     ax = plt.axes(projection='3d')
-    high = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/16, pi/16, pi/16])
-    low = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, -0.05, -0.05, -0.05, -pi/16, -pi/16, -pi/16])
+    high = np.array([0, 0, 1, 0, 0, 10, 0.01 * degree, 0.01 * degree, 0.01 * degree, 10 * degree, 10 * degree, 10 * degree])
+    low = np.array([-0, -0, -1,  -0, -0, -10, -0.01 * degree, -0.01 * degree, -0.01 * degree, -10 * degree, -10 * degree, -10 * degree])
     t = np.linspace(0, 30, 800)
     for _ in range(n):
         state = np.array([np.random.uniform(x, y) for x, y in zip(low, high)])
@@ -132,8 +133,8 @@ def nsim3D(n):
 T = 120
 tam = 3200
 un_grado = np.pi/180.0
-high = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/8, pi/8, pi/8])
-low = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, -0.05, -0.05, -0.05, -pi/8, -pi/8, -pi/8])
+high = np.array([0.0, 0.0, 0.1, 0, 0, 5, 0.05, 0.05, 0.05, pi/8, pi/8, pi/8])
+low = np.array([-0.0, -0.0, -0.1,  0, 0, -5, -0.05, -0.05, -0.05, -pi/8, -pi/8, -pi/8])
 Y = np.array([np.random.uniform(x, y) for x, y in zip(low, high)])
 Ze = (0, 0, 0, 0)
 start = process_time() 
