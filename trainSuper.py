@@ -20,7 +20,9 @@ F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 BATCH_SIZE = 32
 EPOCHS = 250
-N = 100# vuelos simulados
+N = 100 # vuelos simulados
+LOW_OBS = np.array([-0.1, -0.1, -0.1,  -5, -5, -5, 0.05, 0.05, 0.05, -pi/16, -pi/16, -pi/16])
+HIGH_OBS = np.array([0.1, 0.1, 0.1, 5, 5, 5, 0.05, 0.05, 0.05, pi/16, pi/16, pi/16])
 
 DEVICE = "cpu"
 DTYPE = torch.float32
@@ -123,7 +125,7 @@ def nsim3D(n, agent, env):
             if done:
                 break
         ax.plot(X, Y, Z,'.b', alpha=0.3, markersize=1)
-    fig.suptitle('Vuelos' , fontsize=16)  
+    fig.suptitle(r'$c\overline{R_t} = $'+ '{}'.format(mean_episode_reward/n) , fontsize=16)  
     ax.plot(0, 0, 0,'.r', alpha=0.3, markersize=1)      
     if SHOW:
         plt.show()
@@ -158,8 +160,8 @@ def train(agent, env, data_loader):
     return Loss, Scores
   
 
-get_experience(env, agent.memory, N)
-'''
+Sget_experience(env, agent.memory, N)
+
 dataset = Memory_Dataset(agent.memory.buffer, env)
 n_samples = len(agent.memory.buffer)
 data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
@@ -182,8 +184,9 @@ if SHOW:
     plt.show()
 else:
     plt.savefig(PATH + '/validation_scores.png')
-'''
-#nsim3D(10, agent, env)
+
+
+nsim3D(10, agent, env)
 
 
 
