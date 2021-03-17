@@ -160,7 +160,7 @@ def train(agent, env, data_loader):
     Loss['critic'] /= n_batches
     return Loss, Scores
   
-'''
+
 get_experience(env, agent.memory, N)
 
 dataset = Memory_Dataset(agent.memory.buffer, env)
@@ -189,7 +189,6 @@ else:
 
 nsim3D(10, agent, env)
 
-'''
 
 
 
