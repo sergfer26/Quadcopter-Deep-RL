@@ -26,12 +26,12 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  #60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per 
-VELANG_MIN = -0.05
-VELANG_MAX = 0.05
+VELANG_MIN = -0.00
+VELANG_MAX = 0.00
 
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([0, 0, -0.1,  0, 0, -5, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/16, -pi/16, -pi/16])
-HIGH_OBS = np.array([0, 0, 0.1, 0, 0, 5, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/16, pi/16, pi/16])
+LOW_OBS = np.array([0, 0, -0.1,  -5, -5, -5, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/16, -pi/16, -pi/16])
+HIGH_OBS = np.array([0, 0, 0.1, 5, 5, 5, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/16, pi/16, pi/16])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
 XE = 0.0; YE = 0.0; ZE = 0.0
 
@@ -139,6 +139,10 @@ class QuadcopterEnv(gym.Env):
         self.is_cuda_available()
 
     def is_cuda_available(self):
+        '''
+            is_cuda_available verifica si esta disponible el gpu, 
+            en caso de que sí, las funciones f  y jac 
+        '''
         if cuda.is_available():
             self.f = numba.jit(f)
             self.jac = numba.jit(jac_f)
@@ -171,19 +175,18 @@ class QuadcopterEnv(gym.Env):
                 score1 = 1
         return score1, score2
 
-    def get_reward(self, state, action):
+    def get_reward(self, state):
         x = state[3:6]
         x_ = 5 * np.ones(3)
         r = 0.0
         vel = np.concatenate([state[0:3], state[6:9]])
         #x_st = np.logical_and(self.goal[3:6] - x_ <= x, x <= self.goal[3:6] + x_)
-        #if x_st.all():
-        #    r = 1
-        d1 = norm(x - self.goal[3:6])
+        if abs(state[5]) < 1:
+            r = 1
+        d1 = norm(state[5])
         d2 = norm(vel)
         d3 = norm(rotation_matrix(state[9:]))
-        d4 = norm(action)
-        return - (0.02 * d2 + 0.01 * d1 + 0.5 * d3 + 0.005 * d4)
+        return r - (0.02 * d2 + 0.01 * d1 + 0.5 * d3)
 
     def is_done(self):
         #Si se te acabo el tiempo
@@ -202,14 +205,15 @@ class QuadcopterEnv(gym.Env):
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[1]#, Dfun=self.jac)[1]
         self.state = y_dot # estado interno del ambiente 
-        reward = self.get_reward(y_dot, action)
+        reward = self.get_reward(y_dot)
         done = self.is_done()
         self.i += 1
         return action, reward, self.state, done
 
     def reset(self):
         self.i = 0
-        return self.observation_space.sample()
+        self.state = self.observation_space.sample()
+        return self.state
 
     def set_time(self, steps, time_max):
         self.time_max = time_max
