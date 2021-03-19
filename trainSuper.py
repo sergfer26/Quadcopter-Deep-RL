@@ -143,7 +143,7 @@ def nsim3D(n, agent, env):
                 break
         ax.plot(X, Y, Z, '.b', alpha=0.8, markersize=1)
     fig.suptitle(r'$\overline{Cr}_t = $' +
-                 '{}'.format(mean_episode_reward/n), fontsize=20)
+                 '{} '.format(mean_episode_reward/n), fontsize=20)
     ax.plot(0, 0, 0, '.r', alpha=1, markersize=1)
     if SHOW:
         plt.show()
@@ -196,6 +196,8 @@ if __name__ == "__main__":
 
     data_loss.plot(subplots=True, layout=(1, 2),
                    figsize=(10, 7), title='Training loss')
+
+    plt.title(r'$\tau =$' + '{}'.format(agent.tau))
     if SHOW:
         plt.show()
     else:
