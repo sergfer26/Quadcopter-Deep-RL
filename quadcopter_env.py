@@ -130,8 +130,8 @@ def f(X, t, w1, w2, w3, w4):
 class QuadcopterEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     def __init__(self):
-        self.action_space = spaces.Box(low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4))
-        self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS)
+        self.action_space = spaces.Box(low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4),dtype=np.float64)
+        self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS, dtype=np.float64)
         self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
         self.state = self.reset()
         self.set_time(STEPS, TIME_MAX)
@@ -226,7 +226,7 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         super().__init__(env)
         low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
         high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
-        self.observation_space = spaces.Box(low=low, high=high)
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float64)
         self.noise = OUNoise(env.action_space)
         self.noise_on = True
 
