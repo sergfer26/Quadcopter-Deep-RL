@@ -161,5 +161,5 @@ if __name__ == "__main__":
 
     from trainSuper import nsim3D
 
-    nsim3D(10, agent, env)
+    nsim3D(10, agent, env, PATH)
     create_report(PATH)
