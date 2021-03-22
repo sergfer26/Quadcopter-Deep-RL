@@ -1,23 +1,10 @@
-from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
-from params import PARAMS_ENV
 from reportlab.platypus import Table
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-
-fileName = 'MyDoc.pdf'
-documentTitle = 'Document title!'
-title = 'Reporte de Entrenamiento'
-subTitle = ''
-pdf = canvas.Canvas(fileName)
-
-pdf.setTitle(documentTitle)
-pdf.drawCentredString(300, 770, title)
-# RGB - Red Green and Blue
-pdf.setFillColorRGB(0, 0, 255)
-pdf.setFont("Courier-Bold", 26)
-pdf.drawCentredString(290,720, subTitle)
+from params import PARAMS_ENV, PARAMS_TRAIN
+from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
 
 
 style = TableStyle([
@@ -31,7 +18,7 @@ style = TableStyle([
 
     ('BOTTOMPADDING', (0,0), (-1,0), 12),
 
-    ('BACKGROUND',(0,1),(-1,-1),colors.beige),
+    ('BACKGROUND',(0,1),(-1,-1),colors.white),
 ])
 
 ts = TableStyle(
@@ -62,17 +49,13 @@ def drawMyRuler(pdf):
     pdf.drawString(10,700, 'y700')
     pdf.drawString(10,800, 'y800')
 
-drawMyRuler(pdf)
-
-
-
 
 def dic_to_list(data):
     lista = [[v, str(k)] for v, k in list(data.items())]
-    lista.insert(0, ['Param', 'Valor'])
+    lista.insert(0, ['Parámetro', 'Valor'])
     return lista
 
-def add_table(data,x,y):
+def add_table(pdf,data,x,y):
     data = dic_to_list(data)
     table = Table(data)
     table.setStyle(style)
@@ -80,7 +63,7 @@ def add_table(data,x,y):
     table.wrapOn(pdf,400,100)
     table.drawOn(pdf, x, y)
 
-def add_text(textLines,x,y):
+def add_text(pdf,textLines,x,y):
     text = pdf.beginText(x, y)
     text.setFont("Courier", 18)
     text.setFillColor(colors.black)
@@ -88,24 +71,49 @@ def add_text(textLines,x,y):
         text.textLine(line)
     pdf.drawText(text)
 
+def add_image(PATH,pdf,name,x,y,width = 500,height=500):
+    pdf.drawInlineImage(PATH + name , x,y, width = width, height=height,preserveAspectRatio=True)
 
+def create_report(PATH):
+    fileName = '/Reporte.pdf'
+    fileName = PATH + fileName
+    documentTitle = 'Document title!'
+    title = 'Reporte de Entrenamiento'
+    subTitle = ''
+    pdf = canvas.Canvas(fileName)
 
-add_text(['Parámetros de DDPG'],100, 700)
-add_table(PARAMS_DDPG,100,550)
+    pdf.setTitle(documentTitle)
+    pdf.drawCentredString(300, 800, title)
+# RGB - Red Green and Blue
+    pdf.setFillColorRGB(0, 0, 255)
+    pdf.setFont("Courier-Bold", 26)
+    pdf.drawCentredString(290,720, subTitle)
+    #drawMyRuler(pdf)
+    add_text(pdf,['Parámetros del Entrenamiento'],100, 750)
+    add_table(pdf,PARAMS_TRAIN,100,610)
+    
 
+    add_text(pdf,['Parámetros del Ambiente'],100, 560)
+    add_table(pdf,PARAMS_ENV,100,410)
+    
+    
+    add_text(pdf,['Parámetros de DDPG'],100, 360)
+    add_table(pdf,PARAMS_DDPG,100,210)
+     
 
-add_text(['Parámetros del Ruido'],100, 500)
-add_table(PARAMS_UTILS,100, 350)
+    add_text(pdf,['Parámetros del Ruido'],100, 170)
+    add_table(pdf,PARAMS_UTILS,100,30)
 
+    pdf.showPage()
+    add_image(PATH,pdf,'/c_rewards.png',10, 350,600,600)
+    add_image(PATH,pdf,'/sim_actions.png',30,10)
+    pdf.showPage()
+    #Siguiente pagina
+    add_image(PATH,pdf,'/sim_scores.png',30, 350,550,550)
+    add_image(PATH,pdf,'/sim_states.png',30,0,550,550)
 
+    pdf.showPage()
+    add_image(PATH,pdf,'/vuelos.png',30, 350,550,550)
+    #add_image(PATH,pdf,'sim_actions.png',30,0,550,550)
+    pdf.save()  
 
-add_text(['Parámetros del Ambiente'],100, 300)
-add_table(PARAMS_ENV,100,200)
-
-pdf.showPage()
-#Siguiente pagina
-pdf.drawString(200, 100, "Some text in second page.")
-pdf.showPage()
-image = 'supervisado/10_30_1959/actions_0.png'
-pdf.drawInlineImage(image, 130, 400)
-pdf.save()

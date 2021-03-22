@@ -16,10 +16,11 @@ from numpy import pi, cos, sin
 from numpy import remainder as rem
 from progress.bar import Bar
 from datetime import datetime
+from get_report import create_report
+from params import PARAMS_TRAIN
 
-
-BATCH_SIZE = 32
-EPISODES = 50
+BATCH_SIZE = PARAMS_TRAIN['BATCH_SIZE']
+EPISODES = PARAMS_TRAIN['EPISODES']
 TAU = 2 * pi
 SHOW = False
 
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     states, actions, scores = sim(True, agent, env)
     plt.plot(CR_t)
     plt.xlabel('episodes')
-    plt.title(r'$r_t = \mathbb{1}_{x <= g + 1}$ - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|')
+    plt.title(r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
     if SHOW:
         plt.show()
     else:
@@ -157,3 +158,8 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/sim_scores.png')
         plt.close()
+
+    from trainSuper import nsim3D
+
+    nsim3D(10, agent, env)
+    create_report(PATH)
