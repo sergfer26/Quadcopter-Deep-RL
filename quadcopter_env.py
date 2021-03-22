@@ -202,7 +202,6 @@ class QuadcopterEnv(gym.Env):
             un paso de tiempo;
 
             action: arreglo de 4 posiciones con valores entre [-1, 1];
-
         '''
         w1, w2, w3, w4 = action + W0
         t = [self.time[self.i], self.time[self.i+1]]

@@ -28,11 +28,11 @@ HIGH_OBS = np.array([0.05, 0.05, 0.05, 5, 5, 5, 0.05, 0.05,
                     0.05, np.pi/32, np.pi/32, np.pi/32])
 
 DEVICE = "cpu"
-DTYPE = torch.float32
+DTYPE = torch.float64
 SHOW = False
 
 env = QuadcopterEnv()
-env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS)
+env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS,dtype=np.float64)
 env = AgentEnv(env)
 agent = DDPGagent(env)
 env.noise_on = False
@@ -44,18 +44,6 @@ if torch.cuda.is_available():
     agent.actor.cuda()  # para usar el gpu
     agent.critic.cuda()
 
-
-if not SHOW:
-    tz = pytz.timezone('America/Mexico_City')
-    mexico_now = datetime.now(tz)
-    month = mexico_now.month
-    day = mexico_now.day
-    hour = mexico_now.hour
-    minute = mexico_now.minute
-
-    PATH = 'results_super/' + str(month) + '_' + \
-        str(day) + '_' + str(hour) + str(minute)
-    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
 
 
 class Memory_Dataset(Dataset):
@@ -120,7 +108,7 @@ def get_experience(env, memory, n):
     print(k)
 
 
-def nsim3D(n, agent, env):
+def nsim3D(n, agent, env,PATH):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     mean_episode_reward = 0.0
@@ -143,7 +131,7 @@ def nsim3D(n, agent, env):
                 break
         ax.plot(X, Y, Z, '.b', alpha=0.8, markersize=1)
     fig.suptitle(r'$\overline{Cr}_t = $' +
-                 '{}'.format(mean_episode_reward/n), fontsize=20)
+                 '{} '.format(mean_episode_reward/n), fontsize=20)
     ax.plot(0, 0, 0, '.r', alpha=1, markersize=1)
     if SHOW:
         plt.show()
@@ -182,6 +170,18 @@ def train(agent, env, data_loader):
 
 
 if __name__ == "__main__":
+    if not SHOW:
+        tz = pytz.timezone('America/Mexico_City')
+        mexico_now = datetime.now(tz)
+        month = mexico_now.month
+        day = mexico_now.day
+        hour = mexico_now.hour
+        minute = mexico_now.minute
+
+        PATH = 'results_super/' + str(month) + '_' + \
+            str(day) + '_' + str(hour) + str(minute)
+        pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
+
 
     get_experience(env, agent.memory, N)
 
@@ -196,6 +196,8 @@ if __name__ == "__main__":
 
     data_loss.plot(subplots=True, layout=(1, 2),
                    figsize=(10, 7), title='Training loss')
+
+    plt.title(r'$\tau =$' + '{}'.format(agent.tau))
     if SHOW:
         plt.show()
     else:
@@ -208,4 +210,4 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/validation_scores.png')
 
-    nsim3D(10, agent, env)
+    nsim3D(10, agent, env,PATH)
