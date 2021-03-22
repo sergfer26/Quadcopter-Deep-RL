@@ -13,6 +13,7 @@ from params import PARAMS_ENV
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['STEPS']
+FLAG =  PARAMS_ENV['FLAG']
 
 # perturbar constantes 10 %
 G = 9.81
@@ -30,8 +31,8 @@ VELANG_MIN = -0.5
 VELANG_MAX = 0.5
 
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([-1, -1, -1,  -20, -20, -20, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/4, -pi/4, -pi/4])
-HIGH_OBS = np.array([1, 1, 1, 20, 20, 20, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/4, pi/4, pi/4])
+LOW_OBS = 0.3*np.array([-1, -1, -1,  -20, -20, -20, VELANG_MIN, VELANG_MIN, VELANG_MIN, -pi/4, -pi/4, -pi/4])
+HIGH_OBS = 0.3*np.array([1, 1, 1, 20, 20, 20, VELANG_MAX, VELANG_MAX, VELANG_MAX, pi/4, pi/4, pi/4])
 PSIE = 0.0; THETAE = 0.0; PHIE = 0.0
 XE = 0.0; YE = 0.0; ZE = 0.0
 
@@ -135,7 +136,7 @@ class QuadcopterEnv(gym.Env):
         self.goal = np.array([0, 0, 0, XE, YE, ZE, 0, 0, 0, PSIE, THETAE, PHIE])
         self.state = self.reset()
         self.set_time(STEPS, TIME_MAX)
-        self.flag = False
+        self.flag = FLAG
         self.is_cuda_available()
 
     def is_cuda_available(self):
@@ -181,7 +182,7 @@ class QuadcopterEnv(gym.Env):
             r = 1
         d1 = norm(x - self.goal[3:6])
         d2 = norm(vel)
-        d3 = norm(rotation_matrix(state[9:]))
+        d3 = norm(np.identity(3) - rotation_matrix(state[9:]))
         return r - (0.005 * d2 + 0.02 * d1 + 0.1 * d3)
 
     def is_done(self):
