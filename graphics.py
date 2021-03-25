@@ -61,7 +61,7 @@ def nsim2D(n, agent, env, PATH):
         q1.set_ylabel('$ \\theta$')
         q2.plot(t, q,c = 'green',alpha =0.3)
         q2.set_ylabel(' d$ \\theta$')
-        q2.set_ylim(0.01,-0.01)
+        #q2.set_ylim(0.01,-0.01)
 
         u1.plot(t, x,c = 'skyblue',alpha =0.3)
         u1.set_ylabel('x')
