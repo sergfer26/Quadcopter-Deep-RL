@@ -13,30 +13,32 @@ from Linear.step import control_feedback, omega_0, C, F
 from trainDDPG import sim
 from progress.bar import Bar
 from tqdm import tqdm
+from params import PARAMS_TRAIN_SUPER
+from graphics import *
+from get_report import*
 
 plt.style.use('ggplot')
 
 c1, c2, c3, c4 = C
 F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
-BATCH_SIZE = 32
-EPOCHS = 250
-N = 100  # vuelos simulados
+BATCH_SIZE = PARAMS_TRAIN_SUPER['BATCH_SIZE']
+EPOCHS = PARAMS_TRAIN_SUPER['EPOCHS']
+N = PARAMS_TRAIN_SUPER['N']
 LOW_OBS = np.array([-0.05, -0.05, -0.05,  -5, -5, -5, 0.05,
                    0.05, 0.05, -np.pi/32, -np.pi/32, -np.pi/32])
 HIGH_OBS = np.array([0.05, 0.05, 0.05, 5, 5, 5, 0.05, 0.05,
                     0.05, np.pi/32, np.pi/32, np.pi/32])
 
 DEVICE = "cpu"
-DTYPE = torch.float64
-SHOW = False
+DTYPE = torch.float
+SHOW = PARAMS_TRAIN_SUPER['SHOW']
 
 env = QuadcopterEnv()
 env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS,dtype=np.float64)
 env = AgentEnv(env)
 agent = DDPGagent(env)
 env.noise_on = False
-agent.tau = 0.25
 
 
 if torch.cuda.is_available():
@@ -96,9 +98,12 @@ def get_experience(env, memory, n):
         for _ in range(env.steps):
             real_action = get_action(env.state, goal)
             action = env.reverse_action(real_action)
+            action += np.random.normal(0,0.1,4)
             _, reward, new_state, done = env.step(action)
-            if (abs(real_action) < env.action_space.high[0]).all():
-                memory.push(state, action, reward, new_state, done)
+            new_state[0:9] += np.random.normal(0,1,9)
+            #if (abs(real_action) < env.action_space.high[0]).all():
+            memory.push(state, action, reward, new_state, done)
+            
 
             state = new_state
 
@@ -106,38 +111,6 @@ def get_experience(env, memory, n):
                 break
     bar.finish()
     print(k)
-
-
-def nsim3D(n, agent, env,PATH):
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    mean_episode_reward = 0.0
-    for _ in range(n):
-        state = env.reset()
-        env.noise.reset()
-        x, y, z = env.state[3:6]
-        X, Y, Z = [x], [y], [z]
-        while True:
-            action = agent.get_action(state)
-            #action = get_action(env.state, env.goal)
-            _, reward, new_state, done = env.step(action)
-            x, y, z = env.state[3:6]
-            Z.append(z)
-            X.append(x)
-            Y.append(y)
-            state = new_state
-            mean_episode_reward += reward
-            if done:
-                break
-        ax.plot(X, Y, Z, '.b', alpha=0.8, markersize=1)
-    fig.suptitle(r'$\overline{Cr}_t = $' +
-                 '{} '.format(mean_episode_reward/n), fontsize=20)
-    ax.plot(0, 0, 0, '.r', alpha=1, markersize=1)
-    if SHOW:
-        plt.show()
-    else:
-        fig.set_size_inches(33., 21.)
-        plt.savefig(PATH + '/vuelos.png', dpi=300)
 
 
 def train(agent, env, data_loader):
@@ -209,5 +182,7 @@ if __name__ == "__main__":
         plt.show()
     else:
         plt.savefig(PATH + '/validation_scores.png')
-
-    nsim3D(10, agent, env,PATH)
+    #env.set_time(2400,90)
+    nsim3D(5, agent, env,PATH)
+    nsim2D(5, agent, env, PATH)
+    create_report_super(PATH) 

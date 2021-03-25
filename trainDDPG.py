@@ -18,24 +18,13 @@ from progress.bar import Bar
 from datetime import datetime
 from get_report import create_report
 from params import PARAMS_TRAIN
+from graphics import*
 
 BATCH_SIZE = PARAMS_TRAIN['BATCH_SIZE']
 EPISODES = PARAMS_TRAIN['EPISODES']
-TAU = 2 * pi
-SHOW = False
-
-if not SHOW:
-    tz = pytz.timezone('America/Mexico_City')
-    mexico_now = datetime.now(tz)
-    month = mexico_now.month
-    day = mexico_now.day
-    hour = mexico_now.hour
-    minute = mexico_now.minute
-
-    PATH = 'results_ddpg/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
-    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)   
-
-
+TAU = 2 * pi #No es el tau del agente
+SHOW = PARAMS_TRAIN['SHOW']
+  
 def train(agent, env):
     #s = 1
     R = []
@@ -119,6 +108,16 @@ def nSim(flag, agent, env, n):
 
 
 if __name__ == "__main__":
+    tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now(tz)
+    month = mexico_now.month
+    day = mexico_now.day
+    hour = mexico_now.hour
+    minute = mexico_now.minute
+
+    PATH = 'results_ddpg/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
+    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True) 
+    
     env = AgentEnv(QuadcopterEnv())
     #env.flag = False
     agent = DDPGagent(env)
@@ -158,8 +157,6 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/sim_scores.png')
         plt.close()
-
-    from trainSuper import nsim3D
 
     nsim3D(10, agent, env, PATH)
     create_report(PATH)
