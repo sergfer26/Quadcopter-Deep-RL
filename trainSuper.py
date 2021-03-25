@@ -88,12 +88,12 @@ def get_action(state, goal):
 
 
 def get_experience(env, memory, n):
-    print('Learning from observations')
+    #print('Learning from observations')
     goal = env.goal
-    bar = Bar('Processing', max=n)
+    #bar = Bar('Processing', max=n)
     k = 0
     for _ in range(n):
-        bar.next()
+        #bar.next()
         state = env.reset()
         for _ in range(env.steps):
             real_action = get_action(env.state, goal)
@@ -103,14 +103,13 @@ def get_experience(env, memory, n):
             new_state[0:9] += np.random.normal(0,1,9)
             #if (abs(real_action) < env.action_space.high[0]).all():
             memory.push(state, action, reward, new_state, done)
-            
 
             state = new_state
 
             if done:
                 break
-    bar.finish()
-    print(k)
+    #bar.finish()
+    #print(k)
 
 
 def train(agent, env, data_loader):
@@ -118,24 +117,24 @@ def train(agent, env, data_loader):
     Scores = {'$Cr_t$': list(), 'stable': list(), 'contained': list()}
     Loss = {'policy': np.zeros(EPOCHS), 'critic': np.zeros(EPOCHS)}
     for epoch in range(1, EPOCHS + 1):
-        with tqdm(total=len(agent.memory.buffer), position=0) as pbar:
-            pbar.set_description(f'Epoch {epoch}/' + str(EPOCHS))
-            for i, data in enumerate(data_loader, 0):
-                states, actions, rewards, next_states = data
-                policy_loss, critic_loss = agent.train(
-                    states, actions, rewards, next_states)
-                Loss['policy'][epoch - 1] += policy_loss / len(data)
-                Loss['critic'][epoch - 1] += critic_loss / len(data)
-                pbar.set_postfix(policy_loss='{:.4f}'.format(
-                    policy_loss), critic_loss='{:.4f}'.format(critic_loss))
-                pbar.update(states.shape[0])
+        #with tqdm(total=len(agent.memory.buffer), position=0) as pbar:
+            #pbar.set_description(f'Epoch {epoch}/' + str(EPOCHS))
+        for i, data in enumerate(data_loader, 0):
+            states, actions, rewards, next_states = data
+            policy_loss, critic_loss = agent.train(
+                states, actions, rewards, next_states)
+            Loss['policy'][epoch - 1] += policy_loss / len(data)
+            Loss['critic'][epoch - 1] += critic_loss / len(data)
+            #pbar.set_postfix(policy_loss='{:.4f}'.format(
+                #policy_loss), critic_loss='{:.4f}'.format(critic_loss))
+            #pbar.update(states.shape[0])
 
-            if epoch % 10 == 0:
-                # r_t, Cr_t, stable, contained
-                states, actions, scores = sim(True, agent, env)
-                Scores['$Cr_t$'].append(scores[1, -1])
-                Scores['stable'].append(np.sum(scores[2, :]))
-                Scores['contained'].append(np.sum(scores[3, :]))
+        if epoch % 10 == 0:
+            # r_t, Cr_t, stable, contained
+            states, actions, scores = sim(True, agent, env)
+            Scores['$Cr_t$'].append(scores[1, -1])
+            Scores['stable'].append(np.sum(scores[2, :]))
+            Scores['contained'].append(np.sum(scores[3, :]))
 
     Loss['policy'] /= n_batches
     Loss['critic'] /= n_batches
@@ -143,18 +142,17 @@ def train(agent, env, data_loader):
 
 
 if __name__ == "__main__":
-    if not SHOW:
-        tz = pytz.timezone('America/Mexico_City')
-        mexico_now = datetime.now(tz)
-        month = mexico_now.month
-        day = mexico_now.day
-        hour = mexico_now.hour
-        minute = mexico_now.minute
+    
+    tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now(tz)
+    month = mexico_now.month
+    day = mexico_now.day
+    hour = mexico_now.hour
+    minute = mexico_now.minute
 
-        PATH = 'results_super/' + str(month) + '_' + \
-            str(day) + '_' + str(hour) + str(minute)
-        pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-
+    PATH = 'results_super/' + str(month) + '_' + \
+        str(day) + '_' + str(hour) + str(minute)
+    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
 
     get_experience(env, agent.memory, N)
 
