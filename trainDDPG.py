@@ -14,7 +14,7 @@ from numpy.linalg import norm
 #from tools.tools import imagen2d, imagen_action, sub_plot_state
 from numpy import pi, cos, sin
 from numpy import remainder as rem
-from progress.bar import Bar
+#from progress.bar import Bar
 from datetime import datetime
 from get_report import create_report
 from params import PARAMS_TRAIN
