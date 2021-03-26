@@ -33,7 +33,7 @@ def nsim2D(n, agent, env, PATH):
             action = agent.get_action(state)
             #action = get_action(env.state, env.goal)
             _, reward, new_state, done = env.step(action)
-            X.append(reverse_observation(new_state))
+            X.append(env.state)
             if done:
                 break
         X = np.array(X)
