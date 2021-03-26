@@ -11,7 +11,7 @@ from quadcopter_env import QuadcopterEnv, AgentEnv
 from DDPG.ddpg import DDPGagent
 from Linear.step import control_feedback, omega_0, C, F
 from trainDDPG import sim
-from progress.bar import Bar
+#from progress.bar import Bar
 from tqdm import tqdm
 from params import PARAMS_TRAIN_SUPER
 from graphics import *

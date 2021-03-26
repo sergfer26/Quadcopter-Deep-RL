@@ -1,5 +1,6 @@
 
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from params import PARAMS_TRAIN
 
@@ -88,13 +89,14 @@ def nsim2D(n, agent, env, PATH):
 
 def nsim3D(n, agent, env, PATH):
     fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    ax = plt.gca(projection='3d')
     mean_episode_reward = 0.0
     for _ in range(n):
         state = env.reset()
         env.noise.reset()
         x0, y0, z0 = env.state[3:6]
         X, Y, Z = [x0], [y0], [z0]
+        ax.plot(X, Y, Z, '.r', markersize=15)
         while True:
             action = agent.get_action(state)
             #action = get_action(env.state, env.goal)
@@ -107,11 +109,11 @@ def nsim3D(n, agent, env, PATH):
             mean_episode_reward += reward
             if done:
                 break
-        ax.plot(x0, y0, z0, '.r', markersize=15)
+        #ax.plot(x0, y0, z0, '.r', markersize=15)
         ax.plot(X, Y, Z, '.b', alpha=0.5, markersize=5)
     fig.suptitle(r'$\overline{Cr}_t = $' +
                  '{} '.format(mean_episode_reward/n), fontsize=20)
-    ax.plot(0, 0, 0, '.r', alpha=1, markersize=1)
+    ax.plot([0], [0], [0], '.r', alpha=1, markersize=1)
     if SHOW:
         plt.show()
     else:
