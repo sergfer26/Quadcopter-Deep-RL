@@ -114,7 +114,7 @@ def create_report(PATH):
 
     pdf.showPage()
     add_image(PATH,pdf,'/vuelos.png',30, 350,550,550)
-    #add_image(PATH,pdf,'sim_actions.png',30,0,550,550)
+    add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
     pdf.save() 
 
 def create_report_super(PATH):
