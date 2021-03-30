@@ -6,12 +6,11 @@ import pytz
 import pandas as pd
 import pathlib 
 from tqdm import tqdm
-from quadcopter_env import QuadcopterEnv, AgentEnv, G, M, K, omega_0, STEPS, ZE, XE, YE
+from quadcopter_env import QuadcopterEnv, AgentEnv, G, M, K, omega_0, STEPS
+from simulation import nSim3D, nSim, sim
 #from Linear.step import control_feedback, F1, F2, F3, F4, c1, c2, c3, c4
 from DDPG.ddpg import DDPGagent
 from numpy.linalg import norm
-#from DDPG.load_save import load_nets, save_nets, remove_nets, save_buffer, remove_buffer
-#from tools.tools import imagen2d, imagen_action, sub_plot_state
 from numpy import pi, cos, sin
 from numpy import remainder as rem
 from progress.bar import Bar
@@ -68,56 +67,6 @@ def train(agent, env):
     return R
 
 
-def sim(flag, agent, env):
-    #t = env.time
-    env.flag  = flag
-    state = env.reset()
-    states = np.zeros((int(env.steps + 1), env.observation_space.shape[0] - 6))
-    actions = np.zeros((int(env.steps), env.action_space.shape[0]))
-    scores = np.zeros((int(env.steps), 4)) # r_t, Cr_t, stable, contained
-    states[0, :]= env.reverse_observation(state)
-    episode_reward = 0
-    i = 0
-    while True:
-        action = agent.get_action(state)
-        action, reward, new_state, done = env.step(action)
-        episode_reward += reward
-        states[i + 1, :] = env.state
-        actions[i, :] = env.action(action)
-        scores[i, :] = np.array([reward, episode_reward, env.is_stable(new_state), env.is_contained(new_state)])
-        state = new_state
-        if done:
-            break
-        i += 1
-    return states, actions, scores
-
-
-def nSim(flag, agent, env, n):
-    states = np.zeros((env.time_max + 1, env.observation_space.shape[0] - 6, n))
-    actions = np.zeros((env.time_max, env.action_space[0], n))
-    scores = np.zeros((env.time_max, 4, n))
-    env.flag  = flag
-    bar = Bar('Processing', max=n)
-    for k in range(n):
-        bar.next()
-        state = env.reset()
-        states[0, :, k]  = env.state
-        episode_reward = 0
-        i = 0
-        while True:
-            action = agent.get_action(state)
-            action, reward, new_state, done = env.step(action)
-            episode_reward += reward
-            states[i + 1, :, k] = env.state
-            actions[i, :, k] = env.action(action)
-            scores[i, :, k] = np.array([reward, episode_reward, env.is_stable(), env.is_contained()])
-            state = new_state
-            if done:
-                break
-            i += 1
-    return states, actions, scores
-
-
 if __name__ == "__main__":
     env = AgentEnv(QuadcopterEnv())
     #env.flag = False
@@ -159,7 +108,5 @@ if __name__ == "__main__":
         plt.savefig(PATH + '/sim_scores.png')
         plt.close()
 
-    from trainSuper import nsim3D
-
-    nsim3D(10, agent, env, PATH)
+    nSim3D(10, agent, env, PATH, show=SHOW)
     create_report(PATH)
