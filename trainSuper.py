@@ -8,21 +8,26 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader, Dataset, random_split
 from quadcopter_env import QuadcopterEnv, AgentEnv
-from simulation import nSim3D
+from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 from DDPG.ddpg import DDPGagent
 from Linear.step import control_feedback, omega_0, C, F
 from progress.bar import Bar
 from tqdm import tqdm
-from simulation import nSim, plot_nSim2D, plot_nSim3D
+from params import PARAMS_TRAIN_SUPER
+#from graphics import *
+from get_report import create_report_super
+
 
 plt.style.use('ggplot')
 
 c1, c2, c3, c4 = C
 F1, F2, F3, F4 = F
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
-BATCH_SIZE = 32
-EPOCHS = 10
-N = 100  # vuelos simulados
+BATCH_SIZE = PARAMS_TRAIN_SUPER['BATCH_SIZE']
+EPOCHS = PARAMS_TRAIN_SUPER['EPOCHS']
+N = PARAMS_TRAIN_SUPER['N']
+n = PARAMS_TRAIN_SUPER['n']
+
 LOW_OBS = np.array([-0.05, -0.05, -0.05,  -5, -5, -5, 0.05,
                    0.05, 0.05, -np.pi/32, -np.pi/32, -np.pi/32])
 HIGH_OBS = np.array([0.05, 0.05, 0.05, 5, 5, 5, 0.05, 0.05,
@@ -30,14 +35,13 @@ HIGH_OBS = np.array([0.05, 0.05, 0.05, 5, 5, 5, 0.05, 0.05,
 
 DEVICE = "cpu"
 DTYPE = torch.float
-SHOW = False
+SHOW = PARAMS_TRAIN_SUPER['SHOW']
 
 env = QuadcopterEnv()
 env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS,dtype=np.float32)
 env = AgentEnv(env)
 agent = DDPGagent(env)
 env.noise_on = False
-agent.tau = 0.25
 
 
 if torch.cuda.is_available():
@@ -45,7 +49,6 @@ if torch.cuda.is_available():
     DTYPE = torch.float64
     agent.actor.cuda()  # para usar el gpu
     agent.critic.cuda()
-
 
 
 class Memory_Dataset(Dataset):
@@ -87,16 +90,17 @@ def get_action(state):
 
 
 def get_experience(env, memory, n):
-    print('Learning from observations')
+    #print('Learning from observations')
     bar = Bar('Processing', max=n)
-    k = 0
     for _ in range(n):
         bar.next()
         state = env.reset()
         for _ in range(env.steps):
             real_action = get_action(env.state)
             action = env.reverse_action(real_action)
+            action += np.random.normal(0,0.1,4)
             _, reward, new_state, done = env.step(action)
+            new_state[0:9] += np.random.normal(0,1,9)
             if (abs(real_action) < env.action_space.high[0]).all():
                 memory.push(state, action, reward, new_state, done)
 
@@ -105,7 +109,6 @@ def get_experience(env, memory, n):
             if done:
                 break
     bar.finish()
-    print(k)
 
 
 def train(agent, env, data_loader):
@@ -125,12 +128,12 @@ def train(agent, env, data_loader):
                     policy_loss), critic_loss='{:.4f}'.format(critic_loss))
                 pbar.update(states.shape[0])
 
-            if epoch % 10 == 0:
-                # r_t, Cr_t, stable, contained
-                states, actions, scores = sim(True, agent, env)
-                Scores['$Cr_t$'].append(scores[1, -1])
-                Scores['stable'].append(np.sum(scores[2, :]))
-                Scores['contained'].append(np.sum(scores[3, :]))
+        if epoch % 10 == 0:
+            # r_t, Cr_t, stable, contained
+            states, actions, scores = sim(True, agent, env)
+            Scores['$Cr_t$'].append(scores[1, -1])
+            Scores['stable'].append(np.sum(scores[2, :]))
+            Scores['contained'].append(np.sum(scores[3, :]))
 
     Loss['policy'] /= n_batches
     Loss['critic'] /= n_batches
@@ -139,15 +142,14 @@ def train(agent, env, data_loader):
 
 if __name__ == "__main__":
 
+    tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now(tz)
+    month = mexico_now.month
+    day = mexico_now.day
+    hour = mexico_now.hour
+    minute = mexico_now.minute
     PATH = 'results_super/' + str(month) + '_' + str(day) + '_' + str(hour) + str(minute)
     if not SHOW:
-        tz = pytz.timezone('America/Mexico_City')
-        mexico_now = datetime.now(tz)
-        month = mexico_now.month
-        day = mexico_now.day
-        hour = mexico_now.hour
-        minute = mexico_now.minute
-
         pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
 
 
@@ -178,12 +180,13 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/validation_scores.png')
 
-    n_states, n_actions, n_scores = nSim(False, agent, env, 5)
-    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', '$\psi$', r'$\theta$', r'$\varphi$')
-    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/n_states.png')
+    n_states, n_actions, n_scores = nSim(False, agent, env, n)
+    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
+    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
     columns = ['$a_{}$'.format(i) for i in range(1,5)] 
-    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/n_actions.png')
+    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/sim_actions.png')
     columns = ('$r_t$', '$Cr_t$', 'is stable', 'cotained')
-    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/n_scores.png')
-    plot_nSim3D(n_states, PATH, show=SHOW)
-
+    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
+    plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
+    if not SHOW:
+        create_report_super(PATH)

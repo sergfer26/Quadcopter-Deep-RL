@@ -6,34 +6,25 @@ import pytz
 import pandas as pd
 import pathlib 
 from tqdm import tqdm
-from quadcopter_env import QuadcopterEnv, AgentEnv, G, M, K, omega_0, STEPS
+from quadcopter_env import QuadcopterEnv, AgentEnv, omega_0, STEPS
 from simulation import nSim3D, nSim, sim
-#from Linear.step import control_feedback, F1, F2, F3, F4, c1, c2, c3, c4
 from DDPG.ddpg import DDPGagent
 from numpy.linalg import norm
 from numpy import pi, cos, sin
 from numpy import remainder as rem
-from progress.bar import Bar
+#from progress.bar import Bar
 from datetime import datetime
-from get_report import create_report
-from params import PARAMS_TRAIN
+from get_report import create_report_ddpg
+from params import PARAMS_TRAIN_DDPG
+from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 
-BATCH_SIZE = PARAMS_TRAIN['BATCH_SIZE']
-EPISODES = PARAMS_TRAIN['EPISODES']
-TAU = 2 * pi
-SHOW = False
 
-if not SHOW:
-    tz = pytz.timezone('America/Mexico_City')
-    mexico_now = datetime.now(tz)
-    month = mexico_now.month
-    day = mexico_now.day
-    hour = mexico_now.hour
-    minute = mexico_now.minute
-
-    PATH = 'results_ddpg/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
-    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)   
-
+BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
+EPISODES = PARAMS_TRAIN_DDPG['EPISODES']
+n = PARAMS_TRAIN_DDPG['n']
+TAU = 2 * pi #No es el tau del agente
+SHOW = PARAMS_TRAIN_DDPG['SHOW']
+  
 
 def train(agent, env):
     #s = 1
@@ -54,9 +45,8 @@ def train(agent, env):
                 u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
                 a1, a2, a3, a4 = env.action(action)
                 pbar.set_postfix(R='{:.2f}'.format(episode_reward),
-                    #w='{:.2f}'.format(w), v='{:.2f}'.format(v), u='{:.2f}'.format(u), 
-                    #p='{:.2f}'.format(p), q='{:2f}'.format(q), r='{:.2f}'.format(r),
-                    a1='{:.2f}'.format(a1), a2='{:.2f}'.format(a2), a3='{:.2f}'.format(a3), a4='{:.2f}'.format(a4),
+                    w='{:.2f}'.format(w), v='{:.2f}'.format(v), u='{:.2f}'.format(u), 
+                    p='{:.2f}'.format(p), q='{:2f}'.format(q), r='{:.2f}'.format(r),
                     psi='{:.2f}'.format(rem(psi, TAU)), theta='{:.2f}'.format(rem(theta, TAU)), phi='{:.2f}'.format(rem(phi, TAU)), 
                     z='{:.2f}'.format(z), y='{:.2f}'.format(y), x='{:.2f}'.format(x)) 
                 pbar.update(1)
@@ -68,45 +58,39 @@ def train(agent, env):
 
 
 if __name__ == "__main__":
+    tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now(tz)
+    month = mexico_now.month
+    day = mexico_now.day
+    hour = mexico_now.hour
+    minute = mexico_now.minute
+
+    PATH = 'results_ddpg/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
+    if not SHOW:
+        pathlib.Path(PATH).mkdir(parents=True, exist_ok=True) 
+    
     env = AgentEnv(QuadcopterEnv())
     #env.flag = False
     agent = DDPGagent(env)
     CR_t = train(agent, env)
     agent.noise_on = False
     agent.save(PATH)
-    states, actions, scores = sim(True, agent, env)
     plt.plot(CR_t)
     plt.xlabel('episodes')
     plt.title(r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
     if SHOW:
         plt.show()
     else:
-        plt.savefig(PATH + '/c_rewards.png')
+        plt.savefig(PATH + '/c_rewards.png', bbox_inches='tight')
         plt.close()
-    columns=('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', '$\psi$', r'$\theta$', '$\phi$')
-    statesDF = pd.DataFrame(states, columns=columns)
-    statesDF.plot(subplots=True, layout=(4, 3), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_states.png')
-        plt.close()
-    columns=('$a_1$', '$a_2$', '$a_3$', '$a_4$')
-    actionsDF = pd.DataFrame(actions, columns=columns)
-    actionsDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_actions.png')
-        plt.close()
-    columns=('$r_t$', '$Cr_t$', 'Stable', 'Contained')
-    scoresDF = pd.DataFrame(scores, columns=columns)
-    scoresDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_scores.png')
-        plt.close()
-
-    nSim3D(10, agent, env, PATH, show=SHOW)
-    create_report(PATH)
+    
+    n_states, n_actions, n_scores = nSim(False, agent, env, 5)
+    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
+    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
+    columns = ['$a_{}$'.format(i) for i in range(1,5)] 
+    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/sim_actions.png')
+    columns = ('$r_t$', '$Cr_t$', 'is stable', 'cotained')
+    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
+    plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
+    if not SHOW:
+        create_report_ddpg(PATH)
