@@ -75,7 +75,6 @@ class DDPGagent:
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
         next_states = torch.FloatTensor(next_states).to(device)
-        breakpoint()
         self.train(states, actions, rewards, next_states)
     
     def train(self, states, actions, rewards, next_states):
