@@ -8,7 +8,7 @@ def sim(flag, agent, env):
     #t = env.time
     env.flag  = flag
     state = env.reset()
-    states = np.zeros((int(env.steps), env.observation_space.shape[0] - 6))
+    states = np.zeros((int(env.steps), len(env.state)))
     actions = np.zeros((int(env.steps), env.action_space.shape[0]))
     scores = np.zeros((int(env.steps), 4)) # r_t, Cr_t, stable, contained
     #states[0, :]= env.reverse_observation(state)
@@ -48,7 +48,7 @@ def nSim3D(n, agent, env, path, show=False):
     plot_nSim3D(n_states, path, show)
 
 
-def plot_nSim3D(n_states, path, show=False):
+def plot_nSim3D(n_states, show=False, file_name=None):
     fig = plt.figure()
     ax = plt.axes(projection='3d')
     n = n_states.shape[-1]
@@ -58,20 +58,22 @@ def plot_nSim3D(n_states, path, show=False):
         Y = states[:, 4]
         Z = states[:, 5]
         ax.plot(X, Y, Z, '.b', alpha=0.8, markersize=1)
+        ax.plot(X[-1], Y[-1], Z[-1], '.r', alpha=1, markersize=1)
 
     fig.suptitle(r'# of flights = ' + '{} '.format(n), fontsize=20)
-    ax.plot(0, 0, 0, '.r', alpha=1, markersize=1)
+    ax.plot(0, 0, 0, '.c', alpha=1, markersize=1)
     if show:
         plt.show()
     else:
         fig.set_size_inches(33., 21.)
-        plt.savefig(path + '/n_flights.png', dpi=300)
+        plt.savefig(file_name, dpi=300)
+
 
 def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
     steps, var, samples = array3D.shape
     index = pd.MultiIndex.from_product([range(samples), range(steps)], names=['samples', 'steps'])
     data = pd.DataFrame(data=array3D.reshape(steps * samples,var), index=index, columns=columns)
-    _, axes = plt.subplots(6, 2)
+    fig, axes = plt.subplots(var // 2, 2)
     for sample, df in data.groupby(level=0):
         df['time'] = time
         if sample == 0:
@@ -80,7 +82,7 @@ def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
             legend = False
 
         df.plot(x='time', subplots=True, ax=axes, legend=legend)
-    
+    fig.set_size_inches(18.5, 10.5)
     if show:
         plt.show()
     else:
