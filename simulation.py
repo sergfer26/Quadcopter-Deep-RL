@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from progress.bar import Bar
 
 
 def sim(flag, agent, env):
@@ -32,9 +31,7 @@ def nSim(flag, agent, env, n):
     n_states = np.zeros((env.steps, env.observation_space.shape[0] - 6, n))
     n_actions = np.zeros((env.steps, env.action_space.shape[0], n))
     n_scores = np.zeros((env.steps, 4, n))
-    bar = Bar('Processing', max=n)
     for k in range(n):
-        bar.next()
         states, actions, scores = sim(flag, agent, env)
         n_states[:, :, k] = states
         n_actions[:, :, k] = actions
