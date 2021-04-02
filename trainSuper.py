@@ -11,10 +11,7 @@ from quadcopter_env import QuadcopterEnv, AgentEnv
 from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 from DDPG.ddpg import DDPGagent
 from Linear.step import control_feedback, omega_0, C, F
-from progress.bar import Bar
-from tqdm import tqdm
 from params import PARAMS_TRAIN_SUPER
-#from graphics import *
 from get_report import create_report_super
 
 
@@ -91,9 +88,7 @@ def get_action(state):
 
 def get_experience(env, memory, n):
     #print('Learning from observations')
-    bar = Bar('Processing', max=n)
     for _ in range(n):
-        bar.next()
         state = env.reset()
         for _ in range(env.steps):
             real_action = get_action(env.state)
@@ -108,7 +103,6 @@ def get_experience(env, memory, n):
 
             if done:
                 break
-    bar.finish()
 
 
 def train(agent, env, data_loader):
@@ -116,17 +110,12 @@ def train(agent, env, data_loader):
     Scores = {'$Cr_t$': list(), 'stable': list(), 'contained': list()}
     Loss = {'policy': np.zeros(EPOCHS), 'critic': np.zeros(EPOCHS)}
     for epoch in range(1, EPOCHS + 1):
-        with tqdm(total=len(agent.memory.buffer), position=0) as pbar:
-            pbar.set_description(f'Epoch {epoch}/' + str(EPOCHS))
-            for i, data in enumerate(data_loader, 0):
-                states, actions, rewards, next_states = data
-                policy_loss, critic_loss = agent.train(
-                    states, actions, rewards, next_states)
-                Loss['policy'][epoch - 1] += policy_loss / len(data)
-                Loss['critic'][epoch - 1] += critic_loss / len(data)
-                pbar.set_postfix(policy_loss='{:.4f}'.format(
-                    policy_loss), critic_loss='{:.4f}'.format(critic_loss))
-                pbar.update(states.shape[0])
+        for i, data in enumerate(data_loader, 0):
+            states, actions, rewards, next_states = data
+            policy_loss, critic_loss = agent.train(
+                states, actions, rewards, next_states)
+            Loss['policy'][epoch - 1] += policy_loss / len(data)
+            Loss['critic'][epoch - 1] += critic_loss / len(data)
 
         if epoch % 10 == 0:
             # r_t, Cr_t, stable, contained
