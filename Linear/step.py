@@ -6,7 +6,7 @@ from numpy import sin
 from numpy import cos
 from numpy import tan
 from time import process_time 
-from .ecuaciones_drone import f, jac_f, escribe, imagen, imagen2d, I, K, B, M, L, G
+from .equations import f, jac_f, escribe, imagen, imagen2d, I, K, B, M, L, G
 from numpy import pi
 
 omega_0 = np.sqrt((G * M)/(4 * K))

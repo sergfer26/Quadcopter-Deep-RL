@@ -14,3 +14,6 @@ best
 *.pth
 *pth
 MyDoc.pdf
+noise_test.py
+.DS_Store
+Linear/.DS_Store

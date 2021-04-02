@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 #from .models_merge import Actor, Critic, weights_init
 from .models import Actor, Critic, weights_init
-from .utils import Memory, OUNoise
+from .utils import Memory
 from .params import PARAMS_DDPG 
 
 device = 'cpu'
@@ -78,8 +78,11 @@ class DDPGagent:
         self.train(states, actions, rewards, next_states)
     
     def train(self, states, actions, rewards, next_states):
-        # Critic loss        
-        Qvals = self.critic.forward(states, actions)
+        # Critic loss
+        try:   
+            Qvals = self.critic.forward(states, actions)
+        except:
+            breakpoint()
         next_actions = self.actor_target.forward(next_states.to(device))
         next_Q = self.critic_target.forward(next_states.to(device), next_actions.to(device)).detach()
         Qprime = rewards + self.gamma * next_Q
@@ -108,19 +111,19 @@ class DDPGagent:
 
     def save(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
-        torch.save(self.critic.state_dict(), path + "/critic")
-        torch.save(self.critic_optimizer.state_dict(), path + "/critic_optimizer")
-        torch.save(self.actor.state_dict(), path + "/actor")
-        torch.save(self.actor_optimizer.state_dict(), path + "/actor_optimizer")
+        torch.save(self.critic.state_dict(), path + "/critic.pth")
+        torch.save(self.critic_optimizer.state_dict(), path + "/critic_optimizer.pth")
+        torch.save(self.actor.state_dict(), path + "/actor.pth")
+        torch.save(self.actor_optimizer.state_dict(), path + "/actor_optimizer.pth")
         with open(path +'/memory.pickle', 'wb') as handle:
             pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
     def load(self, path):
-        self.critic.load_state_dict(torch.load(path + "/critic"))
-        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer"))
+        self.critic.load_state_dict(torch.load(path + "/critic.pth"))
+        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer.pth"))
         self.critic_target = copy.deepcopy(self.critic)
-        self.actor.load_state_dict(torch.load(path + "/actor"))
-        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer"))
+        self.actor.load_state_dict(torch.load(path + "/actor.pth"))
+        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer.pth"))
         self.actor_target = copy.deepcopy(self.actor)
         #with open(path +'/memory.pickle', 'rb') as handle:
         #    self.memory.pickle.load(handle)

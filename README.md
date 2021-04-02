@@ -7,10 +7,16 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
+Python libraries:
+
+- ``torch 1.6.0``
+- ``gym 0.17.2``
+- ``tqdm 4.45.0``
+- ``reportlab 3.5.65``
+
 
 ```
-Give examples
+pip install torch
 ```
 
 ### Installing
@@ -31,24 +37,24 @@ until finished
 
 End with an example of getting some data out of the system or using it for a little demo
 
-## Running the tests
+## Running the trains and tests
 
 Explain how to run the automated tests for this system
 
-### Break down into end to end tests
+### DDPG + Supervised Learning
 
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
+(initial phase) with simulation:
 
 ```
-Give an example
+python3 trainSuper.py
+```
+
+### DDPG
+
+Training with 18 states and simulation:
+
+```
+python3 trainDDPG.py
 ```
 
 ## Deployment
@@ -57,30 +63,21 @@ Add additional notes about how to deploy this on a live system
 
 ## Built With
 
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
+* Python 3.7.7
 
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
 
 ## Authors
 
 * **Sergio Miguel Fernández Martínez** 
 * **Edgar Amilkar Gazque Espinosa de los Monteros**
-* **Antonio Capella Kort**
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* We want to thank Antonio Capella Kort for his comments, his guidelines and  his time dedicated into this project.
+
+* DDPG code: https://towardsdatascience.com/deep-deterministic-policy-gradients-explained-2d94655a9b7b . 
+
+## References
+
+* Timothy P. Lillicrap. *Continuous control with deep reinforcement learning*. 9 Sep 2015.

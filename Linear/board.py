@@ -8,7 +8,7 @@ from numpy import sin
 from numpy import cos
 from numpy import tan
 from numpy import abs
-from ecuaciones_drone import f, escribe, imagen, imagen2d, I, K, B, M, L, G
+from .equations import f, escribe, imagen, imagen2d, I, K, B, M, L, G
 from numpy import pi
 from torch.utils.tensorboard import SummaryWriter
 from time import sleep

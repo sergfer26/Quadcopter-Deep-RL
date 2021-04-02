@@ -3,22 +3,53 @@ import numpy as np
 from scipy.integrate import odeint
 # import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from numpy import sin
-from numpy import cos
-from numpy import tan
+from numpy import sin, cos, tan 
 from numpy.linalg import norm
+
 
 G = 9.81
 I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
 B, M, L = 1.140*10**(-6), 1.433, 0.225
 K = 0.001219  # kt
+omega_0 = np.sqrt((G * M)/(4 * K))
+
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 sec = lambda x: 1/cos(x)
 
-def f(y, t, w1, w2, w3, w4):
-    #El primer parametro es un vector
-    #W,I tambien
-    u, v, w, x, y, z, p, q, r, psi, theta, phi = y
+
+def rotation_matrix(angles):
+    '''
+        rotation_matrix obtine la matriz de rotación de los angulos de Euler
+        https://en.wikipedia.org/wiki/Rotation_matrix;
+
+        angles: son los angulos de Euler psi, theta y phi con respecto a los 
+        ejes x, y, z;
+
+        regresa: la matriz R.
+    '''
+    z, y, x = angles # psi, theta, phi
+    R = np.array([
+        [cos(z) * cos(y), cos(z) * sin(y) * sin(x) - sin(z) * cos(x), 
+        cos(z) * sin(y) * cos(x) + sin(z) * sin(x)],
+        [sin(z) * cos(y), sin(z) * cos(y) * sin(x) + cos(z) * cos(x), 
+        sin(z) * sin(y) * cos(x) - cos(z) * sin(x)], 
+        [- sin(y), cos(y) * sin(x), cos(y) * cos(x)]
+    ])
+    return R
+
+
+def f(X, t, w1, w2, w3, w4): # Sistema dinámico
+    '''
+        f calcula el vector dot_x = f(x, t, w) (sistema dinamico);
+        
+        X: es un vector de 12 posiciones;
+        t: es un intervalo de tiempo [t1, t2];
+        wi: es un parametro de control, i = 1, 2, 3, 4;
+
+        regresa dot_x
+    '''
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
     Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
     du = r * v - q * w - G * sin(theta)
@@ -26,23 +57,30 @@ def f(y, t, w1, w2, w3, w4):
     dw = q * u - p * v + G * cos(phi) * cos(theta) - (K/M) * norm(W) ** 2
     dp = ((L * B) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
     dq = ((L * B) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
-    dr = (B / Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
+    dr = (B/Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
     dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
     dtheta = q * cos(phi) - r * sin(phi)
     dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
-    dx = u
-    dy = v
-    dz = w
+    dx = u; dy = v; dz = w
     return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
 
-def jac_f(y, t, w1, w2, w3, w4):
+def jac_f(X, t, w1, w2, w3, w4):
+    '''
+        jac_f calcula el jacobiano de la funcion f;
+
+        X: es un vector de 12 posiciones;
+        t: es un intervalo de tiempo [t1, t2];
+        wi: es un parametro de control, i = 1, 2, 3, 4;
+
+        regrasa la matriz J.
+    '''
     Ixx, Iyy, Izz = I
     a1 = (Izz - Iyy)/Ixx
     a2 = (Ixx - Izz)/Iyy
-    u, v, w, _, _, _, p, q, r, _, theta, phi = y
-
-    ddu = np.zeros(12); ddu[1:3] = [r, -q]
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
+    J = np.zeros((12, 12))
+    ddu = np.zeros(12); J[0, 1:3] = [r, -q]
     ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G * sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
     ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G * sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
     ddx = np.zeros(12); ddx[0] = 1
