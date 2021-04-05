@@ -96,7 +96,7 @@ def nsim3D(n, agent, env, PATH):
         env.noise.reset()
         x0, y0, z0 = env.state[3:6]
         X, Y, Z = [x0], [y0], [z0]
-        ax.plot(X, Y, Z, '.r', markersize=15)
+        ax.plot(X, Y, Z, '.g', markersize=15)
         while True:
             action = agent.get_action(state)
             #action = get_action(env.state, env.goal)
@@ -110,7 +110,8 @@ def nsim3D(n, agent, env, PATH):
             if done:
                 break
         #ax.plot(x0, y0, z0, '.r', markersize=15)
-        ax.plot(X, Y, Z, '.b', alpha=0.5, markersize=5)
+        ax.plot(X, Y, Z, '.b', alpha=0.2, markersize=1)
+        ax.plot(X[-1], Y[-1], Z[-1], '.r', markersize=15)
     fig.suptitle(r'$\overline{Cr}_t = $' +
                  '{} '.format(mean_episode_reward/n), fontsize=20)
     ax.plot([0], [0], [0], '.r', alpha=1, markersize=1)

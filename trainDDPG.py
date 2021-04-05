@@ -157,7 +157,7 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/sim_scores.png')
         plt.close()
-    env.set_time(2400,90)
+    env.set_time(1600,60)
     nsim3D(10, agent, env, PATH)
     nsim2D(10, agent, env, PATH)
     create_report(PATH)
