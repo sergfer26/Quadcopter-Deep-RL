@@ -180,7 +180,7 @@ if __name__ == "__main__":
         plt.show()
     else:
         plt.savefig(PATH + '/validation_scores.png')
-    #env.set_time(2400,90)
+    env.set_time(2400,90)
     nsim3D(5, agent, env,PATH)
     nsim2D(5, agent, env, PATH)
     create_report_super(PATH) 

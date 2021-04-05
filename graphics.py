@@ -110,7 +110,7 @@ def nsim3D(n, agent, env, PATH):
             if done:
                 break
         #ax.plot(x0, y0, z0, '.r', markersize=15)
-        ax.plot(X, Y, Z, '.b', alpha=0.2, markersize=1)
+        ax.plot(X, Y, Z, '-b', alpha=0.2, markersize=1)
         ax.plot(X[-1], Y[-1], Z[-1], '.r', markersize=15)
     fig.suptitle(r'$\overline{Cr}_t = $' +
                  '{} '.format(mean_episode_reward/n), fontsize=20)
