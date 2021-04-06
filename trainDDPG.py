@@ -16,14 +16,15 @@ from numpy import pi, cos, sin
 from numpy import remainder as rem
 #from progress.bar import Bar
 from datetime import datetime
-from get_report import create_report
-from params import PARAMS_TRAIN
-from graphics import*
+from get_report import create_report_ddpg
+from params import PARAMS_TRAIN_DDPG
+#from graphics import*
+from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 
-BATCH_SIZE = PARAMS_TRAIN['BATCH_SIZE']
-EPISODES = PARAMS_TRAIN['EPISODES']
+BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
+EPISODES = PARAMS_TRAIN_DDPG['EPISODES']
 TAU = 2 * pi #No es el tau del agente
-SHOW = PARAMS_TRAIN['SHOW']
+SHOW = PARAMS_TRAIN_DDPG['SHOW']
   
 def train(agent, env):
     #s = 1
@@ -57,55 +58,6 @@ def train(agent, env):
     return R
 
 
-def sim(flag, agent, env):
-    #t = env.time
-    env.flag  = flag
-    state = env.reset()
-    states = np.zeros((int(env.steps + 1), env.observation_space.shape[0] - 6))
-    actions = np.zeros((int(env.steps), env.action_space.shape[0]))
-    scores = np.zeros((int(env.steps), 4)) # r_t, Cr_t, stable, contained
-    states[0, :]= env.reverse_observation(state)
-    episode_reward = 0
-    i = 0
-    while True:
-        action = agent.get_action(state)
-        action, reward, new_state, done = env.step(action)
-        episode_reward += reward
-        states[i + 1, :] = env.state
-        actions[i, :] = env.action(action)
-        scores[i, :] = np.array([reward, episode_reward, env.is_stable(new_state), env.is_contained(new_state)])
-        state = new_state
-        if done:
-            break
-        i += 1
-    return states, actions, scores
-
-
-def nSim(flag, agent, env, n):
-    states = np.zeros((env.time_max + 1, env.observation_space.shape[0] - 6, n))
-    actions = np.zeros((env.time_max, env.action_space[0], n))
-    scores = np.zeros((env.time_max, 4, n))
-    env.flag  = flag
-    bar = Bar('Processing', max=n)
-    for k in range(n):
-        bar.next()
-        state = env.reset()
-        states[0, :, k]  = env.state
-        episode_reward = 0
-        i = 0
-        while True:
-            action = agent.get_action(state)
-            action, reward, new_state, done = env.step(action)
-            episode_reward += reward
-            states[i + 1, :, k] = env.state
-            actions[i, :, k] = env.action(action)
-            scores[i, :, k] = np.array([reward, episode_reward, env.is_stable(), env.is_contained()])
-            state = new_state
-            if done:
-                break
-            i += 1
-    return states, actions, scores
-
 
 if __name__ == "__main__":
     tz = pytz.timezone('America/Mexico_City')
@@ -133,31 +85,13 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/c_rewards.png')
         plt.close()
-    columns=('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', '$\psi$', r'$\theta$', '$\phi$')
-    statesDF = pd.DataFrame(states, columns=columns)
-    statesDF.plot(subplots=True, layout=(4, 3), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_states.png')
-        plt.close()
-    columns=('$a_1$', '$a_2$', '$a_3$', '$a_4$')
-    actionsDF = pd.DataFrame(actions, columns=columns)
-    actionsDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_actions.png')
-        plt.close()
-    columns=('$r_t$', '$Cr_t$', 'Stable', 'Contained')
-    scoresDF = pd.DataFrame(scores, columns=columns)
-    scoresDF.plot(subplots=True, layout=(2, 2), figsize=(10, 7))
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + '/sim_scores.png')
-        plt.close()
-    env.set_time(1600,60)
-    nsim3D(10, agent, env, PATH)
-    nsim2D(10, agent, env, PATH)
-    create_report(PATH)
+    n_states, n_actions, n_scores = nSim(False, agent, env, 1)
+    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
+    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
+    columns = ['$a_{}$'.format(i) for i in range(1,5)] 
+    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/sim_actions.png')
+    columns = ('$r_t$', '$Cr_t$', 'is stable', 'cotained')
+    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
+    plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
+    if not SHOW:
+        create_report_ddpg(PATH)
