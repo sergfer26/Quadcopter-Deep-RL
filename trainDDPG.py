@@ -20,7 +20,7 @@ from get_report import create_report_ddpg
 from params import PARAMS_TRAIN_DDPG
 #from graphics import*
 from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
-
+from correo import send_correo
 BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
 EPISODES = PARAMS_TRAIN_DDPG['EPISODES']
 TAU = 2 * pi #No es el tau del agente
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/c_rewards.png')
         plt.close()
-    n_states, n_actions, n_scores = nSim(False, agent, env, 1)
+    n_states, n_actions, n_scores = nSim(False, agent, env, 10)
     columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
     plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
     columns = ['$a_{}$'.format(i) for i in range(1,5)] 
@@ -95,3 +95,5 @@ if __name__ == "__main__":
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
         create_report_ddpg(PATH)
+        send_correo(PATH + '/Reporte.pdf')
+
