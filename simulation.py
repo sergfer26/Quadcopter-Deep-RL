@@ -70,11 +70,11 @@ def plot_nSim3D(n_states, show=False, file_name=None):
 
 
 def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
-    _, var, samples = array3D.shape
+    steps, var, samples = array3D.shape
     fig, axes = plt.subplots(var // 2, 2)
     for k in range(samples):
         data = pd.DataFrame(array3D[:, :, k], columns=columns)
-        data['$t$'] = time
+        data['$t$'] = time[0: steps]
         if k == 0:
             legend = True
         else:
