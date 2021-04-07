@@ -2,4 +2,4 @@ PARAMS_ENV = {'TIME_MAX': 30, 'STEPS': 800, 'omega0_per': 0.60, 'FLAG':False} #S
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128, 'EPISODES': 10000, 'SHOW': False}
 
-PARAMS_TRAIN_SUPER = {'BATCH_SIZE': 64, 'EPOCHS': 10000,'N' : 500, 'SHOW': False} #N es el numero de vuelos hechos con el control lineal
+PARAMS_TRAIN_SUPER = {'BATCH_SIZE': 64, 'EPOCHS': 10000,'N' : 1000, 'SHOW': False} #N es el numero de vuelos hechos con el control lineal
