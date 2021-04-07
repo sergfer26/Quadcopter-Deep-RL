@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 
 
@@ -47,7 +48,7 @@ def nSim3D(n, agent, env, path, show=False):
 
 def plot_nSim3D(n_states, show=False, file_name=None):
     fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    ax = plt.gca(projection='3d')
     n = n_states.shape[-1]
     for k in range(n):
         states = n_states[:, :, k]
@@ -80,7 +81,7 @@ def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
         else:
             legend = False
 
-        data.plot(x='$t$', subplots=True, ax=axes, legend=legend)
+        data.plot(x='$t$', subplots=True, ax=axes, legend=legend,alpha = 0.2)
     fig.set_size_inches(18.5, 10.5)
     if show:
         plt.show()
