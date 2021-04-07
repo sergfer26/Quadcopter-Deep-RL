@@ -140,13 +140,17 @@ def create_report_super(PATH):
     add_text(pdf,['Parámetros del Ambiente'],100, 560)
     add_table(pdf,PARAMS_ENV,100,410) 
 
+    add_text(pdf,['Parámetros del Ruido'],100, 350)
+    add_table(pdf,PARAMS_UTILS,100,200)
+
+
     pdf.showPage()
 
     add_image(PATH,pdf,'/loss.png',10, 350,600,600)
     add_image(PATH,pdf,'/validation_scores.png',30,10)
     pdf.showPage()
     #Siguiente pagina
-    add_image(PATH,pdf,'/vuelos_2D.png',30, 350,550,550)
-    add_image(PATH,pdf,'/vuelos.png',30, 10,600,600)
+    add_image(PATH,pdf,'/sim_states.png',30, 350,550,550)
+    add_image(PATH,pdf,'/sim_flights.png',30, 10,600,600)
     pdf.save()  
 
