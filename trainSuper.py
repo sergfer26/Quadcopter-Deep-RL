@@ -14,8 +14,9 @@ from trainDDPG import sim
 #from progress.bar import Bar
 from tqdm import tqdm
 from params import PARAMS_TRAIN_SUPER
-from graphics import *
+from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 from get_report import*
+from correo import send_correo
 
 plt.style.use('ggplot')
 
@@ -180,7 +181,16 @@ if __name__ == "__main__":
         plt.show()
     else:
         plt.savefig(PATH + '/validation_scores.png')
-    env.set_time(2400,90)
-    nsim3D(5, agent, env,PATH)
-    nsim2D(5, agent, env, PATH)
-    create_report_super(PATH) 
+    #env.set_time(2400,90)
+    n_states, n_actions, n_scores = nSim(False, agent, env, 10)
+    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
+    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
+    columns = ['$a_{}$'.format(i) for i in range(1,5)] 
+    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/sim_actions.png')
+    columns = ('$r_t$', '$Cr_t$', 'is stable', 'cotained')
+    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
+    plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
+    if not SHOW:
+        create_report_super(PATH)
+        send_correo(PATH + '/Reporte.pdf')
+     
