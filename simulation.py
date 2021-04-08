@@ -54,7 +54,7 @@ def plot_nSim3D(n_states, show=False, file_name=None):
         X = states[:, 3]
         Y = states[:, 4]
         Z = states[:, 5]
-        ax.plot(X[0], Y[0], Z[0], '.c', alpha= 0.5, label='$X_0$', markersize=5)
+        ax.plot(X[0:2], Y[0:2], Z[0:2], '.c', alpha= 0.5, label='$X_0$', markersize=5)
         ax.plot(X, Y, Z, '-b', alpha=0.2, label='$X_t$', markersize=1)
         ax.plot(X[-1], Y[-1], Z[-1], '.r', alpha=0.5, label='$X_T$', markersize=5)
         if k == 0:
