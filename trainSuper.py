@@ -40,10 +40,9 @@ env = AgentEnv(env)
 agent = DDPGagent(env)
 env.noise_on = False
 
-
 if torch.cuda.is_available():
     DEVICE = "cuda"
-    DTYPE = torch.float64
+    DTYPE = torch.float32
     agent.actor.cuda()  # para usar el gpu
     agent.critic.cuda()
 
@@ -143,7 +142,7 @@ if __name__ == "__main__":
 
 
     get_experience(env, agent.memory, N)
-
+    agent.tau = 0.5
     dataset = Memory_Dataset(agent.memory.buffer, env)
     n_samples = len(agent.memory.buffer)
     data_loader = DataLoader(dataset, shuffle=True, batch_size=BATCH_SIZE)
