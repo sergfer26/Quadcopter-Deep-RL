@@ -3,7 +3,7 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_SUPER
+from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_SUPER, PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
 
 
@@ -89,8 +89,13 @@ def create_report_ddpg(PATH):
     pdf.setFont("Courier-Bold", 26)
     pdf.drawCentredString(290,720, subTitle)
     #drawMyRuler(pdf)
+    #add_text(pdf,['Parámetros de coordenadas'],100, 750)
+    #add_table(pdf, PARAMS_OBS,100,610)
+
+    #pdf.showPage()
+
     add_text(pdf,['Parámetros del Entrenamiento'],100, 750)
-    add_table(pdf,PARAMS_TRAIN_DDPG,100,610)
+    add_table(pdf, PARAMS_TRAIN_DDPG,100,610)
     
 
     add_text(pdf,['Parámetros del Ambiente'],100, 560)
