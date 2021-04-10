@@ -30,7 +30,6 @@ class DDPGagent:
         self.num_actions = env.action_space.shape[0]
         self.gamma = gamma
         self.tau = tau
-        self.env = env
 
         sizes_actor = hidden_sizes.copy()
         sizes_actor.insert(0, self.num_states)
@@ -41,9 +40,9 @@ class DDPGagent:
         self.actor = Actor(sizes_actor, self.num_actions)
         self.actor.apply(weights_init)
         self.actor_target = Actor(sizes_actor, self.num_actions)
-        self.critic = Critic(sizes_critic, self.num_actions)
+        self.critic = Critic(sizes_critic)
         self.critic.apply(weights_init)
-        self.critic_target = Critic(sizes_critic, self.num_actions)
+        self.critic_target = Critic(sizes_critic)
         if torch.cuda.is_available():
             self.actor.cuda()
             self.actor_target.cuda()
@@ -119,11 +118,11 @@ class DDPGagent:
             pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
     def load(self, path):
-        self.critic.load_state_dict(torch.load(path + "/critic.pth"))
-        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer.pth"))
+        self.critic.load_state_dict(torch.load(path + "/critic.pth", map_location=device))
+        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer.pth",  map_location=device))
         self.critic_target = copy.deepcopy(self.critic)
-        self.actor.load_state_dict(torch.load(path + "/actor.pth"))
-        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer.pth"))
+        self.actor.load_state_dict(torch.load(path + "/actor.pth",  map_location=device))
+        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer.pth",  map_location=device))
         self.actor_target = copy.deepcopy(self.actor)
         #with open(path +'/memory.pickle', 'rb') as handle:
         #    self.memory.pickle.load(handle)
