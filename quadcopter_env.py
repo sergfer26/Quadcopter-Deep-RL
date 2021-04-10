@@ -9,7 +9,7 @@ from gym import spaces
 from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
 from scipy.integrate import odeint
-from params import PARAMS_ENV 
+from params import PARAMS_ENV, PARAMS_OBS
 
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
@@ -25,8 +25,8 @@ VEL_MIN = - omega_0 * omega0_per
 
 # limites espaciales del ambiente
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([-1, -1, -1,  -20, -20, -20, -1, -1, -1, -pi/4, -pi/4, -pi/4])
-HIGH_OBS = np.array([1, 1, 1, 20, 20, 20, 1, 1, 1, pi/4, pi/4, pi/4])
+LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
+HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
 
 
 """Quadcopter Environment that follows gym interface"""
@@ -181,44 +181,14 @@ class QuadcopterEnv(gym.Env):
         pass
 
 
-class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
-    
+# https://github.com/openai/gym/blob/master/gym/core.py
+class NormalizedEnv(gym.ActionWrapper):
+    """ Wrap action """
+
     def __init__(self, env):
         super().__init__(env)
-        low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
-        high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.noise = OUNoise(env.action_space)
         self.noise_on = True
-
-    def observation(self, obs):
-        '''
-            observation transforma un estado de R^12 a un estado de 
-            R^18;
-
-            obs: estado de R^12;
-
-            regresa un estado en R^18.
-        '''
-        angles = obs[9:]
-        ori = np.matrix.flatten(rotation_matrix(angles))
-        return np.concatenate([obs[0:9], ori])
-
-    def reverse_observation(self, obs):
-        '''
-            reverse_observation transforma un estado de R^18 a un estado de
-            R^12;
-
-            obs: estado en R^18;
-
-            regresa un estado en R^12.
-        '''
-        mat = obs[9:].reshape((3, 3))
-        psi = np.arctan(mat[1, 0]/mat[0, 0])
-        theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
-        phi = np.arctan(mat[2, 1] / mat[2, 2])
-        angles = np.array([psi, theta, phi])
-        return np.concatenate([obs[0:9], angles])
 
     def action(self, action):
         '''
@@ -253,6 +223,44 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         act_k_inv = 2./(high - low)
         act_b = (high + low)/ 2.
         return act_k_inv * (action - act_b)
+
+
+class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
+    
+    def __init__(self, env):
+        super().__init__(env)
+        low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
+        high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
+
+    def observation(self, obs):
+        '''
+            observation transforma un estado de R^12 a un estado de 
+            R^18;
+
+            obs: estado de R^12;
+
+            regresa un estado en R^18.
+        '''
+        angles = obs[9:]
+        ori = np.matrix.flatten(rotation_matrix(angles))
+        return np.concatenate([obs[0:9], ori])
+
+    def reverse_observation(self, obs):
+        '''
+            reverse_observation transforma un estado de R^18 a un estado de
+            R^12;
+
+            obs: estado en R^18;
+
+            regresa un estado en R^12.
+        '''
+        mat = obs[9:].reshape((3, 3))
+        psi = np.arctan(mat[1, 0]/mat[0, 0])
+        theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
+        phi = np.arctan(mat[2, 1] / mat[2, 2])
+        angles = np.array([psi, theta, phi])
+        return np.concatenate([obs[0:9], angles])
 
     def step(self, a):
         '''
