@@ -12,6 +12,7 @@ odeint_gpu_vs_cpu.py
 *.csv
 best
 *.pth
+*.png
 *pth
 MyDoc.pdf
 noise_test.py
