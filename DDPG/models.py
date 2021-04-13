@@ -11,7 +11,7 @@ class Critic(nn.Module):
         for k in range(len(h_sizes) - 1):
             self.hidden.append(nn.Linear(h_sizes[k], h_sizes[k+1]))
         
-        self.out = nn.Linear(h_sizes[-1], output_size)
+        self.out = nn.Linear(h_sizes[-1], 1)
 
     def forward(self, state, action):
         """
