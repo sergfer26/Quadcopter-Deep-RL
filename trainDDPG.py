@@ -85,6 +85,7 @@ if __name__ == "__main__":
     else:
         plt.savefig(PATH + '/c_rewards.png')
         plt.close()
+    env.set_time(2400,90)
     n_states, n_actions, n_scores = nSim(False, agent, env, 10)
     columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
     plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
