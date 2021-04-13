@@ -122,11 +122,3 @@ class DDPGagent:
         self.actor.load_state_dict(torch.load(path + "/actor",  map_location=device))
         self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer",  map_location=device))
         self.actor_target = copy.deepcopy(self.actor)
-        #with open(path +'/memory.pickle', 'rb') as handle:
-        #    self.memory.pickle.load(handle)
-'''
-def remove_nets(path):
-    nets = glob.glob(path +'/saved_models/*.pth')
-    for net in nets:
-        os.remove(net)
-'''
