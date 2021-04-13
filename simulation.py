@@ -8,10 +8,10 @@ def sim(flag, agent, env):
     #t = env.time
     env.flag  = flag
     state = env.reset()
-    states = np.zeros((int(env.steps), len(env.state)))
-    actions = np.zeros((int(env.steps), env.action_space.shape[0]))
-    scores = np.zeros((int(env.steps), 4)) # r_t, Cr_t, stable, contained
-    #states[0, :]= env.reverse_observation(state)
+    states = np.zeros((env.steps, len(env.state)))
+    actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
+    scores = np.zeros((env.steps - 1, 4)) # r_t, Cr_t, stable, contained
+    states[0, :]= env.state
     episode_reward = 0
     i = 0
     while True:
@@ -30,8 +30,8 @@ def sim(flag, agent, env):
 
 def nSim(flag, agent, env, n):
     n_states = np.zeros((env.steps, env.observation_space.shape[0] - 6, n))
-    n_actions = np.zeros((env.steps, env.action_space.shape[0], n))
-    n_scores = np.zeros((env.steps, 4, n))
+    n_actions = np.zeros((env.steps -1, env.action_space.shape[0], n))
+    n_scores = np.zeros((env.steps -1, 4, n))
     bar = Bar('Processing', max=n)
     for k in range(n):
         bar.next()
@@ -57,11 +57,14 @@ def plot_nSim3D(n_states, show=False, file_name=None):
         X = states[:, 3]
         Y = states[:, 4]
         Z = states[:, 5]
-        ax.plot(X, Y, Z, '.b', alpha=0.8, markersize=1)
-        ax.plot(X[-1], Y[-1], Z[-1], '.r', alpha=1, markersize=1)
+        ax.plot(X[0], Y[0], Z[0], '.c', alpha= 0.5, label='$X_0$', markersize=5)
+        ax.plot(X, Y, Z, '-b', alpha=0.2, label='$X_t$', markersize=1)
+        ax.plot(X[-1], Y[-1], Z[-1], '.r', alpha=0.5, label='$X_T$', markersize=5)
+        if k == 0:
+            ax.legend()
 
-    fig.suptitle(r'# of flights = ' + '{} '.format(n), fontsize=20)
-    ax.plot(0, 0, 0, '.c', alpha=1, markersize=1)
+    fig.suptitle(r'# of flights = ' + '{} '.format(n), fontsize=12)
+    # ax.plot(0, 0, 0, '.c', alpha=1, markersize=15)
     if show:
         plt.show()
     else:
@@ -70,18 +73,17 @@ def plot_nSim3D(n_states, show=False, file_name=None):
 
 
 def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
-    steps, var, samples = array3D.shape
-    index = pd.MultiIndex.from_product([range(samples), range(steps)], names=['samples', 'steps'])
-    data = pd.DataFrame(data=array3D.reshape(steps * samples,var), index=index, columns=columns)
+    _, var, samples = array3D.shape
     fig, axes = plt.subplots(var // 2, 2)
-    for sample, df in data.groupby(level=0):
-        df['time'] = time
-        if sample == 0:
+    for k in range(samples):
+        data = pd.DataFrame(array3D[:, :, k], columns=columns)
+        data['$t$'] = time
+        if k == 0:
             legend = True
         else:
             legend = False
 
-        df.plot(x='time', subplots=True, ax=axes, legend=legend)
+        data.plot(x='$t$', subplots=True, ax=axes, legend=legend)
     fig.set_size_inches(18.5, 10.5)
     if show:
         plt.show()
