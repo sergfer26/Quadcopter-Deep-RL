@@ -107,9 +107,3 @@ class Memory:
     def __len__(self):
         return len(self.buffer)
 
-    def remove(self):
-        n = int(floor(len(self.buffer)/2))
-        for _ in range(n):
-            i = np.random.randint(n)
-            del self.buffer[i]
-        print('Se elimino el 50% de la infomacion!!')
