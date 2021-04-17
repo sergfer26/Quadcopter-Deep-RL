@@ -73,6 +73,7 @@ if __name__ == "__main__":
     env = AgentEnv(QuadcopterEnv())
     #env.flag = False
     agent = DDPGagent(env)
+    agent.load(PATH)
     CR_t = train(agent, env)
     agent.noise_on = False
     agent.save(PATH)
@@ -86,7 +87,7 @@ if __name__ == "__main__":
         plt.savefig(PATH + '/c_rewards.png')
         plt.close()
     env.set_time(2400,90)
-    n_states, n_actions, n_scores = nSim(False, agent, env, 10)
+    n_states, n_actions, n_scores = nSim(False, agent, env, 3)
     columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
     plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
     columns = ['$a_{}$'.format(i) for i in range(1,5)] 
@@ -96,5 +97,5 @@ if __name__ == "__main__":
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
         create_report_ddpg(PATH)
-        send_correo(PATH + '/Reporte.pdf')
+        #send_correo(PATH + '/Reporte.pdf')
 
