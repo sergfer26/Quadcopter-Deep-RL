@@ -1,12 +1,12 @@
 import numpy as np
 import sys
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import torch
 import pytz
 import pandas as pd
 import pathlib 
 from quadcopter_env import QuadcopterEnv, AgentEnv, omega_0, STEPS
-from simulation import nSim3D, nSim, sim
 from DDPG.ddpg import DDPGagent
 from numpy.linalg import norm
 from numpy import pi, cos, sin
@@ -25,7 +25,7 @@ SHOW = PARAMS_TRAIN_DDPG['SHOW']
   
 
 def train(agent, env):
-    R = []
+    rewards = []; avg_rewards = []
     env.reset()
     for _ in range(EPISODES):
         state = env.reset()
@@ -40,8 +40,9 @@ def train(agent, env):
             if done:
                 break
             state = new_state
-        R.append(episode_reward)
-    return R
+        rewards.append(episode_reward)
+        avg_rewards.append(np.mean(rewards[-10:]))
+    return rewards, avg_rewards
 
 
 if __name__ == "__main__":
@@ -52,6 +53,8 @@ if __name__ == "__main__":
     hour = mexico_now.hour
     minute = mexico_now.minute
 
+    mpl.style.use('seaborn')
+
     PATH = 'results_ddpg/'+ str(month) + '_'+ str(day) +'_'+ str(hour) + str(minute)
     if not SHOW:
         pathlib.Path(PATH).mkdir(parents=True, exist_ok=True) 
@@ -59,12 +62,14 @@ if __name__ == "__main__":
     env = AgentEnv(QuadcopterEnv())
     #env.flag = False
     agent = DDPGagent(env)
-    CR_t = train(agent, env)
-    agent.noise_on = False
+    rewards, avg_rewards = train(agent, env)
+    env.noise_on = False
     agent.save(PATH)
-    plt.plot(CR_t)
+    plt.plot(rewards, 'b--', label='episode reward', alpha=0.5)
+    plt.plot(avg_rewards, 'y-', label='average reward')
     plt.xlabel('episodes')
     plt.title(r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
+    plt.legend(loc='best')
     if SHOW:
         plt.show()
     else:
