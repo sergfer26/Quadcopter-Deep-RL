@@ -183,7 +183,7 @@ class QuadcopterEnv(gym.Env):
         d1 = norm(x - self.goal[5]) #[3:6]
         d2 = norm(vel)
         d3 = norm(np.identity(3) - rotation_matrix(state[9:]))
-        return r - (0.005 * d2 + 0.02 * d1 + 0.1 * d3)
+        return r - (0.005 * d2 + 0.02 * d1 + 0.5 * d3)
 
     def is_done(self):
         #Si se te acabo el tiempo
