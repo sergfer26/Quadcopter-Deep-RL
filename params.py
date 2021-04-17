@@ -7,7 +7,7 @@ PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128, 'EPISODES': 2, 'n': 1, 'SHOW': False}
 
 PARAMS_TRAIN_SUPER = {'BATCH_SIZE': 64, 'EPOCHS': 2500, 'N': 1000, 'n': 10, 'SHOW': False} 
 
-PARAMS_TRAIN_PPO = {'EPISODES': 2, 'SHOW': False}
+PARAMS_TRAIN_PPO = {'EPISODES': 2, 'SHOW': False, 'action_std_decay_freq': int(2.5e5)}
 
 PARAMS_OBS = {'$u$': 1, '$v$': 1, '$w$': 1, '$x$': 20, '$y$': 20, '$z$': 20, '$p$': 1, \
     '$q$': 1, '$r$': 1, '$\psi$': pi/4, r'$\theta$': pi/4, '$\phi$': pi/4}
