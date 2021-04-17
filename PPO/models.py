@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.autograd
 from torch.autograd import Variable
 
+
 class Critic(nn.Module):
     def __init__(self, h_sizes):
         super(Critic, self).__init__()
@@ -23,6 +24,7 @@ class Critic(nn.Module):
         x = self.out(x)
 
         return x
+
 
 class Actor(nn.Module):
     def __init__(self, h_sizes, output_size):
