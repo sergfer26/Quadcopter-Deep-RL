@@ -9,7 +9,7 @@ from gym import spaces
 from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
 from scipy.integrate import odeint
-from params import PARAMS_ENV 
+from params import PARAMS_ENV, PARAMS_OBS
 
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
@@ -19,23 +19,28 @@ FLAG = PARAMS_ENV['FLAG']
 
 # constantes del ambiente
 omega0_per = PARAMS_ENV['omega0_per']
-VEL_MAX = omega_0 * omega0_per  #60 #Velocidad maxima de los motores 150
-VEL_MIN = - omega_0 * omega0_per 
+VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
+VEL_MIN = - omega_0 * omega0_per
 
 
 # limites espaciales del ambiente
 # du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-LOW_OBS = np.array([-1, -1, -1,  -20, -20, -20, -1, -1, -1, -pi/4, -pi/4, -pi/4])
-HIGH_OBS = np.array([1, 1, 1, 20, 20, 20, 1, 1, 1, pi/4, pi/4, pi/4])
+LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
+HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
 
 
 """Quadcopter Environment that follows gym interface"""
+
+
 class QuadcopterEnv(gym.Env):
     metadata = {'render.modes': ['human']}
+
     def __init__(self):
-        self.action_space = spaces.Box(low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4), dtype=np.float32)
-        self.observation_space = spaces.Box(low=LOW_OBS, high=HIGH_OBS, dtype=np.float32)
-        self.state = self.reset() # estado interno del ambiente
+        self.action_space = spaces.Box(
+            low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=LOW_OBS, high=HIGH_OBS, dtype=np.float32)
+        self.state = self.reset()  # estado interno del ambiente
         self.set_time(STEPS, TIME_MAX)
         self.flag = FLAG
         self.is_cuda_available()
@@ -125,14 +130,14 @@ class QuadcopterEnv(gym.Env):
 
             regresa valor booleano.
         '''
-        if self.i == self.steps-2: # Si se te acabo el tiempo
+        if self.i == self.steps-2:  # Si se te acabo el tiempo
             return True
-        elif self.flag: # Si el drone esta estrictamente contenido
-            if self.is_contained(self.state): 
+        elif self.flag:  # Si el drone esta estrictamente contenido
+            if self.is_contained(self.state):
                 return False
             else:
                 return True
-        else: 
+        else:
             return False
 
     def step(self, action):
@@ -146,8 +151,9 @@ class QuadcopterEnv(gym.Env):
         '''
         w1, w2, w3, w4 = action + W0
         t = [self.time[self.i], self.time[self.i+1]]
-        y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4), Dfun=self.jac)[1]
-        self.state = y_dot  
+        y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
+            1]  # , Dfun=self.jac)[1]
+        self.state = y_dot
         reward = self.get_reward(y_dot)
         done = self.is_done()
         self.i += 1
@@ -173,7 +179,7 @@ class QuadcopterEnv(gym.Env):
         self.time_max = time_max
         self.steps = steps
         self.time = np.linspace(0, self.time_max, self.steps)
-        
+
     def render(self, mode='human', close=False):
         '''
             render hace una simulación visual del drone.
@@ -181,15 +187,58 @@ class QuadcopterEnv(gym.Env):
         pass
 
 
-class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
-    
+# https://github.com/openai/gym/blob/master/gym/core.py
+class NormalizedEnv(gym.ActionWrapper):
+    """ Wrap action """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.noise = OUNoise(env.action_space)
+        self.noise_on = True
+
+    def action(self, action):
+        '''
+            action transforma una accion de valores entre [-1, 1] a
+            los valores [low, high];
+
+            action: arreglo de 4 posiciones con valores entre [-1, 1];
+
+            regresa una acción entre [low, high].
+        '''
+        high = self.action_space.high
+        low = self.action_space.low
+        act_k = (high - low) / 2.
+        act_b = (high + low) / 2.
+        action = act_k * action + act_b
+        if self.noise_on:
+            action = self.noise.get_action(action, self.i)
+
+        return action
+
+    def reverse_action(self, action):
+        '''
+            reverse_action transforma una accion entre los valores low y high
+            del ambiente a valores entre [-1, 1];
+
+            action: arreglo de 4 posiciones con valores entre [low, high];
+
+            regresa una acción entre [-1, 1].
+        '''
+        high = self.action_space.high
+        low = self.action_space.low
+        act_k_inv = 2./(high - low)
+        act_b = (high + low) / 2.
+        return act_k_inv * (action - act_b)
+
+
+class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
+
     def __init__(self, env):
         super().__init__(env)
         low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
         high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
-        self.noise = OUNoise(env.action_space)
-        self.noise_on = True
+        self.observation_space = spaces.Box(
+            low=low, high=high, dtype=np.float32)
 
     def observation(self, obs):
         '''
@@ -220,40 +269,6 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         angles = np.array([psi, theta, phi])
         return np.concatenate([obs[0:9], angles])
 
-    def action(self, action):
-        '''
-            action transforma una accion de valores entre [-1, 1] a
-            los valores [low, high];
-
-            action: arreglo de 4 posiciones con valores entre [-1, 1];
-
-            regresa una acción entre [low, high].
-        '''
-        high = self.action_space.high
-        low = self.action_space.low
-        act_k = (high - low)/ 2.
-        act_b = (high + low)/ 2.
-        action = act_k * action + act_b
-        if self.noise_on:
-            action = self.noise.get_action(action, self.i)
-        
-        return action
-
-    def reverse_action(self, action):
-        '''
-            reverse_action transforma una accion entre los valores low y high
-            del ambiente a valores entre [-1, 1];
-
-            action: arreglo de 4 posiciones con valores entre [low, high];
-
-            regresa una acción entre [-1, 1].
-        '''
-        high = self.action_space.high
-        low = self.action_space.low
-        act_k_inv = 2./(high - low)
-        act_b = (high + low)/ 2.
-        return act_k_inv * (action - act_b)
-
     def step(self, a):
         '''
             step modifica el método original del super;
@@ -275,6 +290,3 @@ class AgentEnv(gym.ActionWrapper, gym.ObservationWrapper):
         '''
         state = super().reset()
         return self.observation(state)
-
-
-
