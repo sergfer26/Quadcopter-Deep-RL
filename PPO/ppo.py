@@ -48,8 +48,8 @@ class ActorCrtic(object):
 class PPOagent:
 
     def __init__(self, env, hidden_sizes=params['hidden_sizes'], \
-        learning_rate_actor=params['learning_rate_actor'], \
-        learning_rate_critic=params['learning_rate_critic'], \
+        actor_learning_rate=params['actor_learning_rate'], \
+        critic_learning_rate=params['critic_learning_rate'], \
         gamma=params['gamma'], K_epochs=params['K_epochs'], 
         eps_clip=params['eps_clip'], 
         action_std_init=params['action_std_init'], 
@@ -81,8 +81,8 @@ class PPOagent:
         # Training
         self.buffer = RolloutBuffer()
         self.criterion  = nn.MSELoss()
-        self.actor_optimizer  = optim.Adam(self.policy.actor.parameters(), lr=learning_rate_actor)
-        self.critic_optimizer = optim.Adam(self.policy.critic.parameters(), lr=learning_rate_critic)
+        self.actor_optimizer  = optim.Adam(self.policy.actor.parameters(), lr=actor_learning_rate)
+        self.critic_optimizer = optim.Adam(self.policy.critic.parameters(), lr=critic_learning_rate)
 
     def get_action(self, state):
         with torch.no_grad():
