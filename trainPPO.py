@@ -73,8 +73,8 @@ if __name__ == "__main__":
     plt.plot(rewards, 'b--', label='episode reward', alpha=0.5)
     plt.plot(avg_rewards, 'y-', label='average reward')
     plt.xlabel('episodes')
-    plt.title(
-        r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
+    plt.title('Training - Cumulative Reward')
+    #    r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
     if SHOW:
         plt.show()
     else:
