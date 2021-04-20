@@ -4,6 +4,7 @@ pycache__/
 nohup.out
 supervisado/
 results_ddpg/
+results_ppo/
 results_super/
 resultsRL/
 supervisado/
