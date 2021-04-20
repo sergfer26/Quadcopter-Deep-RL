@@ -1,26 +1,20 @@
 import numpy as np
-import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import torch
 import pytz
-import pandas as pd
 import pathlib
-from quadcopter_env import QuadcopterEnv, AgentEnv, omega_0, STEPS
+from quadcopter_env import QuadcopterEnv, AgentEnv
 from DDPG.ddpg import DDPGagent
-from numpy.linalg import norm
-from numpy import pi, cos, sin
-from numpy import remainder as rem
 from datetime import datetime
 from get_report import create_report_ddpg
 from params import PARAMS_TRAIN_DDPG
-from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
+from simulation import nSim, plot_nSim2D, plot_nSim3D
 
 
 BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
 EPISODES = PARAMS_TRAIN_DDPG['EPISODES']
 n = PARAMS_TRAIN_DDPG['n']
-TAU = 2 * pi  # No es el tau del agente
+TAU = 2 * np.pi  # No es el tau del agente
 SHOW = PARAMS_TRAIN_DDPG['SHOW']
 
 
@@ -62,7 +56,7 @@ if __name__ == "__main__":
         pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
 
     env = AgentEnv(QuadcopterEnv())
-    #env.flag = False
+    # env.flag = False
     agent = DDPGagent(env)
     rewards, avg_rewards = train(agent, env)
     env.noise_on = False

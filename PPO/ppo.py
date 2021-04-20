@@ -22,6 +22,9 @@ class ActorCrtic(object):
 
         self.actor = Actor(h_sizes, self.num_actions)
         self.critic = Critic(h_sizes)
+        if torch.cuda.is_available():
+            self.actor.cuda()
+            self.critic.cuda()
 
     def set_action_std(self, new_action_std):
         self.action_var = torch.full(
@@ -32,6 +35,7 @@ class ActorCrtic(object):
         cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
+        action = torch.clamp(action, min=-1.0, max=1.0)
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
@@ -129,8 +133,8 @@ class PPOagent:
 
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
-        rewards = (rewards - rewards.mean()) / \
-            (rewards.std() + 1e-7)  # Revisar esta linea
+        # rewards = (rewards - rewards.mean()) / \
+        #    (rewards.std() + 1e-7)  # Revisar esta linea
 
         # convert list to tensor
         old_states = torch.squeeze(torch.stack(

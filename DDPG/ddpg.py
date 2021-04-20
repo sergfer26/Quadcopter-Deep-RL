@@ -12,7 +12,7 @@ from torch.autograd import Variable
 #from .models_merge import Actor, Critic, weights_init
 from .models import Actor, Critic, weights_init
 from .utils import Memory
-from .params import PARAMS_DDPG 
+from .params import PARAMS_DDPG
 
 device = 'cpu'
 if torch.cuda.is_available():
@@ -20,11 +20,11 @@ if torch.cuda.is_available():
 
 
 class DDPGagent:
-    def __init__(self, env, hidden_sizes=PARAMS_DDPG['hidden_sizes'], \
-        actor_learning_rate=PARAMS_DDPG['actor_learning_rate'], \
-        critic_learning_rate=PARAMS_DDPG['critic_learning_rate'], \
-        gamma=PARAMS_DDPG['gamma'], tau=PARAMS_DDPG['tau'], \
-        max_memory_size=PARAMS_DDPG['max_memory_size']):
+    def __init__(self, env, hidden_sizes=PARAMS_DDPG['hidden_sizes'],
+                 actor_learning_rate=PARAMS_DDPG['actor_learning_rate'],
+                 critic_learning_rate=PARAMS_DDPG['critic_learning_rate'],
+                 gamma=PARAMS_DDPG['gamma'], tau=PARAMS_DDPG['tau'],
+                 max_memory_size=PARAMS_DDPG['max_memory_size']):
         # Params
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
@@ -54,78 +54,93 @@ class DDPGagent:
 
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data)
-        
+
         # Training
-        self.memory = Memory(max_memory_size)        
-        self.critic_criterion  = nn.MSELoss()
-        self.actor_optimizer  = optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_learning_rate)
-    
+        self.memory = Memory(max_memory_size)
+        self.critic_criterion = nn.MSELoss()
+        self.actor_optimizer = optim.Adam(
+            self.actor.parameters(), lr=actor_learning_rate)
+        self.critic_optimizer = optim.Adam(
+            self.critic.parameters(), lr=critic_learning_rate)
+
     def get_action(self, state):
         state = Variable(torch.from_numpy(state).float().unsqueeze(0))
         action = self.actor.forward(state.to(device))
-        action = action.detach().cpu().numpy()[0,:]
+        action = action.detach().cpu().numpy()[0, :]
         return action
 
     def update(self, batch_size):
         # actions -> lambdas
-        states, actions, rewards, next_states, _ = self.memory.sample(batch_size)
+        states, actions, rewards, next_states, _ = self.memory.sample(
+            batch_size)
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
         next_states = torch.FloatTensor(next_states).to(device)
         self.train(states, actions, rewards, next_states)
-    
+
     def train(self, states, actions, rewards, next_states):
         # Critic loss
-        try:   
+        try:
             Qvals = self.critic.forward(states, actions)
         except:
             breakpoint()
         next_actions = self.actor_target.forward(next_states.to(device))
-        next_Q = self.critic_target.forward(next_states.to(device), next_actions.to(device)).detach()
+        next_Q = self.critic_target.forward(
+            next_states.to(device), next_actions.to(device)).detach()
         Qprime = rewards + self.gamma * next_Q
         critic_loss = self.critic_criterion(Qvals, Qprime)
 
         # Actor loss
-        policy_loss = -self.critic.forward(states.to(device), self.actor.forward(states.to(device))).mean()
-        
+        policy_loss = - \
+            self.critic.forward(states.to(device),
+                                self.actor.forward(states.to(device))).mean()
+
         # update networks
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
 
         self.critic_optimizer.zero_grad()
-        critic_loss.backward() 
+        critic_loss.backward()
         self.critic_optimizer.step()
 
-        # update target networks 
+        # update target networks
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
-       
+            target_param.data.copy_(
+                param.data * self.tau + target_param.data * (1.0 - self.tau))
+
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
-            target_param.data.copy_(param.data * self.tau + target_param.data * (1.0 - self.tau))
+            target_param.data.copy_(
+                param.data * self.tau + target_param.data * (1.0 - self.tau))
 
         return policy_loss, critic_loss
 
     def save(self, path):
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True) 
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
         torch.save(self.critic.state_dict(), path + "/critic.pth")
-        torch.save(self.critic_optimizer.state_dict(), path + "/critic_optimizer.pth")
+        torch.save(self.critic_optimizer.state_dict(),
+                   path + "/critic_optimizer.pth")
         torch.save(self.actor.state_dict(), path + "/actor.pth")
-        torch.save(self.actor_optimizer.state_dict(), path + "/actor_optimizer.pth")
-        with open(path +'/memory.pickle', 'wb') as handle:
+        torch.save(self.actor_optimizer.state_dict(),
+                   path + "/actor_optimizer.pth")
+        with open(path + '/memory.pickle', 'wb') as handle:
             pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
+
     def load(self, path):
-        self.critic.load_state_dict(torch.load(path + "/critic.pth", map_location=device))
-        self.critic_optimizer.load_state_dict(torch.load(path + "/critic_optimizer.pth",  map_location=device))
+        self.critic.load_state_dict(torch.load(
+            path + "/critic.pth", map_location=device))
+        self.critic_optimizer.load_state_dict(torch.load(
+            path + "/critic_optimizer.pth",  map_location=device))
         self.critic_target = copy.deepcopy(self.critic)
-        self.actor.load_state_dict(torch.load(path + "/actor.pth",  map_location=device))
-        self.actor_optimizer.load_state_dict(torch.load(path + "/actor_optimizer.pth",  map_location=device))
+        self.actor.load_state_dict(torch.load(
+            path + "/actor.pth",  map_location=device))
+        self.actor_optimizer.load_state_dict(torch.load(
+            path + "/actor_optimizer.pth",  map_location=device))
         self.actor_target = copy.deepcopy(self.actor)
-        #with open(path +'/memory.pickle', 'rb') as handle:
+        # with open(path +'/memory.pickle', 'rb') as handle:
         #    self.memory.pickle.load(handle)
+
 
 '''
 def remove_nets(path):
