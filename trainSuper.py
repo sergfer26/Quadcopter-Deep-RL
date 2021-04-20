@@ -35,9 +35,11 @@ DTYPE = torch.float
 SHOW = PARAMS_TRAIN_SUPER['SHOW']
 
 env = QuadcopterEnv()
-env.observation_space = gym.spaces.Box(low=LOW_OBS, high=HIGH_OBS,dtype=np.float32)
+env.observation_space = gym.spaces.Box(
+    low=LOW_OBS, high=HIGH_OBS, dtype=np.float32)
 env = AgentEnv(env)
 agent = DDPGagent(env)
+agent.tau = 0.5
 env.noise_on = False
 
 if torch.cuda.is_available():
@@ -92,9 +94,9 @@ def get_experience(env, memory, n):
         for _ in range(env.steps):
             real_action = get_action(env.state)
             action = env.reverse_action(real_action)
-            action += np.random.normal(0,0.1,4)
+            action += np.random.normal(0, 0.1, 4)
             _, reward, new_state, done = env.step(action)
-            new_state[0:9] += np.random.normal(0,1,9)
+            new_state[0:9] += np.random.normal(0, 1, 9)
             if (abs(real_action) < env.action_space.high[0]).all():
                 memory.push(state, action, reward, new_state, done)
 
@@ -136,10 +138,10 @@ if __name__ == "__main__":
     day = mexico_now.day
     hour = mexico_now.hour
     minute = mexico_now.minute
-    PATH = 'results_super/' + str(month) + '_' + str(day) + '_' + str(hour) + str(minute)
+    PATH = 'results_super/' + str(month) + '_' + \
+        str(day) + '_' + str(hour) + str(minute)
     if not SHOW:
         pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-
 
     get_experience(env, agent.memory, N)
     agent.tau = 0.5
@@ -169,12 +171,16 @@ if __name__ == "__main__":
         plt.savefig(PATH + '/validation_scores.png')
 
     n_states, n_actions, n_scores = nSim(False, agent, env, n)
-    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$', '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
-    plot_nSim2D(n_states, columns, env.time, show=SHOW, file_name=PATH + '/sim_states.png')
-    columns = ['$a_{}$'.format(i) for i in range(1,5)] 
-    plot_nSim2D(n_actions, columns, env.time, show=SHOW, file_name=PATH + '/sim_actions.png')
+    columns = ('$u$', '$v$', '$w$', '$x$', '$y$', '$z$', '$p$',
+               '$q$', '$r$', r'$\psi$', r'$\theta$', r'$\varphi$')
+    plot_nSim2D(n_states, columns, env.time, show=SHOW,
+                file_name=PATH + '/sim_states.png')
+    columns = ['$a_{}$'.format(i) for i in range(1, 5)]
+    plot_nSim2D(n_actions, columns, env.time, show=SHOW,
+                file_name=PATH + '/sim_actions.png')
     columns = ('$r_t$', '$Cr_t$', 'is stable', 'cotained')
-    plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
+    plot_nSim2D(n_scores, columns, env.time, show=SHOW,
+                file_name=PATH + '/sim_scores.png')
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
         create_report_super(PATH)

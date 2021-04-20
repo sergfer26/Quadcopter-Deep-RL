@@ -9,7 +9,6 @@ results_super/
 resultsRL/
 supervisado/
 __pycache__/
-odeint_gpu_vs_cpu.py
 *.csv
 best
 *.pth

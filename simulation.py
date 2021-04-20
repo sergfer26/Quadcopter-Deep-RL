@@ -5,12 +5,12 @@ import pandas as pd
 
 def sim(flag, agent, env):
     #t = env.time
-    env.flag  = flag
+    env.flag = flag
     state = env.reset()
     states = np.zeros((env.steps, len(env.state)))
     actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
-    scores = np.zeros((env.steps - 1, 4)) # r_t, Cr_t, stable, contained
-    states[0, :]= env.state
+    scores = np.zeros((env.steps - 1, 4))  # r_t, Cr_t, stable, contained
+    states[0, :] = env.state
     episode_reward = 0
     i = 0
     while True:
@@ -19,7 +19,8 @@ def sim(flag, agent, env):
         episode_reward += reward
         states[i + 1, :] = env.state
         actions[i, :] = env.action(action)
-        scores[i, :] = np.array([reward, episode_reward, env.is_stable(new_state), env.is_contained(new_state)])
+        scores[i, :] = np.array([reward, episode_reward, env.is_stable(
+            new_state), env.is_contained(new_state)])
         state = new_state
         if done:
             break
@@ -29,8 +30,8 @@ def sim(flag, agent, env):
 
 def nSim(flag, agent, env, n):
     n_states = np.zeros((env.steps, len(env.state), n))
-    n_actions = np.zeros((env.steps -1, env.action_space.shape[0], n))
-    n_scores = np.zeros((env.steps -1, 4, n))
+    n_actions = np.zeros((env.steps - 1, env.action_space.shape[0], n))
+    n_scores = np.zeros((env.steps - 1, 4, n))
     for k in range(n):
         states, actions, scores = sim(flag, agent, env)
         n_states[:, :, k] = states
@@ -54,9 +55,11 @@ def plot_nSim3D(n_states, show=False, file_name=None):
         X = states[:, 3]
         Y = states[:, 4]
         Z = states[:, 5]
-        ax.plot([X[0]], [Y[0]], [Z[0]], '.c', alpha= 0.5, label='$X_0$', markersize=5)
+        ax.plot([X[0]], [Y[0]], [Z[0]], '.c',
+                alpha=0.5, label='$X_0$', markersize=5)
         ax.plot(X, Y, Z, '-b', alpha=0.2, label='$X_t$', markersize=1)
-        ax.plot([X[-1]], [Y[-1]], [Z[-1]], '.r', alpha=0.5, label='$X_T$', markersize=5)
+        ax.plot([X[-1]], [Y[-1]], [Z[-1]], '.r',
+                alpha=0.5, label='$X_T$', markersize=5)
         if k == 0:
             ax.legend()
 
