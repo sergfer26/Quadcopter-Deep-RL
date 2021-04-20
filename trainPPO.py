@@ -12,7 +12,7 @@ from numpy.linalg import norm
 from numpy import pi, cos, sin
 from numpy import remainder as rem
 from datetime import datetime
-from get_report import create_report_ddpg
+from get_report import create_report_ppo
 from params import PARAMS_TRAIN_PPO
 from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 
@@ -93,6 +93,6 @@ if __name__ == "__main__":
     plot_nSim2D(n_scores, columns, env.time, show=SHOW, file_name=PATH + '/sim_scores.png')
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
-        create_report_ddpg(PATH)
+        create_report_ppo(PATH)
         with open(PATH +'/training_rewards.npy', 'wb') as f:
             np.save(f, np.array(rewards))
