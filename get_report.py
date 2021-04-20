@@ -3,8 +3,9 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_SUPER, PARAMS_OBS
+from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_PPO, PARAMS_TRAIN_SUPER, PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
+from PPO.params import PARAMS_PPO
 
 
 style = TableStyle([
@@ -39,7 +40,6 @@ def drawMyRuler(pdf):
     pdf.drawString(300,810, 'x300')
     pdf.drawString(400,810, 'x400')
     pdf.drawString(500,810, 'x500')
-
     pdf.drawString(10,100, 'y100')
     pdf.drawString(10,200, 'y200')
     pdf.drawString(10,300, 'y300')
@@ -55,6 +55,7 @@ def dic_to_list(data):
     lista.insert(0, ['Parámetro', 'Valor'])
     return lista
 
+
 def add_table(pdf,data,x,y):
     data = dic_to_list(data)
     table = Table(data)
@@ -62,6 +63,7 @@ def add_table(pdf,data,x,y):
     table.setStyle(ts)
     table.wrapOn(pdf,400,100)
     table.drawOn(pdf, x, y)
+
 
 def add_text(pdf,textLines,x,y):
     text = pdf.beginText(x, y)
@@ -71,8 +73,10 @@ def add_text(pdf,textLines,x,y):
         text.textLine(line)
     pdf.drawText(text)
 
+
 def add_image(PATH,pdf,name,x,y,width = 500,height=500):
     pdf.drawInlineImage(PATH + name , x,y, width = width, height=height,preserveAspectRatio=True)
+
 
 def create_report_ddpg(PATH):
     fileName = '/Reporte.pdf'
@@ -84,7 +88,7 @@ def create_report_ddpg(PATH):
 
     pdf.setTitle(documentTitle)
     pdf.drawCentredString(300, 800, title)
-# RGB - Red Green and Blue
+    # RGB - Red Green and Blue
     pdf.setFillColorRGB(0, 0, 255)
     pdf.setFont("Courier-Bold", 26)
     pdf.drawCentredString(290,720, subTitle)
@@ -122,6 +126,51 @@ def create_report_ddpg(PATH):
     #add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
     pdf.save() 
 
+def create_report_ppo(PATH):
+    fileName = '/Reporte.pdf'
+    fileName = PATH + fileName
+    documentTitle = 'Document title!'
+    title = 'Reporte de Entrenamiento PPO'
+    subTitle = ''
+    pdf = canvas.Canvas(fileName)
+
+    pdf.setTitle(documentTitle)
+    pdf.drawCentredString(300, 800, title)
+    # RGB - Red Green and Blue
+    pdf.setFillColorRGB(0, 0, 255)
+    pdf.setFont("Courier-Bold", 26)
+    pdf.drawCentredString(290,720, subTitle)
+    #drawMyRuler(pdf)
+    #add_text(pdf,['Parámetros de coordenadas'],100, 750)
+    #add_table(pdf, PARAMS_OBS,100,610)
+
+    #pdf.showPage()
+
+    add_text(pdf,['Parámetros del Entrenamiento'],100, 750)
+    add_table(pdf, PARAMS_TRAIN_PPO,100,610)
+    
+
+    add_text(pdf,['Parámetros del Ambiente'],100, 560)
+    add_table(pdf,PARAMS_ENV, 100, 410)
+    
+    
+    add_text(pdf,['Parámetros de PPO'], 100, 360)
+    add_table(pdf,PARAMS_PPO, 100, 210)
+
+    pdf.showPage()
+    add_image(PATH,pdf,'/c_rewards.png',10, 350,600,600)
+    add_image(PATH,pdf,'/sim_states.png',30,10)
+    pdf.showPage()
+    #Siguiente pagina
+    add_image(PATH,pdf,'/sim_actions.png',30, 350,550,550)
+    add_image(PATH,pdf,'/sim_scores.png',30,0,550,550)
+
+    pdf.showPage()
+    add_image(PATH,pdf,'/sim_flights.png',30, 350,550,550)
+    #add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
+    pdf.save() 
+
+
 def create_report_super(PATH):
     fileName = '/Reporte.pdf'
     fileName = PATH + fileName
@@ -132,7 +181,7 @@ def create_report_super(PATH):
 
     pdf.setTitle(documentTitle)
     pdf.drawCentredString(300, 800, title)
-# RGB - Red Green and Blue
+    # RGB - Red Green and Blue
     pdf.setFillColorRGB(0, 0, 255)
     pdf.setFont("Courier-Bold", 26)
     pdf.drawCentredString(290,720, subTitle)
@@ -145,6 +194,8 @@ def create_report_super(PATH):
     add_table(pdf,PARAMS_ENV,100,410) 
 
     pdf.showPage()
+
+
 
     add_image(PATH,pdf,'/loss.png',10, 350,600,600)
     add_image(PATH,pdf,'/validation_scores.png',30,10)
