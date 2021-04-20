@@ -1,10 +1,10 @@
 import numpy as np
 import gym
-import numba
+#import numba
 import torch
 from Linear.equations import rotation_matrix, f, jac_f, omega_0, W0
 from DDPG.utils import OUNoise
-from numba import cuda
+#from numba import cuda
 from gym import spaces
 from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
@@ -45,12 +45,12 @@ class QuadcopterEnv(gym.Env):
             is_cuda_available verifica si esta disponible el gpu, 
             en caso de que sí, las funciones f y jac trabajaran sobre numba.
         '''
-        if cuda.is_available():
-            self.f = numba.jit(f)
-            self.jac = numba.jit(jac_f)
-        else:
-            self.f = f
-            self.jac = jac_f
+        #if cuda.is_available():
+        #    self.f = numba.jit(f)
+        #    self.jac = numba.jit(jac_f)
+        #else:
+        self.f = f
+        self.jac = jac_f
 
     def is_contained(self, state):
         '''
