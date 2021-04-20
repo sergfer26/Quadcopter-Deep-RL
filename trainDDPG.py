@@ -87,4 +87,4 @@ if __name__ == "__main__":
     if not SHOW:
         create_report_ddpg(PATH)
         with open(PATH +'/training_rewards.npy', 'wb') as f:
-            np.save(f, np.array(CR_t))
+            np.save(f, np.array(rewards))
