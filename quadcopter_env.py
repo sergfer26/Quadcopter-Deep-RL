@@ -112,8 +112,8 @@ class QuadcopterEnv(gym.Env):
 
             regresa valor real.
         '''
-        x = state[3:6]
-        x_ = 1 * np.ones(3)
+        x = state[3]
+        x_ = 1  # * np.ones(3)
         r = 0.0
         vel = np.concatenate([state[0:3], state[6:9]])
         x_st = np.logical_and(- x_ <= x, x <= x_)
