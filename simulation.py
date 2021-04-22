@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def sim(flag, agent, env):
-    #t = env.time
+    # t = env.time
     env.flag = flag
     state = env.reset()
     states = np.zeros((env.steps, len(env.state)))
