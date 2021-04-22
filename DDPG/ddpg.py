@@ -1,10 +1,7 @@
 import pathlib
-import os
 import pickle
-import glob
 import torch
 import copy
-import numpy as np
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
@@ -13,6 +10,7 @@ from torch.autograd import Variable
 from .models import Actor, Critic, weights_init
 from .utils import Memory
 from .params import PARAMS_DDPG
+
 
 device = 'cpu'
 if torch.cuda.is_available():
@@ -81,10 +79,7 @@ class DDPGagent:
 
     def train(self, states, actions, rewards, next_states):
         # Critic loss
-        try:
-            Qvals = self.critic.forward(states, actions)
-        except:
-            breakpoint()
+        Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states.to(device))
         next_Q = self.critic_target.forward(
             next_states.to(device), next_actions.to(device)).detach()
@@ -118,25 +113,25 @@ class DDPGagent:
 
     def save(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-        torch.save(self.critic.state_dict(), path + "/critic.pth")
+        torch.save(self.critic.state_dict(), path + "/critic")
         torch.save(self.critic_optimizer.state_dict(),
-                   path + "/critic_optimizer.pth")
-        torch.save(self.actor.state_dict(), path + "/actor.pth")
+                   path + "/critic_optimizer")
+        torch.save(self.actor.state_dict(), path + "/actor")
         torch.save(self.actor_optimizer.state_dict(),
-                   path + "/actor_optimizer.pth")
+                   path + "/actor_optimizer")
         with open(path + '/memory.pickle', 'wb') as handle:
             pickle.dump(self.memory, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load(self, path):
         self.critic.load_state_dict(torch.load(
-            path + "/critic.pth", map_location=device))
+            path + "/critic", map_location=device))
         self.critic_optimizer.load_state_dict(torch.load(
-            path + "/critic_optimizer.pth",  map_location=device))
+            path + "/critic_optimizer",  map_location=device))
         self.critic_target = copy.deepcopy(self.critic)
         self.actor.load_state_dict(torch.load(
-            path + "/actor.pth",  map_location=device))
+            path + "/actor",  map_location=device))
         self.actor_optimizer.load_state_dict(torch.load(
-            path + "/actor_optimizer.pth",  map_location=device))
+            path + "/actor_optimizer",  map_location=device))
         self.actor_target = copy.deepcopy(self.actor)
         # with open(path +'/memory.pickle', 'rb') as handle:
         #    self.memory.pickle.load(handle)
