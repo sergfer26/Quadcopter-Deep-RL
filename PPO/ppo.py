@@ -35,6 +35,7 @@ class ActorCrtic(object):
         cov_mat = torch.diag(self.action_var).unsqueeze(dim=0)
         dist = MultivariateNormal(action_mean, cov_mat)
         action = dist.sample()
+        breakpoint()
         action = torch.clamp(action, min=-1.0, max=1.0)
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
