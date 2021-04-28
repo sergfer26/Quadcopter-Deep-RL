@@ -97,3 +97,5 @@ if __name__ == "__main__":
         create_report_ppo(PATH)
         with open(PATH + '/training_rewards.npy', 'wb') as f:
             np.save(f, np.array(rewards))
+        with open(PATH + '/training_avg_rewards.npy', 'wb') as f:
+            np.save(f, np.array(avg_rewards))
