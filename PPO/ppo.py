@@ -183,21 +183,21 @@ class PPOagent:
 
     def save(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-        torch.save(self.policy.critic.state_dict(), path + "/critic.pth")
+        torch.save(self.policy.critic.state_dict(), path + "/critic")
         torch.save(self.critic_optimizer.state_dict(),
-                   path + "/critic_optimizer.pth")
-        torch.save(self.policy.actor.state_dict(), path + "/actor.pth")
+                   path + "/critic_optimizer")
+        torch.save(self.policy.actor.state_dict(), path + "/actor")
         torch.save(self.actor_optimizer.state_dict(),
-                   path + "/actor_optimizer.pth")
+                   path + "/actor_optimizer")
 
     def load(self, path):
         self.policy.critic.load_state_dict(torch.load(
-            path + "/critic.pth", map_location=device))
+            path + "/critic", map_location=device))
         self.critic_optimizer.load_state_dict(torch.load(
-            path + "/critic_optimizer.pth",  map_location=device))
+            path + "/critic_optimizer",  map_location=device))
         self.old_critic = copy.deepcopy(self.policy.critic)
         self.policy.actor.load_state_dict(torch.load(
-            path + "/actor.pth",  map_location=device))
+            path + "/actor",  map_location=device))
         self.actor_optimizer.load_state_dict(torch.load(
-            path + "/actor_optimizer.pth",  map_location=device))
+            path + "/actor_optimizer",  map_location=device))
         self.old_actor = copy.deepcopy(self.policy.actor)

@@ -70,12 +70,16 @@ if __name__ == "__main__":
     agent = PPOagent(env)
     rewards, avg_rewards = train(agent, env, action_std_decay_freq)
     agent.save(PATH)
-    plt.plot(rewards, 'b--', label='episode reward', alpha=0.5)
-    plt.plot(avg_rewards, 'y-', label='average reward')
+    plt.plot(rewards, 'b--', label='episode reward', alpha=0.1)
+    plt.plot(avg_rewards, 'r-', label='average reward')
     plt.xlabel('episodes')
     plt.title('Training - Cumulative Reward')
+<<<<<<< HEAD
     # r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\|
     # - 0.5 \|I - X_{\theta}\|$')
+=======
+    # r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
+>>>>>>> 23d2da0f4d984469e1d29274d3270369651f9aa3
     if SHOW:
         plt.show()
     else:
@@ -98,3 +102,5 @@ if __name__ == "__main__":
         create_report_ppo(PATH)
         with open(PATH + '/training_rewards.npy', 'wb') as f:
             np.save(f, np.array(rewards))
+        with open(PATH + '/training_avg_rewards.npy', 'wb') as f:
+            np.save(f, np.array(avg_rewards))

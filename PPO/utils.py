@@ -6,7 +6,6 @@ class RolloutBuffer:
         self.logprobs = []
         self.rewards = []
         self.is_terminals = []
-    
 
     def clear(self):
         del self.actions[:]

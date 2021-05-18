@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def sim(flag, agent, env):
-    #t = env.time
+    # t = env.time
     env.flag = flag
     state = env.reset()
     states = np.zeros((env.steps, len(env.state)))
@@ -56,10 +56,10 @@ def plot_nSim3D(n_states, show=False, file_name=None):
         Y = states[:, 4]
         Z = states[:, 5]
         ax.plot([X[0]], [Y[0]], [Z[0]], '.c',
-                alpha=0.5, label='$X_0$', markersize=5)
-        ax.plot(X, Y, Z, '-b', alpha=0.2, label='$X_t$', markersize=1)
+                alpha=0.75, label='$X_0$', markersize=5)
+        ax.plot(X, Y, Z, '-b', alpha=0.1, label='$X_t$', markersize=1)
         ax.plot([X[-1]], [Y[-1]], [Z[-1]], '.r',
-                alpha=0.5, label='$X_T$', markersize=5)
+                alpha=0.75, label='$X_T$', markersize=5)
         if k == 0:
             ax.legend()
 

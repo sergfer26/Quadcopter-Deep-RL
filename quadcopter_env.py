@@ -1,12 +1,10 @@
 import numpy as np
 import gym
-#import numba
-import torch
+import numba
 from Linear.equations import rotation_matrix, f, jac_f, omega_0, W0
 from DDPG.utils import OUNoise
-#from numba import cuda
+from numba import cuda
 from gym import spaces
-from numpy import pi, sin, cos, tan
 from numpy.linalg import norm
 from scipy.integrate import odeint
 from params import PARAMS_ENV, PARAMS_OBS
@@ -24,7 +22,7 @@ VEL_MIN = - omega_0 * omega0_per
 
 
 # limites espaciales del ambiente
-# du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+# u, v, w, x, y, z, p, q, r, psi, theta, phi
 LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
 HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
 
@@ -37,7 +35,8 @@ class QuadcopterEnv(gym.Env):
 
     def __init__(self):
         self.action_space = spaces.Box(
-            low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4), dtype=np.float32)
+            low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4),
+            dtype=np.float32)
         self.observation_space = spaces.Box(
             low=LOW_OBS, high=HIGH_OBS, dtype=np.float32)
         self.state = self.reset()  # estado interno del ambiente
@@ -47,19 +46,19 @@ class QuadcopterEnv(gym.Env):
 
     def is_cuda_available(self):
         '''
-            is_cuda_available verifica si esta disponible el gpu, 
+            is_cuda_available verifica si esta disponible el gpu,
             en caso de que sí, las funciones f y jac trabajaran sobre numba.
         '''
-        #if cuda.is_available():
-        #    self.f = numba.jit(f)
-        #    self.jac = numba.jit(jac_f)
-        #else:
-        self.f = f
-        self.jac = jac_f
+        if cuda.is_available():
+            self.f = numba.jit(f)
+            self.jac = numba.jit(jac_f)
+        else:
+            self.f = f
+            self.jac = jac_f
 
     def is_contained(self, state):
         '''
-            is_contained verifica si los valores de (x, y, z) estan dentro 
+            is_contained verifica si los valores de (x, y, z) estan dentro
             de los rangos definidos por el ambiente;
 
             state: vector de 12 o 18 posiciones;
@@ -118,11 +117,11 @@ class QuadcopterEnv(gym.Env):
         vel = np.concatenate([state[0:3], state[6:9]])
         x_st = np.logical_and(- x_ <= x, x <= x_)
         if x_st.all():
-            r = 1
+            r = 1.1
         d1 = norm(x)
         d2 = norm(vel)
         d3 = norm(np.identity(3) - rotation_matrix(state[9:]))
-        return r - (0.005 * d2 + 0.02 * d1 + 0.1 * d3)
+        return r - (0.005 * d2 + 0.05 * d1 + 0.2 * d3)
 
     def is_done(self):
         '''
@@ -142,7 +141,7 @@ class QuadcopterEnv(gym.Env):
 
     def step(self, action):
         '''
-            step realiza la interaccion entre el agente y el ambiente en 
+            step realiza la interaccion entre el agente y el ambiente en
             un paso de tiempo;
 
             action: arreglo de 4 posiciones con valores entre [low, high];
@@ -163,7 +162,7 @@ class QuadcopterEnv(gym.Env):
         '''
             reset fija la condición inicial para cada simulación del drone
 
-            regresa el estado actual del drone. 
+            regresa el estado actual del drone.
         '''
         self.i = 0
         self.state = self.observation_space.sample()
@@ -242,7 +241,7 @@ class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
 
     def observation(self, obs):
         '''
-            observation transforma un estado de R^12 a un estado de 
+            observation transforma un estado de R^12 a un estado de
             R^18;
 
             obs: estado de R^12;
@@ -286,7 +285,7 @@ class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
         '''
             reset modifica el método del super
 
-            regresa el estado actual del drone en 18 posiciones. 
+            regresa el estado actual del drone en 18 posiciones.
         '''
         state = super().reset()
         return self.observation(state)
