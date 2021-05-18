@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import pytz
+#import pytz
 import pathlib
 from quadcopter_env import QuadcopterEnv, AgentEnv
 from PPO.ppo import PPOagent
@@ -11,7 +11,7 @@ from params import PARAMS_TRAIN_PPO
 from simulation import nSim, plot_nSim2D, plot_nSim3D
 
 
-SHOW = PARAMS_TRAIN_PPO['SHOW']
+SHOW = True  # PARAMS_TRAIN_PPO['SHOW']
 EPISODES = PARAMS_TRAIN_PPO['EPISODES']
 action_std_decay_freq = PARAMS_TRAIN_PPO['action_std_decay_freq']
 
@@ -51,8 +51,8 @@ def train(agent, env, action_std_decay_freq):
 
 
 if __name__ == "__main__":
-    tz = pytz.timezone('America/Mexico_City')
-    mexico_now = datetime.now(tz)
+    # tz = pytz.timezone('America/Mexico_City')
+    mexico_now = datetime.now()  # tz
     month = mexico_now.month
     day = mexico_now.day
     hour = mexico_now.hour
@@ -74,7 +74,8 @@ if __name__ == "__main__":
     plt.plot(avg_rewards, 'y-', label='average reward')
     plt.xlabel('episodes')
     plt.title('Training - Cumulative Reward')
-    #    r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
+    # r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\|
+    # - 0.5 \|I - X_{\theta}\|$')
     if SHOW:
         plt.show()
     else:
@@ -95,5 +96,5 @@ if __name__ == "__main__":
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
         create_report_ppo(PATH)
-        with open(PATH +'/training_rewards.npy', 'wb') as f:
+        with open(PATH + '/training_rewards.npy', 'wb') as f:
             np.save(f, np.array(rewards))
