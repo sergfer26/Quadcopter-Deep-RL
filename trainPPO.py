@@ -11,6 +11,7 @@ from datetime import datetime
 from get_report import create_report_ppo
 from params import PARAMS_TRAIN_PPO
 from simulation import nSim, plot_nSim2D, plot_nSim3D
+from smooth import smooth
 
 
 SHOW = PARAMS_TRAIN_PPO['SHOW']
@@ -90,8 +91,9 @@ if __name__ == "__main__":
     agent = PPOagent(env)
     rewards, avg_rewards = train(agent, env, action_std_decay_freq)
     agent.save(PATH)
-    plt.plot(rewards, 'b--', label='episode reward', alpha=0.1)
-    plt.plot(avg_rewards, 'r-', label='average reward')
+    plt.plot(rewards, 'lightskyblue', label='episode reward', alpha=0.05)
+    plt.plot(smooth(rewards, 30), 'blue', label='smooth reward', alpha=0.5)
+    plt.plot(avg_rewards, 'royalblue', label='average reward', alpha=0.01)
     plt.xlabel('episodes')
     plt.title(f'$r_t = {env.reward.str}$')
     if SHOW:
