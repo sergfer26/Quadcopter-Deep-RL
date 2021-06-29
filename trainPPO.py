@@ -16,6 +16,7 @@ from smooth import smooth
 
 SHOW = PARAMS_TRAIN_PPO['SHOW']
 EPISODES = PARAMS_TRAIN_PPO['EPISODES']
+TAU = 2 * np.pi  # No es el tau del agente
 action_std_decay_freq = PARAMS_TRAIN_PPO['action_std_decay_freq']
 
 if not SHOW:
