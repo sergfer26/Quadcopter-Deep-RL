@@ -39,28 +39,32 @@ class Reward(object):
         if self.tag == 'r1':
             self.str = r'1 - 0.2 \sqrt{ x^2 + y^2 + z^2 }'
         elif self.tag == 'r2':
-            self.str = r'4 \times 10-3 | X | + 2 \times 10 ^ {-4} | A | + 3 \times 10 ^ {-4} |\omega | + 5 \times 10 ^ {-4} | V|'
+            self.str = r'-4 \times 10-3 \| X \| - 2 \times 10 ^ {-4} | A | - 3 \times 10 ^ {-4} \|\omega \| - 5 \times 10 ^ {-4} \| V\|'
         elif self.tag == 'r3':
-            self.str = r'\max(0, 1 - |X|) - 0.02 |\theta| - 0.03 |\omega|'
+            self.str = r'\max(0, 1 - \|X\|) - 0.02 \|\theta\| - 0.03 \|\omega\|'
+        elif self.tag == 'r4':
+            self.str = r'-0.02 \times \|X\| - 0.1\|R_{\theta}\|'
 
         self.expr = parse_latex(self.str)
 
     def eval(self, state, action):
         u, v, w, x, y, z, p, q, r, psi, theta, phi = state
         a1, a2, a3, a4 = action
+        angles = [psi, theta, phi]
         r = 0.0
-        X = norm([x, y, z])
         omega = norm([p, q, r])
-        theta = norm([psi, theta, phi])
+        theta = norm(angles)
+        X = norm([x, y, z])
+        A = norm([a1, a2, a3, a4])
+        V = norm([u, v, w])
         if self.tag == 'r1':
-            r = self.expr.evalf(3, subs=dict(x=x, y=y, z=z))
+            r = 1.0 - 0.2 * X
         elif self.tag == 'r2':
-            A = norm([a1, a2, a3, a4])
-            V = norm([u, v, w])
-            r = self.expr.evalf(3, subs=dict(X=X, A=A, V=V, omega=omega))
+            r = -0.004 * X - 0.0002 * A - 0.0003 * omega - 0.0005 * V
         elif self.tag == 'r3':
-            r = self.expr.evalf(3, subs=dict(X=X, theta=theta, omega=omega))
-
+            r = max(0, X) - 0.02 * theta - 0.03 * omega
+        elif self.tag == 'r4':
+            r = - 0.02 * X - 0.1 * norm(rotation_matrix(angles))
         return float(r)
 
 
