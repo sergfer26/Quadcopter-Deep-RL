@@ -1,7 +1,7 @@
 from numpy import pi
 
 PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 260, 'omega0_per': 0.60, 'FLAG': False,
-              'reward': 'r1'}
+              'reward': 'r3'}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
