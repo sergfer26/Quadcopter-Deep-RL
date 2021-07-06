@@ -3,7 +3,7 @@ import numpy as np
 from scipy.integrate import odeint
 # import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from numpy import sin, cos, tan 
+from numpy import sin, cos, tan
 from numpy.linalg import norm
 
 
@@ -15,7 +15,8 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
-sec = lambda x: 1/cos(x)
+
+def sec(x): return 1/cos(x)
 
 
 def rotation_matrix(angles):
@@ -28,21 +29,21 @@ def rotation_matrix(angles):
 
         regresa: la matriz R.
     '''
-    z, y, x = angles # psi, theta, phi
+    z, y, x = angles  # psi, theta, phi
     R = np.array([
-        [cos(z) * cos(y), cos(z) * sin(y) * sin(x) - sin(z) * cos(x), 
-        cos(z) * sin(y) * cos(x) + sin(z) * sin(x)],
-        [sin(z) * cos(y), sin(z) * cos(y) * sin(x) + cos(z) * cos(x), 
-        sin(z) * sin(y) * cos(x) - cos(z) * sin(x)], 
+        [cos(z) * cos(y), cos(z) * sin(y) * sin(x) - sin(z) * cos(x),
+         cos(z) * sin(y) * cos(x) + sin(z) * sin(x)],
+        [sin(z) * cos(y), sin(z) * cos(y) * sin(x) + cos(z) * cos(x),
+         sin(z) * sin(y) * cos(x) - cos(z) * sin(x)],
         [- sin(y), cos(y) * sin(x), cos(y) * cos(x)]
     ])
     return R
 
 
-def f(X, t, w1, w2, w3, w4): # Sistema dinámico
+def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     '''
         f calcula el vector dot_x = f(x, t, w) (sistema dinamico);
-        
+
         X: es un vector de 12 posiciones;
         t: es un intervalo de tiempo [t1, t2];
         wi: es un parametro de control, i = 1, 2, 3, 4;
@@ -61,7 +62,9 @@ def f(X, t, w1, w2, w3, w4): # Sistema dinámico
     dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
     dtheta = q * cos(phi) - r * sin(phi)
     dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
-    dx = u; dy = v; dz = w
+    dx = u
+    dy = v
+    dz = w
     return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
 
 
@@ -80,43 +83,60 @@ def jac_f(X, t, w1, w2, w3, w4):
     a2 = (Ixx - Izz)/Iyy
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
     J = np.zeros((12, 12))
-    ddu = np.zeros(12); J[0, 1:3] = [r, -q]
-    ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G * sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
-    ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G * sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
-    ddx = np.zeros(12); ddx[0] = 1
-    ddy = np.zeros(12); ddx[1] = 1
-    ddz = np.zeros(12); ddx[2] = 1
-    ddp = np.zeros(12); ddp[7] = -r * a1; ddp[8] = -q * a1
-    ddq = np.zeros(12); ddq[6] = -r * a2; ddq[8] = -p * a2
+    ddu = np.zeros(12)
+    J[0, 1:3] = [r, -q]
+    ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G *
+           sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
+    ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G *
+           sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
+    ddx = np.zeros(12)
+    ddx[0] = 1
+    ddy = np.zeros(12)
+    ddx[1] = 1
+    ddz = np.zeros(12)
+    ddx[2] = 1
+    ddp = np.zeros(12)
+    ddp[7] = -r * a1
+    ddp[8] = -q * a1
+    ddq = np.zeros(12)
+    ddq[6] = -r * a2
+    ddq[8] = -p * a2
     ddr = np.zeros(12)
 
-    ddpsi = np.zeros(12); ddpsi[7:9] = [sin(phi), cos(phi) * sec(theta)]
-    ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta), (q * cos(phi) - r * sin(phi)) * sec(theta)]
-    
-    ddtheta = np.zeros(12); ddtheta[7:9] = [cos(phi), -sin(phi)]
-    ddtheta[-1] =  -q * sin(phi) -r * cos(phi)
+    ddpsi = np.zeros(12)
+    ddpsi[7:9] = [sin(phi), cos(phi) * sec(theta)]
+    ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta),
+                  (q * cos(phi) - r * sin(phi)) * sec(theta)]
 
-    ddphi = np.zeros(12); ddphi[6:9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
-    ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) ** 2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
+    ddtheta = np.zeros(12)
+    ddtheta[7:9] = [cos(phi), -sin(phi)]
+    ddtheta[-1] = -q * sin(phi) - r * cos(phi)
 
-    J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp, ddq, ddr, ddpsi, ddtheta, ddphi])
+    ddphi = np.zeros(12)
+    ddphi[6:9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
+    ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) **
+                  2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
+
+    J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp,
+                 ddq, ddr, ddpsi, ddtheta, ddphi])
     return J
 
 
 def escribe(X, Y, Z, phi, theta, psi):
-    posicion = open('XYZ.txt','w')
-    angulos = open('ang.txt','w')
+    posicion = open('XYZ.txt', 'w')
+    angulos = open('ang.txt', 'w')
     np.savetxt('XYZ.txt', [X, Y, Z])
-    np.savetxt('ang.txt',[phi, psi, theta])
+    np.savetxt('ang.txt', [phi, psi, theta])
     posicion.close()
     angulos.close()
 
 
 def imagen(X, Y, Z):
-    fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(size=1, colorscale='Viridis', opacity=0.8))])
+    fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(
+        size=1, colorscale='Viridis', opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
-    
+
 
 def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True, dir_=None):
     fig, ((w1, w2), (r1, r2), (p1, p2), (q1, q2)) = plt.subplots(4, 2)
@@ -142,7 +162,7 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True, dir_=None):
     q2.plot(t, q)
     q2.set_ylabel(' d$ \\theta$')
     q2.set_ylim(0.001, -0.001)
-    
+
     w1.plot(t, cero + 15, '--', c='k', alpha=0.5)
     w2.plot(t, cero, '--', c='k', alpha=0.5)
     r2.plot(t, cero, '--', c='k', alpha=0.5)
@@ -151,9 +171,8 @@ def imagen2d(z, w, psi, r, phi, p, theta, q, t, show=True, dir_=None):
     if show:
         plt.show()
     else:
-        fig.set_size_inches(33.,21.)
+        fig.set_size_inches(33., 21.)
         plt.savefig(dir_+'/sim.png')
-
 
 
 def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
@@ -177,7 +196,6 @@ def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
     ax3.set_ylabel('q')
 
 
-
 if __name__ == "__main__":
     pass
     # w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
@@ -193,5 +211,5 @@ if __name__ == "__main__":
     # Y = sol[:,10]
     # Z = sol[:,11]
 
-    #escribe()
+    # escribe()
     #imagen(X, Y, Z)

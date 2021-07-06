@@ -1,13 +1,14 @@
 from numpy import pi
 
-PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 260, 'omega0_per': 0.60, 'FLAG': False}
+PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 260, 'omega0_per': 0.60, 'FLAG': False,
+              'reward': 'r3'}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
-                     'EPISODES': 15000, 'n': 10, 'SHOW': False}
+                     'EPISODES': 2, 'n': 1, 'SHOW': False}
 
 PARAMS_TRAIN_SUPER = {'BATCH_SIZE': 64,
-                      'EPOCHS': 1500, 'N': 1000, 'n': 10, 'SHOW': False}
+                      'EPOCHS': 2, 'N': 200, 'n': 2, 'SHOW': False}
 
 PARAMS_TRAIN_PPO = {'EPISODES': 15000, 'SHOW': False,
                     'action_std_decay_freq': int(630)}

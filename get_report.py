@@ -153,7 +153,7 @@ def create_report_ppo(PATH):
     add_table(pdf, PARAMS_ENV, 100, 410)
 
     add_text(pdf, ['Parámetros de PPO'], 100, 360)
-    add_table(pdf, PARAMS_PPO, 100, 210)
+    add_table(pdf, PARAMS_PPO, 100, 110)
 
     pdf.showPage()
     add_image(PATH, pdf, '/c_rewards.png', 10, 350, 600, 600)
