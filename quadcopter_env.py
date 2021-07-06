@@ -26,6 +26,10 @@ VEL_MIN = - omega_0 * omega0_per
 LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
 HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
 
+rewards = {'a': lambda r, x: r - 0.01 * norm(x),
+           'b': lambda x, R, ome: max(0, 1 - norm(x)) - 0.2 * norm(R) - 0.005 * norm(ome), 
+           'c': lambda r, x, R, ome: r - }
+
 
 """Quadcopter Environment that follows gym interface"""
 
