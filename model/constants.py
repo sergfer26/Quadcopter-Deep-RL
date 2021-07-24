@@ -3,7 +3,7 @@ from sympy import symbols
 from struct_var import Struct
 
 
-m, s = symbols('m s')
+m, s, radians = symbols('m s radians')
 
 
 CONSTANTS = {
@@ -33,4 +33,28 @@ CONSTANTS = {
 
 
 STATE_VARS = {
-    'x':}
+    'x': Struct(typ='State', varid='x', prn='$x$', desc='Position x of the Quadcopter',
+                units=m, val=0.0, rec=1),
+    'y': Struct(typ='State', varid='y', prn='$y$', desc='Position y of the Quadcopter',
+                units=m, val=0.0, rec=1),
+    'z': Struct(typ='State', varid='z', prn='$z$', desc='Position z of the Quadcopter',
+                units=m, val=0.0, rec=1),
+    'dx': Struct(typ='State', varid='dx', prn='$dx$', desc='Derivative of x',
+                 units=m, val=0.0, rec=1),
+    'dy': Struct(typ='State', varid='dy', prn='$dy$', desc='Derivative of y',
+                 units=m, val=0.0, rec=1),
+    'dz': Struct(typ='State', varid='dz', prn='$dz$', desc='Derivative of x',
+                 units=m, val=0.0, rec=1),
+    'psi': Struct(typ='State', varid='psi', prn='$psi$', desc='Yaw',
+                  units=radians, val=0.0, rec=1),
+    'theta': Struct(typ='State', varid='theta', prn='$theta$', desc='Pitch',
+                    units=radians, val=0.0, rec=1),
+    'phi': Struct(typ='State', varid='phi', prn='$phi$', desc='Roll',
+                  units=radians, val=0.0, rec=1),
+    'dpsi': Struct(typ='State', varid='dpsi', prn='$dpsi$', desc='Derivative of Yaw',
+                   units=radians, val=0.0, rec=1),
+    'dtheta': Struct(typ='State', varid='dtheta', prn='$dtheta$', desc='Derivative of Pitch',
+                     units=radians, val=0.0, rec=1),
+    'dphi': Struct(typ='State', varid='dphi', prn='$dphi$', desc='Derivative of Roll',
+                   units=radians, val=0.0, rec=1)
+}
