@@ -9,13 +9,13 @@ m, s, radians = symbols('m s radians')
 CONSTANTS = {
     'G': Struct(typ='Cnts', varid='G', prn='$G$', desc='Gravity constant',
                 units=m * s**-2, val=9.81, rec=1),
-    'Ix': Struct(typ='Cnts', varid='Ix', prn='$I_x$',
+    'Ix': Struct(typ='Cnts', varid='Ixx', prn='$I_{xx}$',
                  desc='Inertia tensor component x', units=1, val=4.856*10**-3,
                  rec=1),
-    'Iy': Struct(typ='Cnts', varid='Iy', prn='$I_y$',
+    'Iy': Struct(typ='Cnts', varid='Iyy', prn='$I_{yy}$',
                  desc='Inertia tensor component y', units=1, val=4.856*10**-3,
                  rec=1),
-    'Iz': Struct(typ='Cnts', varid='Iz', prn='$I_z$',
+    'Iz': Struct(typ='Cnts', varid='Izz', prn='$I_{zz}$',
                  desc='Inertia tensor component z', units=1, val=8.801*10**-3,
                  rec=1),
     'B': Struct(typ='Cnts', varid='B', prn='$B$', desc='Missing', units=1,
@@ -57,4 +57,16 @@ STATE_VARS = {
                      units=radians, val=0.0, rec=1),
     'dphi': Struct(typ='State', varid='dphi', prn='$dphi$', desc='Derivative of Roll',
                    units=radians, val=0.0, rec=1)
+}
+
+
+ACTIONS = {
+    'w1': Struct(typ='State', varid='w1', prn='$\omega_1$', desc='Control 1',
+                 units=1, val=0.0, rec=1),
+    'w2': Struct(typ='State', varid='w2', prn='$\omega_2$', desc='Control 2',
+                 units=1, val=0.0, rec=1),
+    'w3': Struct(typ='State', varid='w3', prn='$\omega_3$', desc='Control 3',
+                 units=1, val=0.0, rec=1),
+    'w4': Struct(typ='State', varid='w4', prn='$\omega_4$', desc='Control 4',
+                 units=1, val=0.0, rec=1)
 }
