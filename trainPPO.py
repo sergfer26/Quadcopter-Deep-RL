@@ -5,7 +5,7 @@ import pytz
 import pathlib
 from tqdm import tqdm
 from numpy import remainder as rem
-from quadcopter_env import QuadcopterEnv, AgentEnv
+from env import QuadcopterEnv, AgentEnv
 from PPO.ppo import PPOagent
 from datetime import datetime
 from get_report import create_report_ppo

@@ -7,7 +7,7 @@ import gym
 from datetime import datetime
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader, Dataset, random_split
-from quadcopter_env import QuadcopterEnv, AgentEnv
+from env import QuadcopterEnv, AgentEnv
 from simulation import sim, nSim, plot_nSim2D, plot_nSim3D
 from DDPG.ddpg import DDPGagent
 from Linear.step import control_feedback, omega_0, C, F
