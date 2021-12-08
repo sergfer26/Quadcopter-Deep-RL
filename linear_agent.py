@@ -31,7 +31,7 @@ class LinearAgent:
 
     def get_action(self, state):
         u, v, w, x, y, z, p, q, r, psi, theta, phi = state
-        W1 = control_feedback(z, w, F1) * (c1 ** 2)  # control z
+        W1 = control_feedback(z, w, F1) * c1   # control z
         W2 = control_feedback(psi, r, F2) * c2  # control yaw
         W3 = control_feedback(phi, p, F3) * c3  # control roll
         W4 = control_feedback(theta, q, F4) * c4  # control pitch
@@ -52,7 +52,6 @@ class LinearEnv(gym.ActionWrapper):
         return action
 
 
-'''
 if __name__ == "__main__":
     env = QuadcopterEnv(reward='r4')
     env = LinearEnv(env)
@@ -84,4 +83,3 @@ if __name__ == "__main__":
     data['$t$'] = env.time[0:steps]
     data.plot(x='$t$', subplots=True, ax=axs3, legend=True)
     plt.show()
-'''
