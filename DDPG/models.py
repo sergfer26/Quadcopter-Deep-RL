@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F 
+import torch.nn.functional as F
 import torch.autograd
 from torch.autograd import Variable
+
 
 class Critic(nn.Module):
     def __init__(self, h_sizes):
@@ -10,7 +11,7 @@ class Critic(nn.Module):
         self.hidden = nn.ModuleList()
         for k in range(len(h_sizes) - 1):
             self.hidden.append(nn.Linear(h_sizes[k], h_sizes[k+1]))
-        
+
         self.out = nn.Linear(h_sizes[-1], 1)
 
     def forward(self, state, action):
@@ -24,15 +25,16 @@ class Critic(nn.Module):
 
         return x
 
+
 class Actor(nn.Module):
     def __init__(self, h_sizes, output_size):
         super(Actor, self).__init__()
         self.hidden = nn.ModuleList()
         for k in range(len(h_sizes) - 1):
             self.hidden.append(nn.Linear(h_sizes[k], h_sizes[k+1]))
-        
+
         self.out = nn.Linear(h_sizes[-1], output_size)
-        
+
     def forward(self, state):
         """
         Param state is a torch tensor
