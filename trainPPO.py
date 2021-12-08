@@ -75,7 +75,7 @@ if __name__ == "__main__":
     plt.plot(rewards, 'b--', label='episode reward', alpha=0.1)
     plt.plot(avg_rewards, 'r-', label='average reward')
     plt.xlabel('episodes')
-    plt.title('Training - Cumulative Reward')
+    plt.title('Training - Cumulative Reward - ' + r'$\lambda = {env.lamb}$')
     # r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\|
     # - 0.5 \|I - X_{\theta}\|$')
     # r'$r_t = \mathbb{1}_{x <= g + 1} - 0.01 \|x - g\| - 0.01 \|[dx, d\theta]\| - 0.5 \|I - X_{\theta}\|$')
