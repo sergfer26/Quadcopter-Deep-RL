@@ -1,18 +1,25 @@
 import numpy as np
 import pandas as pd
 from env import QuadcopterEnv
-from Linear.equations import I, G
 from matplotlib import pyplot as plt
 from simulation import sim
+from linear_agent import LinearEnv
+from Linear.constants import CONSTANTS, omega_0
 
 #    z, phi, theta, psi
 KD = np.array([2.5, 1.75, 1.75, 1.75])
 KP = np.array([1.5, 6, 6, 6])
-M = 0.468
-K = 2.980 * 10 **−6
-B = 1.140 * 10 **−7
-L = 0.225
-Ixx, Iyy, Izz = I
+
+G = CONSTANTS['G']
+M = CONSTANTS['M']
+K = CONSTANTS['K']
+B = CONSTANTS['B']
+L = CONSTANTS['L']
+Ixx = CONSTANTS['Ixx']
+Iyy = CONSTANTS['Iyy']
+Izz = CONSTANTS['Izz']
+
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
 def tau2omega(t, x, y):
@@ -23,13 +30,9 @@ def tau2omega(t, x, y):
     return aux
 
 
-def pid(kp, kd, c, x, xf, dt):
+def pid(kp, kd, c, x, xf, x_dot, xf_dot, dt):
     error = xf - x
-    if pid.old_error.all() is None:
-        pid.old_error = error
-
-    de = (error - pid.old_error) / dt
-
+    de = xf_dot - x_dot
     return (kd * de + kp * error) * c
 
 
@@ -40,25 +43,37 @@ class PIDAgent:
         self.num_actions = env.action_space.shape[0]
         self.dt = env.time[1] - env.time[0]
         self.goal = np.zeros(4)
+        self.goal_dot = np.zeros(4)
         self.reset()
 
     def get_action(self, state):
         u, v, w, x, y, z, p, q, r, psi, theta, phi = state
+
         c1 = M/(np.cos(phi) * np.cos(theta))
-        b1 = G * c1
-        C = np.array([c1, Ixx, Iyy, Izz])
-        X = np.array([z, phi, theta, psi])
-        tau = pid(KP, KD, C, X, self.goal, self.dt)  # thrust, torques
+        #b1 = G * c1
+        #C = np.array([c1, Ixx, Iyy, Izz])
+        #X = np.array([z, phi, theta, psi])
+        #X_dot = np.array([w, p, q, r])
+        '''
+        tau = pid(KP, KD, C, X, self.goal, X_dot,
+                  self.goal_dot, self.dt)  # thrust, torques
         tau[0] += b1
+        '''
+        T = (G + KD[0] * w + KP[0] * z) * c1
+        tau_phi = (KD[1] * p + KP[1] * phi) * Ixx
+        tau_theta = (KD[2] * q + KP[2] * theta) * Iyy
+        tau_psi = (KD[2] * r + KP[2] * psi) * Izz
+        tau = np.array([T, tau_phi, tau_theta, tau_psi])
         return self.get_control(tau)
 
     def get_control(self, tau):
         t, tau_phi, tau_theta, tau_psi = tau
-        w1 = np.sqrt(tau2omega(t, - tau_theta, - tau_psi))
-        w2 = np.sqrt(tau2omega(t, - tau_phi, + tau_psi))
-        w3 = np.sqrt(tau2omega(t, + tau_theta, - tau_psi))
-        w4 = np.sqrt(tau2omega(t, + tau_phi, + tau_psi))
-        return np.array([w1, w2, w3, w4])
+        w1 = tau2omega(t, - tau_theta, - tau_psi)
+        w2 = tau2omega(t, - tau_phi, + tau_psi)
+        w3 = tau2omega(t, + tau_theta, - tau_psi)
+        w4 = tau2omega(t, + tau_phi, + tau_psi)
+        w = np.array([w1, w2, w3, w4])
+        return np.sqrt(w)
 
     def reset(self):
         pid.old_error = np.full(4, None)
@@ -66,11 +81,10 @@ class PIDAgent:
 
 if __name__ == "__main__":
     env = QuadcopterEnv(reward='r4')
-    # env = LinearEnv(env)
-    # env.noise_on = False
+    env = LinearEnv(env)
+    env.noise_on = False
     agent = PIDAgent(env)
     states, actions, scores = sim(True, agent, env)
-
     steps = states.shape[0]
     fig1, axs1 = plt.subplots(agent.num_states // 2, 2)
     names = (r'$u$', r'$v$', r'$w$', r'$x$', r'$y$', r'$z$', r'$p$',
