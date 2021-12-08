@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
 import numpy as np
 from scipy.integrate import odeint
-# import plotly.graph_objects as go
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from numpy import sin, cos, tan
 from numpy.linalg import norm
+from .constants import CONSTANTS, Ixx
 
+G = CONSTANTS['G']
+Ixx = CONSTANTS['Ixx']
+Iyy = CONSTANTS['Iyy']
+Izz = CONSTANTS['Izz']
+B = CONSTANTS['B']
+M = CONSTANTS['M']
+L = CONSTANTS['L']
+K = CONSTANTS['K']
 
+'''
 G = 9.81
-I = (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
-B, M, L = 1.140*10**(-6), 1.433, 0.225
-K = 0.001219  # kt
-omega_0 = np.sqrt((G * M)/(4 * K))
+Ixx, Iyy, Izz = 1, 1, 0.5  # (4.856*10**-3, 4.856*10**-3, 8.801*10**-3)
+B, M, L = 1.140 * 1e-7, 1, 0.225
+K = 2.980 * 1e-6  # kt
+'''
 
+omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
@@ -24,7 +35,7 @@ def rotation_matrix(angles):
         rotation_matrix obtine la matriz de rotación de los angulos de Euler
         https://en.wikipedia.org/wiki/Rotation_matrix;
 
-        angles: son los angulos de Euler psi, theta y phi con respecto a los 
+        angles: son los angulos de Euler psi, theta y phi con respecto a los
         ejes x, y, z;
 
         regresa: la matriz R.
@@ -51,7 +62,7 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
         regresa dot_x
     '''
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
-    Ixx, Iyy, Izz = I
+    # Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
     du = r * v - q * w - G * sin(theta)
     dv = p * w - r * u - G * cos(theta) * sin(phi)
@@ -66,6 +77,35 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     dy = v
     dz = w
     return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+
+
+'''
+def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
+
+        f calcula el vector dot_x = f(x, t, w) (sistema dinamico);
+
+        X: es un vector de 12 posiciones;
+        t: es un intervalo de tiempo [t1, t2];
+        wi: es un parametro de control, i = 1, 2, 3, 4;
+
+        regresa dot_x
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
+    Ixx, Iyy, Izz = I
+    W = np.array([w1, w2, w3, w4])
+    du = r * v - q * w - G * sin(theta)
+    dv = p * w - r * u - G * cos(theta) * sin(phi)
+    dw = q * u - p * v + G * cos(phi) * cos(theta) - (K/M) * np.sum(W)
+    dp = ((L * B) / Ixx) * (w4 - w2) - q * r * ((Izz - Iyy) / Ixx)
+    dq = ((L * B) / Iyy) * (w3 - w1) - p * r * ((Ixx - Izz) / Iyy)
+    dr = (B/Izz) * (w2 + w4 - w1 - w3)
+    dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
+    dtheta = q * cos(phi) - r * sin(phi)
+    dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
+    dx = u
+    dy = v
+    dz = w
+    return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+'''
 
 
 def jac_f(X, t, w1, w2, w3, w4):
@@ -104,16 +144,16 @@ def jac_f(X, t, w1, w2, w3, w4):
     ddr = np.zeros(12)
 
     ddpsi = np.zeros(12)
-    ddpsi[7:9] = [sin(phi), cos(phi) * sec(theta)]
+    ddpsi[7: 9] = [sin(phi), cos(phi) * sec(theta)]
     ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta),
                   (q * cos(phi) - r * sin(phi)) * sec(theta)]
 
     ddtheta = np.zeros(12)
-    ddtheta[7:9] = [cos(phi), -sin(phi)]
+    ddtheta[7: 9] = [cos(phi), -sin(phi)]
     ddtheta[-1] = -q * sin(phi) - r * cos(phi)
 
     ddphi = np.zeros(12)
-    ddphi[6:9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
+    ddphi[6: 9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
     ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) **
                   2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
 
@@ -197,19 +237,18 @@ def postion_vs_velocity(z, w, psi, r, phi, p, theta, q, cluster):
 
 
 if __name__ == "__main__":
-    pass
-    # w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
-    # t = np.linspace(0, 10, 1000)
-    # y = 0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10
-    # W = [w1, w2, w3, w4]
-    # sol = odeint(f, y, t, args=(w1, w2, w3, w4))
+    w1, w2, w3, w4 = (0, 53.6666, 55.6666, 1)
+    t = np.linspace(0, 10, 2600)
+    y = 0, 0, 0, 0, 0, 0, 2, 3, 10, 0, 0, 10
+    W = [w1, w2, w3, w4]
+    sol = odeint(f, y, t, args=(w1, w2, w3, w4))
 
-    #psi = sol[:,6]
-    #theta = sol[:,7]
-    #phi = sol[:,8]
-    # X = sol[:,9]
-    # Y = sol[:,10]
-    # Z = sol[:,11]
+    psi = sol[:, 6]
+    theta = sol[:, 7]
+    phi = sol[:, 8]
+    X = sol[:, 9]
+    Y = sol[:, 10]
+    Z = sol[:, 11]
 
     # escribe()
-    #imagen(X, Y, Z)
+    imagen(X, Y, Z)
