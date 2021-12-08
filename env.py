@@ -1,14 +1,16 @@
 import numpy as np
 import gym
 import numba
-from sympy.parsing.latex import parse_latex
-from Linear.equations import rotation_matrix, f, jac_f, omega_0, W0
+#from sympy.parsing.latex import parse_latex
+from Linear.equations import rotation_matrix, f, jac_f, W0
+from Linear.constants import CONSTANTS, omega_0, F, C
 from DDPG.utils import OUNoise
 from numba import cuda
 from gym import spaces
 from numpy.linalg import norm
 from scipy.integrate import odeint
 from params import PARAMS_ENV, PARAMS_OBS
+from Linear.step import control_feedback  # hay que quitar esto
 
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
@@ -28,9 +30,22 @@ VEL_MIN = - omega_0 * omega0_per
 LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
 HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
 
+G = CONSTANTS['G']
+M = CONSTANTS['M']
+K = CONSTANTS['K']
+B = CONSTANTS['B']
+L = CONSTANTS['L']
+Ixx = CONSTANTS['Ixx']
+Iyy = CONSTANTS['Iyy']
+Izz = CONSTANTS['Izz']
+
+F1, F2, F3, F4 = F
+c1, c2, c3, c4 = C
+
+"""
 rewards = {'a': lambda r, x: r - 0.01 * norm(x),
-           'b': lambda x, R, ome: max(0, 1 - norm(x)) - 0.2 * norm(R) - 0.005 * norm(ome), 
-           'c': lambda r, x, R, ome: r - }
+           'b': lambda x, R, ome: max(0, 1 - norm(x)) - 0.2 * norm(R) - 0.005 * norm(ome),
+           'c': lambda r, x, R, ome: r - 1}
 
 
 '''Quadcopter Environment that follows gym interface'''
@@ -68,8 +83,10 @@ class Reward(object):
         elif self.tag == 'r3':
             r = max(0, 1.0 - X) - 0.02 * theta - 0.03 * omega
         elif self.tag == 'r4':
-            r = - 0.02 * X - 0.1 * norm(rotation_matrix(angles))
+            r = - 0.02 * X - 0.1 * \
+                norm(np.identity(3) - rotation_matrix(angles))
         return float(r)
+"""
 
 
 class QuadcopterEnv(gym.Env):
@@ -85,7 +102,8 @@ class QuadcopterEnv(gym.Env):
         self.set_time(STEPS, TIME_MAX)
         self.flag = FLAG
         self.is_cuda_available()
-        self.reward = Reward(tag=reward)
+        #self.reward = Reward(tag=reward)
+        self.lamb = 10
 
     def is_cuda_available(self):
         '''
@@ -147,25 +165,15 @@ class QuadcopterEnv(gym.Env):
         return score1, score2
 
     def get_reward(self, state, action):
-        '''
-            get_reward calcula el reward dado el estado del drone;
-
-            state: vector de 12 o 18 posiciones;
-
-            regresa valor real.
-
-        x = state[3]
-        x_ = 1  # * np.ones(3)
-        r = 0.0
-        vel = np.concatenate([state[0:3], state[6:9]])
-        x_st = np.logical_and(- x_ <= x, x <= x_)
-        if x_st.all():
-            r = 1.1
-        d1 = norm(x)
-        d2 = norm(vel)
-        d3 = norm(np.identity(3) - rotation_matrix(state[9:]))
-        '''
-        return self.reward.eval(state, action)
+        _, _, w, _, _, z, p, q, r, psi, theta, phi = self.state
+        W1 = control_feedback(z, w, F1) * (c1 ** 2)  # control z
+        W2 = control_feedback(psi, r, F2) * c2  # control yaw
+        W3 = control_feedback(phi, p, F3) * c3  # control roll
+        W4 = control_feedback(theta, q, F4) * c4  # control pitch
+        W = W1 + W2 + W3 + W4
+        W = W.reshape(4)
+        # return self.reward.eval(state, action)
+        return - (norm(action - W) + self.lamb * norm(action))
 
     def is_done(self):
         '''
@@ -192,7 +200,7 @@ class QuadcopterEnv(gym.Env):
 
             regresa la tupla (a, r, ns, d)
         '''
-        w1, w2, w3, w4 = action + W0
+        w1, w2, w3, w4 = action  # + W0
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
@@ -228,9 +236,14 @@ class QuadcopterEnv(gym.Env):
             render hace una simulación visual del drone.
         '''
         pass
-
+    '''
+    def action(self, action):
+        return action
+    '''
 
 # https://github.com/openai/gym/blob/master/gym/core.py
+
+
 class NormalizedEnv(gym.ActionWrapper):
     """ Wrap action """
 
