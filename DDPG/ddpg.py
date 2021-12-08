@@ -7,7 +7,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
 # from .models_merge import Actor, Critic, weights_init
-from .models_merge import Actor, Critic, weights_init
+from .models import Actor, Critic, weights_init
 from .utils import Memory
 from .params import PARAMS_DDPG
 
