@@ -6,26 +6,24 @@ from numpy import sin
 from numpy import cos
 from numpy import tan
 from time import process_time
-from .equations import f, jac_f, escribe, imagen, imagen2d, I, K, B, M, L, G
+from .equations import f, jac_f, escribe, imagen, imagen2d
 from numpy import pi
+from .constants import CONSTANTS, F, C
+
+G = CONSTANTS['G']
+Ixx = CONSTANTS['Ixx']
+Iyy = CONSTANTS['Iyy']
+Izz = CONSTANTS['Izz']
+B = CONSTANTS['B']
+M = CONSTANTS['M']
+L = CONSTANTS['L']
+K = CONSTANTS['K']
+
 
 omega_0 = np.sqrt((G * M)/(4 * K))
-W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
-Ixx, Iyy, Izz = I
-F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]
-              ).T  # matriz de control z
-F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
-F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
-F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
-              ).T  # matriz de control pitch
-
-c1 = 1  # (((2*K)/M) * omega_0)**(-1)  # z
-c3 = (((L * B) / Ixx) * omega_0)**(-1)  # roll
-c4 = (((L * B) / Iyy) * omega_0)**(-1)  # pitch
-c2 = (((2 * B) / Izz) * omega_0)**(-1)  # yaw
-
-C = c1, c2, c3, c4
-F = F1, F2, F3, F4
+F1, F2, F3, F4 = F
+c1, c2, c3, c4 = C
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
 def imagen_accion(A, t, show=True, dir_=None):

@@ -23,6 +23,7 @@ REWARD = PARAMS_ENV['reward']
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per
+W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
 # limites espaciales del ambiente
@@ -200,7 +201,7 @@ class QuadcopterEnv(gym.Env):
 
             regresa la tupla (a, r, ns, d)
         '''
-        w1, w2, w3, w4 = action  # + W0
+        w1, w2, w3, w4 = action + W0
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
