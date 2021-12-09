@@ -85,7 +85,8 @@ if __name__ == "__main__":
     plt.plot(smooth(rewards, 30), 'blue', label='smooth reward', alpha=0.5)
     plt.plot(avg_rewards, 'royalblue', label='average reward', alpha=0.01)
     plt.xlabel('episodes')
-    plt.title('Training - Cumulative Reward - ' + r'$\lambda = {env.lamb}$')
+    plt.title('Training - Cumulative Reward - ' +
+              r'$\lambda = {}$'.format(env.lamb))
     plt.legend(loc='best')
     if SHOW:
         plt.show()
