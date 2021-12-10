@@ -17,6 +17,7 @@ TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['STEPS']
 FLAG = PARAMS_ENV['FLAG']
 REWARD = PARAMS_ENV['reward']
+LAMB = PARAMS_ENV['lamb']
 
 
 # constantes del ambiente
@@ -104,7 +105,7 @@ class QuadcopterEnv(gym.Env):
         self.flag = FLAG
         self.is_cuda_available()
         #self.reward = Reward(tag=reward)
-        self.lamb = 10
+        self.lamb = LAMB
 
     def is_cuda_available(self):
         '''
@@ -201,7 +202,7 @@ class QuadcopterEnv(gym.Env):
 
             regresa la tupla (a, r, ns, d)
         '''
-        w1, w2, w3, w4 = action + W0
+        w1, w2, w3, w4 = action  # + W0
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
