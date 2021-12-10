@@ -64,7 +64,7 @@ class PIDAgent:
         tau_theta = (KD[2] * q + KP[2] * theta) * Iyy
         tau_psi = (KD[2] * r + KP[2] * psi) * Izz
         tau = np.array([T, tau_phi, tau_theta, tau_psi])
-        return self.get_control(tau)
+        return 10 * self.get_control(tau)
 
     def get_control(self, tau):
         t, tau_phi, tau_theta, tau_psi = tau
