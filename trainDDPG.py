@@ -12,6 +12,7 @@ from get_report import create_report_ddpg
 from params import PARAMS_TRAIN_DDPG
 from simulation import nSim, plot_nSim2D, plot_nSim3D
 from smooth import smooth
+from correo import send_correo
 
 
 BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
@@ -108,6 +109,8 @@ if __name__ == "__main__":
     plot_nSim3D(n_states, show=SHOW, file_name=PATH + '/sim_flights.png')
     if not SHOW:
         create_report_ddpg(PATH)
+        send_correo(PATH + '/Reporte.pdf')
+
         with open(PATH + '/training_rewards.npy', 'wb') as f:
             np.save(f, np.array(rewards))
         with open(PATH + '/training_avg_rewards.npy', 'wb') as f:
