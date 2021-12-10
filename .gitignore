@@ -17,3 +17,6 @@ MyDoc.pdf
 noise_test.py
 .DS_Store
 Linear/.DS_Store
+dron/*
+params_correo.py
+
