@@ -38,7 +38,7 @@ def send_correo(path):
     i = 0
     while i <= 3:
         if not test_conn_open(smtp):
-            smtp = SMTP("smtp.live.com", 587)
+            smtp = SMTP("smtp.gmail.com", 465)
             i += 1
         else:
             break
