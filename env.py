@@ -104,8 +104,6 @@ class QuadcopterEnv(gym.Env):
         self.set_time(STEPS, TIME_MAX)
         self.flag = FLAG
         self.is_cuda_available()
-        #self.reward = Reward(tag=reward)
-        self.lamb = LAMB
 
     def is_cuda_available(self):
         '''
@@ -167,6 +165,7 @@ class QuadcopterEnv(gym.Env):
         return score1, score2
 
     def get_reward(self, state, action):
+        '''
         _, _, w, _, _, z, p, q, r, psi, theta, phi = self.state
         W1 = control_feedback(z, w, F1) * (c1 ** 2)  # control z
         W2 = control_feedback(psi, r, F2) * c2  # control yaw
@@ -175,7 +174,13 @@ class QuadcopterEnv(gym.Env):
         W = W1 + W2 + W3 + W4
         W = W.reshape(4)
         # return self.reward.eval(state, action)
-        return - (norm(action - W) + self.lamb * norm(action))
+        '''
+        #u, v, w, x, y, z, p, q, r, psi, theta, phi
+        penalty = 0.5 * norm(state[3:6])
+        mat = rotation_matrix(state[9:])
+        penalty += 1.0 * norm(np.identity(3) - mat)
+        # return - (norm(action - W) + self.lamb * norm(action))
+        return 1 - penalty
 
     def is_done(self):
         '''
@@ -202,7 +207,7 @@ class QuadcopterEnv(gym.Env):
 
             regresa la tupla (a, r, ns, d)
         '''
-        w1, w2, w3, w4 = action  # + W0
+        w1, w2, w3, w4 = action + W0
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
