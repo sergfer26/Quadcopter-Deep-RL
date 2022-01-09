@@ -72,7 +72,7 @@ class PIDAgent:
         w2 = tau2omega(t, - tau_phi, + tau_psi)
         w3 = tau2omega(t, + tau_theta, - tau_psi)
         w4 = tau2omega(t, + tau_phi, + tau_psi)
-        w = np.array([w1, w2, w3, w4])
+        w = np.array([w1, w2, w3, w4]) / (2 * np.pi)
         return np.sqrt(w)
 
     def reset(self):
@@ -86,6 +86,7 @@ if __name__ == "__main__":
     agent = PIDAgent(env)
     states, actions, scores = sim(True, agent, env)
     steps = states.shape[0]
+    breakpoint()
     fig1, axs1 = plt.subplots(agent.num_states // 2, 2)
     names = (r'$u$', r'$v$', r'$w$', r'$x$', r'$y$', r'$z$', r'$p$',
              r'$q$', r'$r$', r'$\psi$', r'$\theta$', r'$\phi$')
