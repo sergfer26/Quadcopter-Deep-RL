@@ -84,7 +84,7 @@ def plot_nSim2D(array3D, columns, time, show=True, file_name=None):
         else:
             legend = False
 
-        data.plot(x='$t$', subplots=True, ax=axes, legend=legend)
+        data.plot(x='$t$', subplots=True, ax=axes, legend=legend, alpha=0.4)
     fig.set_size_inches(18.5, 10.5)
     if show:
         plt.show()
