@@ -21,9 +21,9 @@ n = PARAMS_TRAIN_DDPG['n']
 TAU = 2 * np.pi  # No es el tau del agente
 SHOW = PARAMS_TRAIN_DDPG['SHOW']
 
-if not SHOW:
-    from functools import partialmethod
-    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+# if not SHOW:
+#    from functools import partialmethod
+#    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
 def train(agent, env, show=True):
@@ -86,8 +86,7 @@ if __name__ == "__main__":
     plt.plot(smooth(rewards, 30), 'blue', label='smooth reward', alpha=0.5)
     plt.plot(avg_rewards, 'royalblue', label='average reward', alpha=0.01)
     plt.xlabel('episodes')
-    plt.title('Training - Cumulative Reward - ' +
-              r'$\lambda = {}$'.format(env.lamb))
+    plt.title('Training - Cumulative Reward $R$')
     plt.legend(loc='best')
     if SHOW:
         plt.show()
