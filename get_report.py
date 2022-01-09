@@ -4,7 +4,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_PPO
-from params import PARAMS_TRAIN_SUPER  # , PARAMS_OBS
+from params import PARAMS_TRAIN_SUPER, PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
 from PPO.params import PARAMS_PPO
 
@@ -95,7 +95,6 @@ def create_report_ddpg(PATH):
     pdf.setFont("Courier-Bold", 26)
     pdf.drawCentredString(290, 720, subTitle)
     # drawMyRuler(pdf)
-    # add_text(pdf,['Parámetros de coordenadas'],100, 750)
     # add_table(pdf, PARAMS_OBS,100,610)
 
     # pdf.showPage()
@@ -111,6 +110,10 @@ def create_report_ddpg(PATH):
 
     add_text(pdf, ['Parámetros del Ruido'], 100, 170)
     add_table(pdf, PARAMS_UTILS, 100, 30)
+
+    pdf.showPage()
+    add_text(pdf, ['Espacio de simulación'], 100, 750)
+    add_table(pdf, PARAMS_OBS, 100, 420)
 
     pdf.showPage()
     add_image(PATH, pdf, '/c_rewards.png', 10, 350, 600, 600)
