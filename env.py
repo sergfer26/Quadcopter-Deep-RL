@@ -1,7 +1,6 @@
 import numpy as np
 import gym
 import numba
-#from sympy.parsing.latex import parse_latex
 from Linear.equations import rotation_matrix, f, jac_f, W0
 from Linear.constants import CONSTANTS, omega_0, F, C
 from DDPG.utils import OUNoise
@@ -10,7 +9,6 @@ from gym import spaces
 from numpy.linalg import norm
 from scipy.integrate import odeint
 from params import PARAMS_ENV, PARAMS_OBS
-from Linear.step import control_feedback  # hay que quitar esto
 
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
@@ -24,7 +22,6 @@ LAMB = PARAMS_ENV['lamb']
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per
-W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
 # limites espaciales del ambiente
@@ -44,51 +41,8 @@ Izz = CONSTANTS['Izz']
 F1, F2, F3, F4 = F
 c1, c2, c3, c4 = C
 
-"""
-rewards = {'a': lambda r, x: r - 0.01 * norm(x),
-           'b': lambda x, R, ome: max(0, 1 - norm(x)) - 0.2 * norm(R) - 0.005 * norm(ome),
-           'c': lambda r, x, R, ome: r - 1}
-
 
 '''Quadcopter Environment that follows gym interface'''
-
-
-class Reward(object):
-
-    def __init__(self, tag):
-        self.tag = tag
-        if self.tag == 'r1':
-            self.str = r'1 - 0.2 \sqrt{ x^2 + y^2 + z^2 }'
-        elif self.tag == 'r2':
-            self.str = r'-4 \times 10-3 \| X \| - 2 \times 10 ^ {-4} | A | - 3 \times 10 ^ {-4} \|\omega \| - 5 \times 10 ^ {-4} \| V\|'
-        elif self.tag == 'r3':
-            self.str = r'\max(0, 1 - \|X\|) - 0.02 \|\theta\| - 0.03 \|\omega\|'
-        elif self.tag == 'r4':
-            self.str = r'-0.02 \times \|X\| - 0.1\|R_{\theta}\|'
-
-        #self.expr = parse_latex(self.str)
-
-    def eval(self, state, action):
-        u, v, w, x, y, z, p, q, r, psi, theta, phi = state
-        a1, a2, a3, a4 = action
-        angles = [psi, theta, phi]
-        r = 0.0
-        omega = norm([p, q, r])
-        theta = norm(angles)
-        X = norm([x, y, z])
-        A = norm([a1, a2, a3, a4])
-        V = norm([u, v, w])
-        if self.tag == 'r1':
-            r = 1.0 - 0.2 * X
-        elif self.tag == 'r2':
-            r = -0.004 * X - 0.0002 * A - 0.0003 * omega - 0.0005 * V
-        elif self.tag == 'r3':
-            r = max(0, 1.0 - X) - 0.02 * theta - 0.03 * omega
-        elif self.tag == 'r4':
-            r = - 0.02 * X - 0.1 * \
-                norm(np.identity(3) - rotation_matrix(angles))
-        return float(r)
-"""
 
 
 class QuadcopterEnv(gym.Env):
@@ -107,7 +61,7 @@ class QuadcopterEnv(gym.Env):
 
     def is_cuda_available(self):
         '''
-            is_cuda_available verifica si esta disponible el gpu,
+            Verifica si esta disponible el gpu,
             en caso de que sí, las funciones f y jac trabajaran sobre numba.
         '''
         if cuda.is_available():
@@ -119,12 +73,12 @@ class QuadcopterEnv(gym.Env):
 
     def is_contained(self, state):
         '''
-            is_contained verifica si los valores de (x, y, z) estan dentro
-            de los rangos definidos por el ambiente;
-
-            state: vector de 12 o 18 posiciones;
-
-            regresa un valor booleano.
+            Verifica si los valores de (x, y, z) estan dentro
+            de los rangos definidos por el ambiente.
+            Params:
+                * state (array): vector de 12 o 18 posiciones.
+            Salidas:
+                * (bool): estado de contención.
         '''
         x = state[3:6]
         high = self.observation_space.high[3:6]
@@ -134,11 +88,11 @@ class QuadcopterEnv(gym.Env):
 
     def is_stable(self, state):
         '''
-            is_stable verifica el drone esta estable, cerca del objetivo;
-
-            state: vector de 12 o 18 posiciones;
-
-            regresa un valor booleano.
+            Verifica el drone esta estable, cerca del objetivo.
+            Params:
+                * state (array): vector de 12 o 18 posiciones;
+            Salidas:
+                * (bool): estado de estabilidad.
         '''
         x = state[3:6]
         v = np.concatenate([state[0:3], state[6:9]])
@@ -150,11 +104,12 @@ class QuadcopterEnv(gym.Env):
 
     def get_score(self, state):
         '''
-            get_score verifica el drone esta contenido y estable;
-
-            state: vector de 12 o 18 posiciones;
-
-            regresa dos puntajes.
+            Verifica el drone esta contenido y estable.
+            Params:
+                * state (array): vector de 12 o 18 posiciones.
+            Salidas:
+                * score1 (int): puntaje de contención.
+                * score2 (int): puntahje de estabilidad.
         '''
         score1 = 0
         score2 = 0
@@ -166,21 +121,15 @@ class QuadcopterEnv(gym.Env):
 
     def get_reward(self, state, action):
         '''
-        _, _, w, _, _, z, p, q, r, psi, theta, phi = self.state
-        W1 = control_feedback(z, w, F1) * (c1 ** 2)  # control z
-        W2 = control_feedback(psi, r, F2) * c2  # control yaw
-        W3 = control_feedback(phi, p, F3) * c3  # control roll
-        W4 = control_feedback(theta, q, F4) * c4  # control pitch
-        W = W1 + W2 + W3 + W4
-        W = W.reshape(4)
-        # return self.reward.eval(state, action)
+        falta
         '''
-        #u, v, w, x, y, z, p, q, r, psi, theta, phi
+        # u, v, w, x, y, z, p, q, r, psi, theta, phi
         penalty = 0.5 * norm(state[3:6])
         mat = rotation_matrix(state[9:])
         penalty += 1.0 * norm(np.identity(3) - mat)
+        penalty += 0.005 * norm(action)
         # return - (norm(action - W) + self.lamb * norm(action))
-        return 1 - penalty
+        return - penalty
 
     def is_done(self):
         '''
@@ -215,7 +164,7 @@ class QuadcopterEnv(gym.Env):
         reward = self.get_reward(y_dot, action)
         done = self.is_done()
         self.i += 1
-        return action, reward, self.state, done
+        return self.state, reward, done, None
 
     def reset(self):
         '''
@@ -292,6 +241,40 @@ class NormalizedEnv(gym.ActionWrapper):
         act_k_inv = 2./(high - low)
         act_b = (high + low) / 2.
         return act_k_inv * (action - act_b)
+
+
+class ObsEnv(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
+        high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
+        self.observation_space = spaces.Box(
+            low=low, high=high, dtype=np.float32)
+
+    def observation(self, obs):
+        '''
+            observation transforma un estado de R^12 a un estado de
+            R^18;
+            - obs: estado de R^12;
+            regresa un estado en R^18.
+        '''
+        angles = obs[9:]
+        ori = np.matrix.flatten(rotation_matrix(angles))
+        return np.concatenate([obs[0:9], ori])
+
+    def reverse_observation(self, obs):
+        '''
+            reverse_observation transforma un estado de R^18 a un estado de
+            R^12;
+            - obs: estado en R^18;
+            regresa un estado en R^12.
+        '''
+        mat = obs[9:].reshape((3, 3))
+        psi = np.arctan(mat[1, 0]/mat[0, 0])
+        theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
+        phi = np.arctan(mat[2, 1] / mat[2, 2])
+        angles = np.array([psi, theta, phi])
+        return np.concatenate([obs[0:9], angles])
 
 
 class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
