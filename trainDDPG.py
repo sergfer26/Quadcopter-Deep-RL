@@ -11,7 +11,7 @@ from datetime import datetime
 from get_report import create_report_ddpg
 from params import PARAMS_TRAIN_DDPG
 from simulation import nSim, plot_nSim2D, plot_nSim3D
-from smooth import smooth
+from utils import smooth
 from correo import send_correo
 
 
