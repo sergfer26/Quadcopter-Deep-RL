@@ -17,17 +17,17 @@ from numpy.linalg import norm
 
 omega_0 = np.sqrt((G * M)/(4 * K))
 Ixx, Iyy, Izz = I
-F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # matriz de control z
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]
+              ).T  # matriz de control z
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # matriz de control yaw
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # matriz de control roll
-F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]).T  # matriz de control pitch
+F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
+              ).T  # matriz de control pitch
 
 c1 = (((2*K)/M) * omega_0)**(-1)
 c3 = (((L * B) / Ixx) * omega_0)**(-1)
 c4 = (((L * B) / Iyy) * omega_0)**(-1)
 c2 = (((2 * B) / Izz) * omega_0)**(-1)
-
-
 
 
 def step(W, y_t, t, z_e):
@@ -44,8 +44,8 @@ def step(W, y_t, t, z_e):
     w1, w2, w3, w4 = W
     delta_y = odeint(f, y_t, t, args=(w1, w2, w3, w4))[1]
     _, _, w, p, q, r, psi, theta, phi, _, _, z = delta_y
-    reward = -np.linalg.norm([w, p, q, r, psi, theta, phi,z-z_e])
-    return delta_y,reward
+    reward = -np.linalg.norm([w, p, q, r, psi, theta, phi, z-z_e])
+    return delta_y, reward
 
 
 def control_feedback(x, y, F):
@@ -61,6 +61,7 @@ def control_feedback(x, y, F):
     '''
     A = np.array([x, y]).reshape((2, 1))
     return np.dot(F, A)
+
 
 def simulador(Y, z_e, T, tam):
     '''
@@ -90,31 +91,34 @@ def simulador(Y, z_e, T, tam):
         W4 = control_feedback(theta, q, F4) * c4  # control pitch
         W = W0 + W1 + W2 + W3 + W4
         print(W)
-        Y,reward = step(W, Y, [t[i], t[i+1]],z_e)
+        Y, reward = step(W, Y, [t[i], t[i+1]], z_e)
         R.append(reward)
         X[i+1] = Y
         writer.add_scalar('t vs z', z, t[i])
-        writer.add_scalars('Rotores', {'W_0':float(W[0]),'W_1':float(W[1]),'W_2': float(W[2]),'W_3':float(W[3])}, t[i])
+        writer.add_scalars('Rotores', {'W_0': float(W[0]), 'W_1': float(
+            W[1]), 'W_2': float(W[2]), 'W_3': float(W[3])}, t[i])
         if z > 2*z_inicial:
-            print('El dron se estrello contra el suelo',z,reward,done)
+            print('El dron se estrello contra el suelo', z, reward, done)
             done = True
             print('debe salir')
-            return X[0:i],R[0:i]
+            return X[0:i], R[0:i]
     writer.close()
-    return X,R
+    return X, R
+
 
 if __name__ == "__main__":
     '''
 Vamos a suponer que el dron siempre empeiza en 10 mas una perturbacion aleatoria,
 y que queremos estabilizar en ze
     '''
-    T = 60 #120
+    T = 60  # 120
     tam = 1500
-    ale = np.random.uniform(-5,5)
+    ale = np.random.uniform(-5, 5)
     z_0 = 20
-    Y = np.array([0, 0, 0, 0, 0, 0, pi * 0.005555555555555556, pi * 0.005555555555555556, pi * 0.005555555555555556, 0, 0, z_0])
+    Y = np.array([0, 0, 0, 0, 0, 0, pi * 0.005555555555555556, pi *
+                 0.005555555555555556, pi * 0.005555555555555556, 0, 0, z_0])
     z_e = 15
-    X,R = simulador(Y, z_e, T, tam)
+    X, R = simulador(Y, z_e, T, tam)
     t = np.linspace(0, T, tam)[0:len(X)]
     z = X[:, 11]
     y = X[:, 10]
@@ -126,8 +130,8 @@ y que queremos estabilizar en ze
     q = X[:, 4]
     p = X[:, 3]
     w = X[:, 2]
-    plt.plot(t,z)
-    #plt.show()
+    plt.plot(t, z)
+    # plt.show()
     # escribe(x, y, z, psi, theta, phi) #Escribe para que blender lea
     # imagen(x, y, z)
     # input()

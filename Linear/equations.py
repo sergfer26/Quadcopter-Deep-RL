@@ -3,7 +3,6 @@ import numpy as np
 from scipy.integrate import odeint
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from numpy import sin, cos, tan
 from numpy.linalg import norm
 from .constants import CONSTANTS, Ixx
 
@@ -27,7 +26,7 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 
-def sec(x): return 1/cos(x)
+def sec(x): return 1/np.cos(x)
 
 
 def rotation_matrix(angles):
@@ -42,11 +41,13 @@ def rotation_matrix(angles):
     '''
     z, y, x = angles  # psi, theta, phi
     R = np.array([
-        [cos(z) * cos(y), cos(z) * sin(y) * sin(x) - sin(z) * cos(x),
-         cos(z) * sin(y) * cos(x) + sin(z) * sin(x)],
-        [sin(z) * cos(y), sin(z) * cos(y) * sin(x) + cos(z) * cos(x),
-         sin(z) * sin(y) * cos(x) - cos(z) * sin(x)],
-        [- sin(y), cos(y) * sin(x), cos(y) * cos(x)]
+        [np.cos(z) * np.cos(y), np.cos(z) * np.sin(y) * np.sin(x) - np.sin(z)
+         * np.cos(x),
+         np.cos(z) * np.sin(y) * np.cos(x) + np.sin(z) * np.sin(x)],
+        [np.sin(z) * np.cos(y), np.sin(z) * np.cos(y) * np.sin(x) + np.cos(z)
+         * np.cos(x),
+         np.sin(z) * np.sin(y) * np.cos(x) - np.cos(z) * np.sin(x)],
+        [- np.sin(y), np.cos(y) * np.sin(x), np.cos(y) * np.cos(x)]
     ])
     return R
 
@@ -64,15 +65,15 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
     # Ixx, Iyy, Izz = I
     W = np.array([w1, w2, w3, w4])
-    du = r * v - q * w - G * sin(theta)
-    dv = p * w - r * u - G * cos(theta) * sin(phi)
-    dw = q * u - p * v + G * cos(phi) * cos(theta) - (K/M) * norm(W) ** 2
+    du = r * v - q * w - G * np.sin(theta)
+    dv = p * w - r * u - G * np.cos(theta) * np.sin(phi)
+    dw = q * u - p * v + G * np.cos(phi) * np.cos(theta) - (K/M) * norm(W) ** 2
     dp = ((L * B) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
     dq = ((L * B) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
     dr = (B/Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
-    dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
-    dtheta = q * cos(phi) - r * sin(phi)
-    dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
+    dpsi = (q * np.sin(phi) + r * np.cos(phi)) * (1 / np.cos(theta))
+    dtheta = q * np.cos(phi) - r * np.sin(phi)
+    dphi = p + (q * np.sin(phi) + r * np.cos(phi)) * np.tan(theta)
     dx = u
     dy = v
     dz = w
@@ -118,7 +119,6 @@ def jac_f(X, t, w1, w2, w3, w4):
 
         regrasa la matriz J.
     '''
-    Ixx, Iyy, Izz = I
     a1 = (Izz - Iyy)/Ixx
     a2 = (Ixx - Izz)/Iyy
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
@@ -126,9 +126,9 @@ def jac_f(X, t, w1, w2, w3, w4):
     ddu = np.zeros(12)
     J[0, 1:3] = [r, -q]
     ddv = [0, r, -q, 0, 0, 0, w, 0, -u, G *
-           sin(theta) * sin(phi), -G * cos(theta) * cos(phi)]
+           np.sin(theta) * np.sin(phi), -G * np.cos(theta) * np.cos(phi)]
     ddw = [q, -p, 0, 0, 0, 0, -v, u, 0, 0, G *
-           sin(theta) * cos(phi), -G * cos(theta) * sin(phi)]
+           np.sin(theta) * np.cos(phi), -G * np.cos(theta) * np.sin(phi)]
     ddx = np.zeros(12)
     ddx[0] = 1
     ddy = np.zeros(12)
@@ -144,18 +144,18 @@ def jac_f(X, t, w1, w2, w3, w4):
     ddr = np.zeros(12)
 
     ddpsi = np.zeros(12)
-    ddpsi[7: 9] = [sin(phi), cos(phi) * sec(theta)]
-    ddpsi[10:] = [r * cos(phi) * tan(theta) * sec(theta),
-                  (q * cos(phi) - r * sin(phi)) * sec(theta)]
+    ddpsi[7: 9] = [np.sin(phi), np.cos(phi) * sec(theta)]
+    ddpsi[10:] = [r * np.cos(phi) * np.tan(theta) * sec(theta),
+                  (q * np.cos(phi) - r * np.sin(phi)) * sec(theta)]
 
     ddtheta = np.zeros(12)
-    ddtheta[7: 9] = [cos(phi), -sin(phi)]
-    ddtheta[-1] = -q * sin(phi) - r * cos(phi)
+    ddtheta[7: 9] = [np.cos(phi), - np.sin(phi)]
+    ddtheta[-1] = -q * np.sin(phi) - r * np.cos(phi)
 
     ddphi = np.zeros(12)
-    ddphi[6: 9] = [1, sin(phi) * tan(theta), cos(phi) * tan(theta)]
-    ddphi[10:] = [(q * sin(phi) + r * cos(phi)) * sec(theta) **
-                  2, (q * cos(phi) - r * sin(phi)) * tan(theta)]
+    ddphi[6: 9] = [1, np.sin(phi) * np.tan(theta), np.cos(phi) * np.tan(theta)]
+    ddphi[10:] = [(q * np.sin(phi) + r * np.cos(phi)) * sec(theta) **
+                  2, (q * np.cos(phi) - r * np.sin(phi)) * np.tan(theta)]
 
     J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp,
                  ddq, ddr, ddpsi, ddtheta, ddphi])
@@ -172,8 +172,10 @@ def escribe(X, Y, Z, phi, theta, psi):
 
 
 def imagen(X, Y, Z):
-    fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers', marker=dict(
-        size=1, colorscale='Viridis', opacity=0.8))])
+    fig = go.Figure(data=[go.Scatter3d(x=X, y=Y, z=Z, mode='markers',
+                                       marker=dict(size=1,
+                                                   colorscale='Viridis',
+                                                   opacity=0.8))])
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
