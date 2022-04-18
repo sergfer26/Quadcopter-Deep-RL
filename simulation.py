@@ -4,6 +4,9 @@ from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 
 
+
+
+
 def sim(flag, agent, env):
     # t = env.time
     env.flag = flag
