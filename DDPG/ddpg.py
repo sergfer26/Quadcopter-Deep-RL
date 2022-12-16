@@ -2,6 +2,7 @@ import pathlib
 import pickle
 import torch
 import copy
+import numpy as np
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
@@ -22,25 +23,33 @@ class DDPGagent:
                  actor_learning_rate=PARAMS_DDPG['actor_learning_rate'],
                  critic_learning_rate=PARAMS_DDPG['critic_learning_rate'],
                  gamma=PARAMS_DDPG['gamma'], tau=PARAMS_DDPG['tau'],
-                 max_memory_size=PARAMS_DDPG['max_memory_size']):
+                 max_memory_size=PARAMS_DDPG['max_memory_size'],
+                 ):
         # Params
         self.num_states = env.observation_space.shape[0]
         self.num_actions = env.action_space.shape[0]
         self.gamma = gamma
         self.tau = tau
 
-        sizes_actor = hidden_sizes.copy()
-        sizes_actor.insert(0, self.num_states)
-        sizes_critic = hidden_sizes.copy()
-        sizes_critic.insert(0, self.num_states + self.num_actions)
-
         # Networks
-        self.actor = Actor(sizes_actor, self.num_actions)
-        self.actor.apply(weights_init)
-        self.actor_target = Actor(sizes_actor, self.num_actions)
-        self.critic = Critic(sizes_critic)
-        self.critic.apply(weights_init)
-        self.critic_target = Critic(sizes_critic)
+        self.actor = Actor(self.num_states,
+                           self.num_actions,
+                           hidden_sizes
+                           )
+        # self.actor.apply(weights_init)
+        self.actor_target = Actor(self.num_states,
+                                  self.num_actions,
+                                  hidden_sizes
+                                  )
+        self.critic = Critic(self.num_states,
+                             self.num_actions,
+                             hidden_sizes
+                             )
+        # self.critic.apply(weights_init)
+        self.critic_target = Critic(self.num_states,
+                                    self.num_actions,
+                                    hidden_sizes
+                                    )
         if torch.cuda.is_available():
             self.actor.cuda()
             self.actor_target.cuda()
@@ -49,7 +58,6 @@ class DDPGagent:
 
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(param.data)
-
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(param.data)
 
@@ -77,7 +85,7 @@ class DDPGagent:
         next_states = torch.FloatTensor(next_states).to(device)
         self.train(states, actions, rewards, next_states)
 
-    def train(self, states, actions, rewards, next_states):
+    def fit(self, states, actions, rewards, next_states):
         # Critic loss
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states.to(device))
@@ -109,7 +117,17 @@ class DDPGagent:
             target_param.data.copy_(
                 param.data * self.tau + target_param.data * (1.0 - self.tau))
 
+        policy_loss = policy_loss.detach().item()
+        critic_loss = critic_loss.detach().item()
         return policy_loss, critic_loss
+
+    def eval(self):
+        self.actor.eval()
+        self.critic.eval()
+
+    def train(self):
+        self.actor.train()
+        self.critic.train()
 
     def save(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -124,14 +142,14 @@ class DDPGagent:
 
     def load(self, path):
         self.critic.load_state_dict(torch.load(
-            path + "/critic", map_location=device))
+            path + "critic", map_location=device))
         self.critic_optimizer.load_state_dict(torch.load(
-            path + "/critic_optimizer",  map_location=device))
+            path + "critic_optimizer",  map_location=device))
         self.critic_target = copy.deepcopy(self.critic)
         self.actor.load_state_dict(torch.load(
-            path + "/actor",  map_location=device))
+            path + "actor",  map_location=device))
         self.actor_optimizer.load_state_dict(torch.load(
-            path + "/actor_optimizer",  map_location=device))
+            path + "actor_optimizer",  map_location=device))
         self.actor_target = copy.deepcopy(self.actor)
         # with open(path +'/memory.pickle', 'rb') as handle:
         #    self.memory.pickle.load(handle)
