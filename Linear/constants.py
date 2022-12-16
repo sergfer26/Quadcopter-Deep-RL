@@ -10,6 +10,10 @@ CONSTANTS = {'G': 9.81, 'Ixx': 4.856 * 1e-3, 'Iyy': 4.856 * 1e-3,
              'Izz': 8.801 * 1e-3, 'B': 1.140 * 1e-6, 'M': 1.433,
              'L': 0.225, 'K': 0.001219}
 
+PARAMS_STATE = {'$u$': 1, '$v$': 1, '$w$': 1, '$x$': 1, '$y$': 1, '$z$': 1,
+                '$p$': 0.1, '$q$': 0.1, '$r$': 0.1, '$\psi$': np.pi/36,
+                r'$\theta$': np.pi/36, '$\phi$': np.pi/36}
+
 G, Ixx, Iyy, Izz, B, M, L, K = CONSTANTS.values()
 
 omega_0 = np.sqrt((G * M)/(4 * K))
