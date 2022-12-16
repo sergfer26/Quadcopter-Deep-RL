@@ -24,4 +24,5 @@ GCL/sample_rollouts/
 Linear/memory_transformed_x_u.npz
 Linear/sample_rollouts/
 credentials.txt
+results_gcl/
 
