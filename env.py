@@ -1,7 +1,7 @@
 import numpy as np
 import gym
 import numba
-from Linear.equations import rotation_matrix, f, jac_f, W0
+from Linear.equations import f, jac_f, angles2rotation, W0
 from Linear.constants import CONSTANTS, omega_0, F, C
 from DDPG.utils import OUNoise
 from numba import cuda
@@ -14,11 +14,13 @@ from params import PARAMS_ENV, PARAMS_OBS
 TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['STEPS']
 FLAG = PARAMS_ENV['FLAG']
-REWARD = PARAMS_ENV['reward']
-LAMB = PARAMS_ENV['lamb']
 
+# constantes de la recompensa
+K1 = PARAMS_ENV['K1']
+K2 = PARAMS_ENV['K2']
+K3 = PARAMS_ENV['K3']
 
-# constantes del ambiente
+# constantes del control
 omega0_per = PARAMS_ENV['omega0_per']
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per
@@ -26,8 +28,8 @@ VEL_MIN = - omega_0 * omega0_per
 
 # limites espaciales del ambiente
 # u, v, w, x, y, z, p, q, r, psi, theta, phi
-LOW_OBS = np.array([- v for v in PARAMS_OBS.values()])
-HIGH_OBS = np.array([v for v in PARAMS_OBS.values()])
+LOW_OBS = np.array([- eval(v) for v in PARAMS_OBS.values()])
+HIGH_OBS = np.array([eval(v) for v in PARAMS_OBS.values()])
 
 G = CONSTANTS['G']
 M = CONSTANTS['M']
@@ -48,16 +50,22 @@ c1, c2, c3, c4 = C
 class QuadcopterEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, reward=REWARD):
+    def __init__(self, u0=None, low=LOW_OBS, high=HIGH_OBS):
         self.action_space = spaces.Box(
             low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4),
-            dtype=np.float32)
+            dtype=np.float64)
         self.observation_space = spaces.Box(
-            low=LOW_OBS, high=HIGH_OBS, dtype=np.float32)
+            low=low, high=high, dtype=np.float64)
         self.state = self.reset()  # estado interno del ambiente
         self.set_time(STEPS, TIME_MAX)
         self.flag = FLAG
         self.is_cuda_available()
+        self.W0 = W0 if not isinstance(u0, np.ndarray) else u0
+
+    def set_obs_space(self, low, high):
+        self.observation_space = spaces.Box(
+            low=low, high=high, dtype=np.float64
+        )
 
     def is_cuda_available(self):
         '''
@@ -123,12 +131,11 @@ class QuadcopterEnv(gym.Env):
         '''
         falta
         '''
-        # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        penalty = 0.5 * norm(state[3:6])
-        mat = rotation_matrix(state[9:])
-        penalty += 1.0 * norm(np.identity(3) - mat)
-        penalty += 0.005 * norm(action)
-        # return - (norm(action - W) + self.lamb * norm(action))
+        # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
+        penalty = K1 * norm(state[3:6])
+        mat = angles2rotation(state[9:], flatten=False)
+        penalty += K2 * norm(np.identity(3) - mat)
+        penalty += K3 * norm(action)
         return - penalty
 
     def is_done(self):
@@ -149,14 +156,28 @@ class QuadcopterEnv(gym.Env):
 
     def step(self, action):
         '''
-            step realiza la interaccion entre el agente y el ambiente en
-            un paso de tiempo;
+        Realiza la interaccion entre el agente y el ambiente en
+        un paso de tiempo.
 
-            action: arreglo de 4 posiciones con valores entre [low, high];
+        Argumentos
+        ----------
+        action: `np.ndarray`
+            Representa la acción actual ($a_t$). Arreglo de dimesnión (4,) 
+            con valores entre [low, high].
 
-            regresa la tupla (a, r, ns, d)
+        Retornos
+        --------
+        state : `np.ndarray`
+            Representa el estado siguiente ($s_{t+1}$). Arreglo de dimensión (12,).
+        reward : `float`
+            Representa la recompensa siguiente ($r_{t+1}$).
+        done : `bool`
+            Determina si la trayectoria ha terminado o no.
+        info : `dict`
+            Es la información  adicional que proporciona el sistema. 
+            info['real_action'] : action.
         '''
-        w1, w2, w3, w4 = action + W0
+        w1, w2, w3, w4 = action + self.W0
         t = [self.time[self.i], self.time[self.i+1]]
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
@@ -164,7 +185,8 @@ class QuadcopterEnv(gym.Env):
         reward = self.get_reward(y_dot, action)
         done = self.is_done()
         self.i += 1
-        return self.state, reward, done, None
+        info = {'real_action': action}
+        return self.state, reward, done, info
 
     def reset(self):
         '''
@@ -178,10 +200,9 @@ class QuadcopterEnv(gym.Env):
 
     def set_time(self, steps, time_max):
         '''
-            set_time fija la cantidad de pasos y el tiempo de simulación;
-
-            steps: candidad de pasos (int);
-            time_max: tiempo de simulación (float).
+        set_time fija la cantidad de pasos y el tiempo de simulación;
+        steps: candidad de pasos (int);
+        time_max: tiempo de simulación (float).
         '''
         self.time_max = time_max
         self.steps = steps
@@ -192,147 +213,3 @@ class QuadcopterEnv(gym.Env):
             render hace una simulación visual del drone.
         '''
         pass
-    '''
-    def action(self, action):
-        return action
-    '''
-
-# https://github.com/openai/gym/blob/master/gym/core.py
-
-
-class NormalizedEnv(gym.ActionWrapper):
-    """ Wrap action """
-
-    def __init__(self, env):
-        super().__init__(env)
-        self.noise = OUNoise(env.action_space)
-        self.noise_on = True
-
-    def action(self, action):
-        '''
-            action transforma una accion de valores entre [-1, 1] a
-            los valores [low, high];
-
-            action: arreglo de 4 posiciones con valores entre [-1, 1];
-
-            regresa una acción entre [low, high].
-        '''
-        high = self.action_space.high
-        low = self.action_space.low
-        act_k = (high - low) / 2.
-        act_b = (high + low) / 2.
-        action = act_k * action + act_b
-        if self.noise_on:
-            action = self.noise.get_action(action, self.i)
-
-        return action
-
-    def reverse_action(self, action):
-        '''
-            reverse_action transforma una accion entre los valores low y high
-            del ambiente a valores entre [-1, 1];
-
-            action: arreglo de 4 posiciones con valores entre [low, high];
-
-            regresa una acción entre [-1, 1].
-        '''
-        high = self.action_space.high
-        low = self.action_space.low
-        act_k_inv = 2./(high - low)
-        act_b = (high + low) / 2.
-        return act_k_inv * (action - act_b)
-
-
-class ObsEnv(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
-        high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
-        self.observation_space = spaces.Box(
-            low=low, high=high, dtype=np.float32)
-
-    def observation(self, obs):
-        '''
-            observation transforma un estado de R^12 a un estado de
-            R^18;
-            - obs: estado de R^12;
-            regresa un estado en R^18.
-        '''
-        angles = obs[9:]
-        ori = np.matrix.flatten(rotation_matrix(angles))
-        return np.concatenate([obs[0:9], ori])
-
-    def reverse_observation(self, obs):
-        '''
-            reverse_observation transforma un estado de R^18 a un estado de
-            R^12;
-            - obs: estado en R^18;
-            regresa un estado en R^12.
-        '''
-        mat = obs[9:].reshape((3, 3))
-        psi = np.arctan(mat[1, 0]/mat[0, 0])
-        theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
-        phi = np.arctan(mat[2, 1] / mat[2, 2])
-        angles = np.array([psi, theta, phi])
-        return np.concatenate([obs[0:9], angles])
-
-
-class AgentEnv(NormalizedEnv, gym.ObservationWrapper):
-
-    def __init__(self, env):
-        super().__init__(env)
-        low = np.concatenate((self.observation_space.low[:9], - np.ones(9)))
-        high = np.concatenate((self.observation_space.high[:9], np.ones(9)))
-        self.observation_space = spaces.Box(
-            low=low, high=high, dtype=np.float32)
-
-    def observation(self, obs):
-        '''
-            observation transforma un estado de R^12 a un estado de
-            R^18;
-
-            obs: estado de R^12;
-
-            regresa un estado en R^18.
-        '''
-        angles = obs[9:]
-        ori = np.matrix.flatten(rotation_matrix(angles))
-        return np.concatenate([obs[0:9], ori])
-
-    def reverse_observation(self, obs):
-        '''
-            reverse_observation transforma un estado de R^18 a un estado de
-            R^12;
-
-            obs: estado en R^18;
-
-            regresa un estado en R^12.
-        '''
-        mat = obs[9:].reshape((3, 3))
-        psi = np.arctan(mat[1, 0]/mat[0, 0])
-        theta = np.arctan(- mat[2, 0]/np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
-        phi = np.arctan(mat[2, 1] / mat[2, 2])
-        angles = np.array([psi, theta, phi])
-        return np.concatenate([obs[0:9], angles])
-
-    def step(self, a):
-        '''
-            step modifica el método original del super;
-
-            a: arreglo de 4 posiciones con valores entre [-1, 1];
-
-            regresa la tupla (a, r, ns, d).
-        '''
-        action, reward, state, done = super().step(a)
-        state = self.observation(state)
-        action = self.reverse_action(action)
-        return action, reward, state, done
-
-    def reset(self):
-        '''
-            reset modifica el método del super
-
-            regresa el estado actual del drone en 18 posiciones.
-        '''
-        state = super().reset()
-        return self.observation(state)
