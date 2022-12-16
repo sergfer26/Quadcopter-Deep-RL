@@ -10,7 +10,7 @@ from get_report import create_report_ddpg
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, SCORE_NAMES
 from simulation import nSim, plot_nSim2D, plot_nSim3D
 from utils import smooth, date_as_path
-from correo import send_correo
+# from depricated_files.correo import send_correo
 from utils import plot_performance
 
 
