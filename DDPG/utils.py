@@ -75,6 +75,47 @@ class NormalizedEnv(gym.ActionWrapper):
         return act_k_inv * (action - act_b)
 
 
+class AgentEnv(NormalizedEnv):
+
+    def __init__(self, env, tx=None, inv_tx=None):
+        super().__init__(env)
+        self.noise = OUNoise(env.action_space)
+        self.noise_on = True
+        self._tx = tx
+        self._inv_tx = inv_tx
+        low = self._tx(env.observation_space.low)
+        high = self._tx(env.observation_space.high)
+        self.observation_space = gym.spaces.Box(
+            low=low, high=high, dtype=np.float32)
+
+    def action(self, action):
+        action = super().action(action)
+        if self.noise_on:
+            action = self.noise.get_action(action, self.env.i)
+        return action
+
+    def observation(self, state):
+        if callable(self._tx):
+            state = self._tx(state)
+        return state
+
+    def reverse_observation(self, state):
+        if callable(self._inv_tx):
+            state = self._inv_tx(state)
+        return state
+
+    def step(self, action):
+        new_state, reward, done, info = super().step(action)
+        action = self.reverse_action(info['real_action'])
+        info['action'] = action
+        new_state = self.observation(new_state)
+        return new_state, reward, done, info
+
+    def reset(self):
+        state = super().reset()
+        return self.observation(state)
+
+
 class Memory:
 
     def __init__(self, max_size):
