@@ -1,21 +1,30 @@
-from numpy import pi
 
-PARAMS_ENV = {'TIME_MAX': 5, 'STEPS': 124, 'omega0_per': 0.60, 'FLAG': False,
-              'reward': 'r1', 'lamb': 0.5}
+PARAMS_ENV = {'TIME_MAX': 15, 'STEPS': 375, 'omega0_per': 0.60, 'FLAG': False,
+              'K1': 0.25, 'K2': 0.1, 'K3': 0.005}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
-                     'EPISODES': 1, 'n': 1, 'SHOW': False}
-
-PARAMS_TRAIN_SUPER = {'BATCH_SIZE': 64,
-                      'EPOCHS': 2, 'N': 200, 'n': 2, 'SHOW': False}
+                     'EPISODES': 1000, 'n': 10, 'SHOW': False}
 
 PARAMS_TRAIN_PPO = {'EPISODES': 1000, 'n': 10, 'SHOW': True,
                     'action_std_decay_freq': int(630)}
 
-PARAMS_OBS = {'$u$': 0.0, '$v$': 0.0, '$w$': 0.0, '$x$': 1, '$y$': 1, '$z$': 1,
-              '$p$': 0, '$q$': 0, '$r$': 0, '$\psi$': pi/18,
-              r'$\theta$': pi/18, '$\phi$': pi/18}
+PARAMS_TRAIN_GCL = {'REWARD_UPDATES': 2, 'DEMO_SIZE': 64, 'SAMP_SIZE': 128,
+                    'n': 2, 'SHOW': False}
+
+PARAMS_OBS = {'$u$': '0.1', '$v$': '0.1', '$w$': '0.1',
+              '$x$': '2.0', '$y$': '2.0', '$z$': '2.0',
+              '$p$': '0.05', '$q$': '0.05', '$r$': '0.05',
+              '$\psi$': 'np.pi/18', r'$\theta$': 'np.pi/18', '$\phi$': 'np.pi/18'}
+
+### Etiquetas ###
+STATE_NAMES = list(PARAMS_OBS.keys())
+
+ACTION_NAMES = [f'$a_{i}$' for i in range(1, 5)]
+
+REWARD_NAMES = ['$r_t$', r'$\sum r_t$']
+
+COST_NAMES = ['$c_t$', r'$\sum c_t$']
 
 
 # N es el numero de vuelos hechos con el control lineal
