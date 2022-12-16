@@ -5,7 +5,8 @@ X = [2, 36, 14.9, -18.6, 2]
 Y = [-6, 4, 6.7, -2.7, -6]
 
 
-def inside(n):  # Muestrea n puntos en la region 'estable' de z con aceptacion rechazo
+def inside(n):
+    # Muestrea n puntos en la region 'estable' de z con aceptacion rechazo
     puntosx = []
     puntosy = []
     while len(puntosx) != n:
