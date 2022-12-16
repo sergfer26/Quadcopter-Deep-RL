@@ -19,5 +19,5 @@ noise_test.py
 Linear/.DS_Store
 dron/*
 params_correo.py
-depricated_files/*
+depricated_files/*.py
 
