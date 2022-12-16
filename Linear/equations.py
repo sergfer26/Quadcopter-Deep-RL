@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+# from cmath import cos
+import pandas as pd
 import numpy as np
 from scipy.integrate import odeint
-import plotly.graph_objects as go
+# import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from numpy.linalg import norm
-from .constants import CONSTANTS, Ixx
+from Linear.constants import CONSTANTS
+from scipy.spatial.transform import Rotation as R
 
 G = CONSTANTS['G']
 Ixx = CONSTANTS['Ixx']
@@ -29,27 +32,20 @@ W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 def sec(x): return 1/np.cos(x)
 
 
-def rotation_matrix(angles):
-    '''
-        rotation_matrix obtine la matriz de rotación de los angulos de Euler
-        https://en.wikipedia.org/wiki/Rotation_matrix;
-
-        angles: son los angulos de Euler psi, theta y phi con respecto a los
-        ejes x, y, z;
-
-        regresa: la matriz R.
-    '''
+def angles2rotation(angles, flatten=True):
     z, y, x = angles  # psi, theta, phi
-    R = np.array([
-        [np.cos(z) * np.cos(y), np.cos(z) * np.sin(y) * np.sin(x) - np.sin(z)
-         * np.cos(x),
-         np.cos(z) * np.sin(y) * np.cos(x) + np.sin(z) * np.sin(x)],
-        [np.sin(z) * np.cos(y), np.sin(z) * np.cos(y) * np.sin(x) + np.cos(z)
-         * np.cos(x),
-         np.sin(z) * np.sin(y) * np.cos(x) - np.cos(z) * np.sin(x)],
-        [- np.sin(y), np.cos(y) * np.sin(x), np.cos(y) * np.cos(x)]
-    ])
-    return R
+    r = R.from_euler('xyz', [x, y, z], degrees=False)
+    r = r.as_matrix()
+    if flatten:
+        r = r.flatten()
+    return r
+
+
+def rotation2angles(rot):
+    if rot.shape[0] == 9:
+        rot = rot.reshape((3, 3))
+    r = R.from_matrix(rot)
+    return r.as_euler('zyx', degrees=False)
 
 
 def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
@@ -77,36 +73,55 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     dx = u
     dy = v
     dz = w
-    return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
+    return np.array([du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi])
 
 
-'''
-def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
-
-        f calcula el vector dot_x = f(x, t, w) (sistema dinamico);
+def f_x(state, actions):
+    '''
+        jac_f calcula el jacobiano de la funcion f;
 
         X: es un vector de 12 posiciones;
         t: es un intervalo de tiempo [t1, t2];
         wi: es un parametro de control, i = 1, 2, 3, 4;
 
-        regresa dot_x
-    u, v, w, _, _, _, p, q, r, _, theta, phi = X
-    Ixx, Iyy, Izz = I
-    W = np.array([w1, w2, w3, w4])
-    du = r * v - q * w - G * sin(theta)
-    dv = p * w - r * u - G * cos(theta) * sin(phi)
-    dw = q * u - p * v + G * cos(phi) * cos(theta) - (K/M) * np.sum(W)
-    dp = ((L * B) / Ixx) * (w4 - w2) - q * r * ((Izz - Iyy) / Ixx)
-    dq = ((L * B) / Iyy) * (w3 - w1) - p * r * ((Ixx - Izz) / Iyy)
-    dr = (B/Izz) * (w2 + w4 - w1 - w3)
-    dpsi = (q * sin(phi) + r * cos(phi)) * (1 / cos(theta))
-    dtheta = q * cos(phi) - r * sin(phi)
-    dphi = p + (q * sin(phi) + r * cos(phi)) * tan(theta)
-    dx = u
-    dy = v
-    dz = w
-    return du, dv, dw, dx, dy, dz, dp, dq, dr, dpsi, dtheta, dphi
-'''
+        regrasa la matriz J.
+    '''
+    u, v, w, _, _, _, p, q, r, _, theta, phi = state
+    a1 = (Izz - Iyy)/Ixx
+    a2 = (Ixx - Izz)/Iyy
+    J = np.zeros((12, 12))
+
+    J[0, :] = np.array(
+        [0, r, -q, 0, 0, 0, 0, -w, v, 0, - G * np.cos(theta), 0])
+    J[1, :] = np.array([-r, 0, p, 0, 0, 0, w, 0, -u, 0, G *
+                        np.sin(theta) * np.sin(phi),
+                        -G * np.cos(theta) * np.cos(phi)])
+    J[2, :] = np.array([q, -p, 0, 0, 0, 0, -v, u, 0, 0, G *
+                        np.sin(theta) * np.cos(phi),
+                        -G * np.cos(theta) * np.sin(phi)])
+
+    J[3, 0] = 1.
+    J[4, 1] = 1.
+    J[5, 2] = 1.
+    J[6, 7] = -r * a1
+    J[6, 8] = -q * a1
+    J[7, 6] = -r * a2
+    J[7, 8] = -p * a2
+    # ddr = np.zeros(12) # J[8, :]
+
+    J[9, 7: 9] = np.array([np.sin(phi), np.cos(phi) * sec(theta)])
+    J[9, 10:] = np.array([r * np.cos(phi) * np.tan(theta) * sec(theta),
+                          (q * np.cos(phi) - r * np.sin(phi)) * sec(theta)])
+
+    J[10, 7: 9] = np.array([np.cos(phi), - np.sin(phi)])
+    J[10, -1] = -q * np.sin(phi) - r * np.cos(phi)
+
+    J[11, 6: 9] = np.array(
+        [1, np.sin(phi) * np.tan(theta), np.cos(phi) * np.tan(theta)])
+    J[11, 10:] = np.array([(q * np.sin(phi) + r * np.cos(phi)) * sec(theta) **
+                           2, (q * np.cos(phi) - r * np.sin(phi)) * np.tan(theta)])
+
+    return J
 
 
 def jac_f(X, t, w1, w2, w3, w4):
@@ -119,9 +134,9 @@ def jac_f(X, t, w1, w2, w3, w4):
 
         regrasa la matriz J.
     '''
+    u, v, w, _, _, _, p, q, r, _, theta, phi = X
     a1 = (Izz - Iyy)/Ixx
     a2 = (Ixx - Izz)/Iyy
-    u, v, w, _, _, _, p, q, r, _, theta, phi = X
     J = np.zeros((12, 12))
     ddu = np.zeros(12)
     J[0, 1:3] = [r, -q]
@@ -159,6 +174,16 @@ def jac_f(X, t, w1, w2, w3, w4):
 
     J = np.array([ddu, ddv, ddw, ddx, ddy, ddz, ddp,
                  ddq, ddr, ddpsi, ddtheta, ddphi])
+    return J
+
+
+def f_u(state, actions):
+    w1, w2, w3, w4 = actions
+    J = np.zeros((12, 4))
+    J[2, :] = -2 * (K/M) * actions
+    J[3, :] = 2 * (L/Ixx) * np.array([0, -w2, 0, w4])
+    J[4, :] = 2 * (L/Iyy) * np.array([-w1, 0, w3, 0])
+    J[5, :] = 2 * (B/Izz) * actions
     return J
 
 
