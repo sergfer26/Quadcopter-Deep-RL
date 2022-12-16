@@ -1,13 +1,17 @@
+import re
 from reportlab.platypus import Table
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_PPO
-from params import PARAMS_TRAIN_SUPER, PARAMS_OBS
+from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GCL
+from params import PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
-from PPO.params import PARAMS_PPO
+from ILQR.params import PARAMS_iLQR
+# from PPO.params import PARAMS_PPO
 
+PARAMS_OBS = {re.sub(r'\$', '', k): u'\u00B1'+v for k,
+              v in PARAMS_OBS.items()}
 
 style = TableStyle([
     ('BACKGROUND', (0, 0), (3, 0), colors.blue),
@@ -67,6 +71,8 @@ def add_table(pdf, data, x, y):
 
 
 def add_text(pdf, textLines, x, y):
+    if isinstance(textLines, str):
+        textLines = [textLines]
     text = pdf.beginText(x, y)
     text.setFont("Courier", 18)
     text.setFillColor(colors.black)
@@ -80,8 +86,8 @@ def add_image(PATH, pdf, name, x, y, width=500, height=500):
                         height=height, preserveAspectRatio=True)
 
 
-def create_report_ddpg(PATH):
-    fileName = '/Reporte.pdf'
+def _create_report(PATH):
+    fileName = 'Reporte.pdf'
     fileName = PATH + fileName
     documentTitle = 'Document title!'
     title = 'Reporte de Entrenamiento DDPG'
@@ -99,110 +105,123 @@ def create_report_ddpg(PATH):
 
     # pdf.showPage()
 
-    add_text(pdf, ['Parámetros del Entrenamiento'], 100, 750)
+    add_text(pdf, ['Parámetros del', 'Entrenamiento'], 100, 750)
     add_table(pdf, PARAMS_TRAIN_DDPG, 100, 610)
 
-    add_text(pdf, ['Parámetros del Ambiente'], 100, 560)
+    add_text(pdf, ['Parámetros del',  'Ambiente'], 100, 560)
     add_table(pdf, PARAMS_ENV, 100, 410)
 
-    add_text(pdf, ['Parámetros de DDPG'], 100, 360)
+    add_text(pdf, ['Parámetros de', 'DDPG'], 100, 360)
     add_table(pdf, PARAMS_DDPG, 100, 210)
 
-    add_text(pdf, ['Parámetros del Ruido'], 100, 170)
+    add_text(pdf, ['Parámetros del', 'Ruido'], 100, 170)
     add_table(pdf, PARAMS_UTILS, 100, 30)
 
-    pdf.showPage()
-    add_text(pdf, ['Espacio de simulación'], 100, 750)
-    add_table(pdf, PARAMS_OBS, 100, 420)
+    add_text(pdf, ['Espacio de', 'simulación'], 250, 750)
+    add_table(pdf, PARAMS_OBS, 250, 420)
 
     pdf.showPage()
-    add_image(PATH, pdf, '/c_rewards.png', 10, 350, 600, 600)
-    add_image(PATH, pdf, '/sim_states.png', 30, 10)
+    add_image(PATH, pdf, 'train_rewards.png', 10, 350, 600, 600)
+    add_image(PATH, pdf, 'state_rollouts.png', 30, 10)
     pdf.showPage()
     # Siguiente pagina
-    add_image(PATH, pdf, '/sim_actions.png', 30, 350, 550, 550)
-    add_image(PATH, pdf, '/sim_scores.png', 30, 0, 550, 550)
-
-    pdf.showPage()
-    add_image(PATH, pdf, '/sim_flights.png', 30, 350, 550, 550)
-    # add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
-    pdf.save()
-
-
-def create_report_ppo(PATH):
-    fileName = '/Reporte.pdf'
-    fileName = PATH + fileName
-    documentTitle = 'Document title!'
-    title = 'Reporte de Entrenamiento PPO'
-    subTitle = ''
-    pdf = canvas.Canvas(fileName)
-
-    pdf.setTitle(documentTitle)
-    pdf.drawCentredString(300, 800, title)
-    # RGB - Red Green and Blue
-    pdf.setFillColorRGB(0, 0, 255)
-    pdf.setFont("Courier-Bold", 26)
-    pdf.drawCentredString(290, 720, subTitle)
-    # drawMyRuler(pdf)
-    # add_text(pdf,['Parámetros de coordenadas'],100, 750)
-    # add_table(pdf, PARAMS_OBS,100,610)
+    add_image(PATH, pdf, 'action_rollouts.png', 30, 350, 550, 550)
+    add_image(PATH, pdf, 'score_rollouts.png', 30, 0, 550, 550)
 
     # pdf.showPage()
-
-    add_text(pdf, ['Parámetros del Entrenamiento'], 100, 750)
-    add_table(pdf, PARAMS_TRAIN_PPO, 100, 610)
-
-    add_text(pdf, ['Parámetros del Ambiente'], 100, 560)
-    add_table(pdf, PARAMS_ENV, 100, 410)
-
-    add_text(pdf, ['Parámetros de PPO'], 100, 360)
-    add_table(pdf, PARAMS_PPO, 100, 110)
-
-    pdf.showPage()
-    add_image(PATH, pdf, '/c_rewards.png', 10, 350, 600, 600)
-    add_image(PATH, pdf, '/sim_states.png', 30, 10)
-    pdf.showPage()
-    # Siguiente pagina
-    add_image(PATH, pdf, '/sim_actions.png', 30, 350, 550, 550)
-    add_image(PATH, pdf, '/sim_scores.png', 30, 0, 550, 550)
-
-    pdf.showPage()
-    add_image(PATH, pdf, '/sim_flights.png', 30, 350, 550, 550)
+    # add_image(PATH, pdf, 'flight_rollouts.png', 30, 350, 550, 550)
     # add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
     pdf.save()
 
 
-def create_report_super(PATH):
-    fileName = '/Reporte.pdf'
-    fileName = PATH + fileName
-    documentTitle = 'Document title!'
-    title = 'Reporte de Aprendizaje Supervizado'
-    subTitle = ''
-    pdf = canvas.Canvas(fileName)
+def create_report(path, title=None, subtitle='', file_name=None,
+                  method='ddpg', extra_method='noise'):
+    '''
+    Genera un documento pdf con el reporte de entrenamiento 
+    de distintos algoritmos.
 
-    pdf.setTitle(documentTitle)
+    path : str
+        Dirección donde será guardado el documento ('Aqui-se-guardara/').
+    title : str
+        Título que estará en el encabezado de la primera hoja.
+    subtitle : str
+        Subtítulo que estará en el encabezado de la primera hoja.
+    file_name : str
+        Nombre del archivo que tendrá el documento ('reporte.pdf').
+    method: str
+        Nombre del método utilizado en el entrenamiento. Opciones
+        disponibles:
+        * `ddpg`.
+        * `gcl`.
+        * `None`
+
+    extra_method: str
+        Nombre del método secundario utilizado en el entrenamieto.
+        Opciones diponibles:
+        * `noise`.
+        * `ilqr`.
+
+    '''
+    if not isinstance(file_name, str):
+        file_name = 'reporte.pdf'
+    if not isinstance(title, str):
+        title = 'Reporte de entrenamiento'
+    file_name = path + file_name
+
+    pdf = canvas.Canvas(file_name)
     pdf.drawCentredString(300, 800, title)
-    # RGB - Red Green and Blue
     pdf.setFillColorRGB(0, 0, 255)
     pdf.setFont("Courier-Bold", 26)
-    pdf.drawCentredString(290, 720, subTitle)
-    # drawMyRuler(pdf)
-    add_text(pdf, ['Parámetros del Entrenamiento'], 100, 750)
-    add_table(pdf, PARAMS_TRAIN_SUPER, 100, 610)
+    pdf.drawCentredString(290, 760, subtitle)
 
-    add_text(pdf, ['Parámetros del Ambiente'], 100, 560)
-    add_table(pdf, PARAMS_ENV, 100, 410)
+    add_text(pdf, ['Espacio de', 'observación'], 100, 750)
+    add_table(pdf, PARAMS_OBS, 100, 480)
+
+    add_text(pdf, ['Parámetros del',  'ambiente'], 100, 450)
+    add_table(pdf, PARAMS_ENV, 100, 250)
+
+    add_text(pdf, ['Parámetros de', 'optimiazación de red'], 100, 220)
+    add_table(pdf, PARAMS_DDPG, 100, 50)
+
+    if method == 'ddpg':
+        add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
+        add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
+
+    elif method == 'gcl':
+        add_text(pdf, ['Parámetros de', 'entrenamiento GCL'], 350, 750)
+        add_table(pdf, PARAMS_TRAIN_GCL, 350, 600)
+    elif method is None:
+        pass
+    else:
+        print(f'La opción method={method} no es válida.')
+
+    if extra_method == 'noise':
+        add_text(pdf, ['Parámetros de', 'ruido'], 350, 550)
+        add_table(pdf, PARAMS_UTILS, 400, 340)
+
+    elif extra_method == 'ilqr':
+        add_text(pdf, ['Parámetros de', 'iLQR'], 350, 550)
+        add_table(pdf, PARAMS_iLQR, 350, 310)
+    elif method is None:
+        pass
+    else:
+        print(f'La opción method={extra_method} no es válida.')
 
     pdf.showPage()
-
-    add_image(PATH, pdf, '/loss.png', 10, 350, 600, 600)
-    add_image(PATH, pdf, '/validation_scores.png', 30, 10)
-    pdf.showPage()
-    # Siguiente pagina
-    add_image(PATH, pdf, '/sim_states.png', 30, 350, 550, 550)
-    add_image(PATH, pdf, '/sim_actions.png', 30, 10, 600, 600)
+    add_text(pdf, ['Rendimiento de entrenamiento'], 30, 750)
+    add_image(path, pdf, 'train_performance.png', 100, 400, 350, 350)
+    add_text(pdf, ['Simulaciones (estados)'], 30, 390)
+    add_image(path, pdf, 'state_rollouts.png', 30, -10, 500, 500)
 
     pdf.showPage()
-    add_image(PATH, pdf, '/sim_scores.png', 30, 350, 550, 550)
-    add_image(PATH, pdf, '/sim_flights.png', 30, 10, 600, 600)
+    add_text(pdf, ['Simulaciones (acciones)'], 30, 750)
+    add_image(path, pdf, 'action_rollouts.png', 30, 350, 500, 500)
+    add_text(pdf, ['Simulaciones (penalizaciones)'], 30, 400)
+    add_image(path, pdf, 'score_rollouts.png', 30, 0, 500, 500)
+
     pdf.save()
+
+
+if __name__ == '__main__':
+    create_report('results_gcl/22_12_08_18_55/', title='Reporte de entrenamiento GCL',
+                  method='gcl', extra_method='ilqr')
