@@ -44,7 +44,7 @@ def main(path):
     # 1.1 Creación de Ambiente para DDPG y GCL
     env4agent = AgentEnv(deepcopy(env), tx=transform_x, inv_tx=inv_transform_x)
     # 2. Creación de agente DDPG
-    agent = DDPGagent(env4agent, x_dim=9, y_dim=9)
+    agent = DDPGagent(env4agent)
     n_x, n_u = agent.num_states, agent.num_actions
     agent.memory_samp = Memory(max_size=int(
         1e6), state_dim=n_x, action_dim=n_u, T=env.steps - 1)
