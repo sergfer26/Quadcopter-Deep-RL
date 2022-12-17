@@ -33,7 +33,7 @@ def send_email(credentials_path='credentials.txt',
             Defaults to 'credentials.txt'.
         subject (str, optional):
             Título de correo. Defaults to 'Avances en Servidor'.
-        reciever (str, optional): 
+        reciever (str, optional):
             Dirección de correo del receptor si esta se fija en 'sender' la
             el correo se envia a quien lo envío. Defaults to 'sender'.
         message (str, optional):
