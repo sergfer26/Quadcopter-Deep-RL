@@ -106,7 +106,7 @@ dependencies:
   - reportlab=3.5.68
   - scikit-learn=1.1.2
   - scipy=1.9.2
-  - seaborn=0.10.1=
+  - seaborn=0.10.1
   - setuptools=65.5.0
   - six=1.16.0
   - sleef=3.5.1
