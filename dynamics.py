@@ -13,15 +13,11 @@ import numpy as np
 from numpy import cos as c
 from numpy import sin as s
 
-from sympy.vector import CoordSys3D
 from scipy.spatial.transform import Rotation
 
 from numba import njit
 
 from Linear.equations import rotation2angles, angles2rotation
-
-
-C = CoordSys3D('C')
 
 
 G = 9.81
