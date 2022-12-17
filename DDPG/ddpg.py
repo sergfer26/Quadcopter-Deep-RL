@@ -83,7 +83,7 @@ class DDPGagent:
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
         next_states = torch.FloatTensor(next_states).to(device)
-        self.train(states, actions, rewards, next_states)
+        return self.fit(states, actions, rewards, next_states)
 
     def fit(self, states, actions, rewards, next_states):
         # Critic loss
