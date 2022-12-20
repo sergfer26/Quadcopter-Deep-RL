@@ -26,4 +26,5 @@ Linear/sample_rollouts/
 credentials.txt
 results_gcl/
 ILQR/sample_rollouts/
+results_ilqr/
 
