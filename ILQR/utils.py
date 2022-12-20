@@ -45,3 +45,16 @@ class DiffCostNN(FiniteDiffCost):
             u = np.zeros(action_size)
             return cost_net.to_float(x, u, t_x=t_x, t_u=t_u)
         super().__init__(cost, cost_terminal, state_size, action_size, x_eps, u_eps)
+
+
+class FiniteDiffCostBounded(FiniteDiffCost):
+
+    def __init__(self, cost, l_terminal, state_size, action_size, x_eps=None,
+                 u_eps=None, u_bound=None, q1=q1, q2=q2):
+        def l_bounded(x, u, i):
+            total = cost(x, u, i)
+            if isinstance(u_bound, np.ndarray):
+                total += q1 * np.exp(q2 * (u ** 2 - u_bound ** 2)).sum()
+            return total
+
+        super().__init__(l_bounded, l_terminal, state_size, action_size, x_eps, u_eps)
