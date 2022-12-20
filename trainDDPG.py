@@ -1,17 +1,23 @@
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import pathlib
+import send_email
+import numpy as np
+import matplotlib.pyplot as plt
+
 from tqdm import tqdm
-from numpy import remainder as rem
-from env import QuadcopterEnv, AgentEnv
+
+from env import QuadcopterEnv
+from DDPG.utils import AgentEnv
 from DDPG.ddpg import DDPGagent
-from get_report import create_report_ddpg
-from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, SCORE_NAMES
-from simulation import nSim, plot_nSim2D, plot_nSim3D
-from utils import smooth, date_as_path
-# from depricated_files.correo import send_correo
+from numpy import remainder as rem
 from utils import plot_performance
+from get_report import create_report
+from utils import smooth, date_as_path
+from animation import create_animation
+from simulation import n_rollouts, plot_rollouts
+from dynamics import inv_transform_x, transform_x
+from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
+
+# from depricated_files.correo import send_correo
 
 
 BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
@@ -26,8 +32,22 @@ if not SHOW:
 
 
 def train(agent, env, episodes=EPISODES):
-    rewards = []
-    avg_rewards = []
+    '''
+    Argumentos
+    ----------
+    agent : `DDPG.ddpg.DDPGAgent`
+        agente con método DDPG.
+    env : `env.QuadcopterEnv`
+        entorno de gym.
+    episodes : int
+        número de episodios a entrenar
+
+    Retornos
+    --------
+    performance : `dict`
+        keys: rewards, policy, critic
+    '''
+    performance = {k: list() for k in ['rewards', 'policy', 'critic']}
     for episode in range(episodes):
         with tqdm(total=env.steps) as pbar:
             pbar.set_description(f'Ep {episode + 1}/'+str(episodes))
@@ -41,74 +61,89 @@ def train(agent, env, episodes=EPISODES):
                 agent.memory.push(state, action, reward, new_state, done)
                 u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
                 pbar.set_postfix(R='{:.2f}'.format(episode_reward),
-                                 w='{:.2f}'.format(w), v='{:.2f}'.format(v),
-                                 u='{:.2f}'.format(u),
-                                 p='{:.2f}'.format(p), q='{:2f}'.format(q),
-                                 r='{:.2f}'.format(r),
+                                 # w='{:.2f}'.format(w), v='{:.2f}'.format(v),
+                                 # u='{:.2f}'.format(u),
+                                 # p='{:.2f}'.format(p), q='{:2f}'.format(q),
+                                 # r='{:.2f}'.format(r),
                                  psi='{:.2f}'.format(rem(psi, TAU)),
                                  theta='{:.2f}'.format(rem(theta, TAU)),
                                  phi='{:.2f}'.format(rem(phi, TAU)),
-                                 z='{:.2f}'.format(z), y='{:.2f}'.format(y),
+                                 z='{:.2f}'.format(z),
+                                 y='{:.2f}'.format(y),
                                  x='{:.2f}'.format(x))
                 pbar.update(1)
                 if len(agent.memory) > BATCH_SIZE:
-                    agent.update(BATCH_SIZE)
+                    policy_loss, critic_loss = agent.update(BATCH_SIZE)
+                    performance['policy'] = -policy_loss
+                    performance['critic'] = critic_loss
                 if done:
                     break
                 state = new_state
-        rewards.append(episode_reward)
-        avg_rewards.append(np.mean(rewards[-10:]))
-    return rewards, avg_rewards
+        performance['rewards'].append(episode_reward)
+        # avg_rewards.append(np.mean(rewards[-10:]))
+    return performance
 
 
-if __name__ == "__main__":
-    # mpl.style.use('seaborn')
+def main(path):
     plt.style.use("fivethirtyeight")
 
-    PATH = 'results_ddpg/' + date_as_path + '/'
-    if not SHOW:
-        pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-
-    env = AgentEnv(QuadcopterEnv())
+    env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
     agent = DDPGagent(env)
-    rewards, avg_rewards = train(agent, env)
+    performance = train(agent, env)
     env.noise_on = False
-    agent.save(PATH)
-    smth_rewards = smooth(rewards, 30)
-
-    plot_performance(smth_rewards, avg_rewards, rewards,
+    agent.save(path)
+    smth_rewards = smooth(performance['rewards'], 30)
+    fig = plt.figure(figsize=(12, 12), dpi=250)
+    gs = fig.add_gridspec(nrows=2, ncols=2)
+    ax1, ax2 = fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
+    ax3 = fig.add_subplot(gs[0, :])
+    plot_performance(smth_rewards, performance['rewards'],
                      xlabel='episodes', ylabel=r'$r_t(\tau)$',
                      title='Entrenamiento',
                      labels=['smooth reward',
-                             'average reward', 'episode reward']
+                             'episode reward'],
+                     ax=ax3
                      )
-    # plt.plot(rewards, 'lightskyblue', label='episode reward', alpha=0.05)
-    # plt.plot(smooth(rewards, 30), 'blue', label='smooth reward', alpha=0.5)
-    # plt.plot(avg_rewards, 'royalblue', label='average reward', alpha=0.01)
-    # plt.xlabel('episodes')
-    # plt.title('Training - Cumulative Reward $R$')
-    # plt.legend(loc='best')
-    if SHOW:
-        plt.show()
-    else:
-        plt.savefig(PATH + 'train_rewards.png')  # , bbox_inches='tight')
-        plt.close()
+    for ax, key in zip([ax1, ax2], ['policy', 'critic']):
+        ax.plot(performance[key])
+        ax.set_title(key + ' loss')
 
-    n_states, n_actions, n_scores = nSim(agent, env, n)
-    fig1, _ = plot_nSim2D(n_states, STATE_NAMES, env.time)
-    fig2, _ = plot_nSim2D(n_actions, ACTION_NAMES, env.time)
-    fig3, _ = plot_nSim2D(n_scores, SCORE_NAMES, env.time)
-    fig4, _ = plot_nSim3D(n_states)
     if SHOW:
         plt.show()
     else:
-        fig1.savefig(PATH + 'state_rollouts.png')
-        fig2.savefig(PATH + 'action_rollouts.png')
-        fig3.savefig(PATH + 'score_rollouts.png')
-        fig4.savefig(PATH + 'flight_rollouts.png')
+        fig.savefig(path + 'train_performance.png')  # , bbox_inches='tight')
+
+    states, actions, scores = n_rollouts(agent, env, n, t_x=inv_transform_x)
+    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES)
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES)
+    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES)
+
+    if SHOW:
+        plt.show()
+    else:
+        fig1.savefig(path + 'state_rollouts.png')
+        fig2.savefig(path + 'action_rollouts.png')
+        fig3.savefig(path + 'score_rollouts.png')
+
     if not SHOW:
-        create_report_ddpg(PATH)
-        send_correo(PATH + 'Reporte.pdf')
+        create_report(path)
+    subpath = path + 'sample_rollouts/'
+    pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
+    print('Termino de simualcion...')
+    create_animation(states, actions, env.time, scores=scores,
+                     state_labels=STATE_NAMES,
+                     action_labels=ACTION_NAMES,
+                     score_labels=REWARD_NAMES,
+                     path=subpath
+                     )
+    agent.save(path)
+    return path
 
-        with open(PATH + 'train_rewards.npy', 'wb') as f:
-            np.save(f, np.array(rewards))
+
+if __name__ == "__main__":
+    PATH = 'results_ddpg/' + date_as_path() + '/'
+    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
+    if not SHOW:
+        send_email.report_sender(main, args=[PATH])
+    else:
+        main(PATH)
