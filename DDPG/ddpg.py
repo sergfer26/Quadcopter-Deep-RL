@@ -62,8 +62,8 @@ class DDPGagent:
             target_param.data.copy_(param.data)
 
         # Training
-        self.memory = Memory(max_memory_size)
-        self.critic_criterion = nn.MSELoss()
+        self.memory = Memory(
+            max_memory_size, n_x=self.num_states, n_u=self.num_actions)
         self.actor_optimizer = optim.Adam(
             self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(
@@ -79,6 +79,7 @@ class DDPGagent:
         # actions -> lambdas
         states, actions, rewards, next_states, _ = self.memory.sample(
             batch_size)
+        breakpoint()
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)

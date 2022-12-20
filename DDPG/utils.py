@@ -11,8 +11,10 @@ from .params import PARAMS_UTILS
 # Taken from #https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
 class OUNoise(object):
     def __init__(self, action_space, mu=PARAMS_UTILS['mu'],
-                 theta=PARAMS_UTILS['theta'], max_sigma=PARAMS_UTILS['max_sigma'],
-                 min_sigma=PARAMS_UTILS['min_sigma'], decay_period=PARAMS_UTILS['decay_period']):
+                 theta=PARAMS_UTILS['theta'],
+                 max_sigma=PARAMS_UTILS['max_sigma'],
+                 min_sigma=PARAMS_UTILS['min_sigma'],
+                 decay_period=PARAMS_UTILS['decay_period']):
         self.mu = mu
         self.theta = theta
         self.sigma = max_sigma
@@ -87,11 +89,13 @@ class AgentEnv(NormalizedEnv):
         high = self._tx(env.observation_space.high)
         self.observation_space = gym.spaces.Box(
             low=low, high=high, dtype=np.float32)
+        self.i = 0
 
     def action(self, action):
         action = super().action(action)
         if self.noise_on:
-            action = self.noise.get_action(action, self.env.i)
+            action = self.noise.get_action(action, self.i)
+            self.i += 1
         return action
 
     def observation(self, state):
@@ -118,8 +122,10 @@ class AgentEnv(NormalizedEnv):
 
 class Memory:
 
-    def __init__(self, max_size):
+    def __init__(self, max_size, n_x, n_u):
         self.max_size = max_size
+        self.n_x = n_x
+        self.n_u = n_u
         self.buffer = deque(maxlen=max_size)
 
     def push(self, state, action, reward, next_state, done):
@@ -127,21 +133,21 @@ class Memory:
         self.buffer.append(experience)
 
     def sample(self, batch_size):
-        state_batch = []
-        action_batch = []
-        reward_batch = []
-        next_state_batch = []
-        done_batch = []
+        state_batch = np.empty((batch_size, self.n_x))
+        action_batch = np.empty((batch_size, self.n_u))
+        reward_batch = np.empty(batch_size)
+        next_state_batch = np.empty((batch_size, self.n_x))
+        done_batch = np.empty(batch_size)
 
         batch = random.sample(self.buffer, batch_size)
 
-        for experience in batch:
+        for i, experience in enumerate(batch):
             state, action, reward, next_state, done = experience
-            state_batch.append(state)
-            action_batch.append(action)
-            reward_batch.append(reward)
-            next_state_batch.append(next_state)
-            done_batch.append(done)
+            state_batch[i] = state
+            action_batch[i] = action
+            reward_batch[i] = reward
+            next_state_batch[i] = next_state
+            done_batch[i] = done
 
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
