@@ -16,7 +16,7 @@ from dynamics import transform_x, transform_u
 from ILQR.utils import FiniteDiffCostBounded
 # import pandas as pd
 
-PATH = 'results_iqr/' + date_as_path() + '/'
+PATH = 'results_ilqr/' + date_as_path() + '/'
 pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
 N = 1000
 
