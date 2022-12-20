@@ -114,7 +114,7 @@ def plot_performance(*args, xlabel=None, ylabel=None,
     if not isinstance(colors, list):
         colors = mcp.gen_color(cmap=cmap, n=len(args))
     if not isinstance(alphas, list):
-        alphas = np.linspace(0.1, 1, n=len(args))
+        alphas = np.linspace(0.1, 1, len(args))
         if len(alphas) == 1:
             alphas = [1]
     if not isinstance(labels, list):
