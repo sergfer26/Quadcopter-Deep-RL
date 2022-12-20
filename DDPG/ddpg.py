@@ -62,8 +62,10 @@ class DDPGagent:
             target_param.data.copy_(param.data)
 
         # Training
+
         self.memory = Memory(
             max_memory_size, n_x=self.num_states, n_u=self.num_actions)
+        self.critic_criterion = nn.MSELoss()
         self.actor_optimizer = optim.Adam(
             self.actor.parameters(), lr=actor_learning_rate)
         self.critic_optimizer = optim.Adam(
