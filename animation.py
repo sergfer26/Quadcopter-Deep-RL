@@ -222,4 +222,4 @@ if __name__ == '__main__':
                      action_labels=ACTION_NAMES,
                      score_labels=score_names,
                      file_name='flight',
-                     path='ILQR/sample_rollouts/')
+                     path='Linear/sample_rollouts/')
