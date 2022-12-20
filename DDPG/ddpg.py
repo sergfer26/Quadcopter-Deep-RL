@@ -79,7 +79,6 @@ class DDPGagent:
         # actions -> lambdas
         states, actions, rewards, next_states, _ = self.memory.sample(
             batch_size)
-        breakpoint()
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
