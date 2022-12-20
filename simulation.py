@@ -91,7 +91,8 @@ def plot_nSim3D(n_states):
     return fig, ax
 
 
-def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list, ax=None, subplots=True, dpi=150, colors=None):
+def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
+                  ax=None, subplots=True, dpi=150, colors=None, alpha=0.4):
     if len(array.shape) == 2:
         array = array.reshape(1, array.shape[0], array.shape[1])
     if not isinstance(colors, list):
@@ -112,7 +113,7 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list, ax=None, s
             legend = False
 
         data.plot(x='$t (s)$', subplots=subplots,
-                  ax=ax, legend=legend, alpha=0.4)
+                  ax=ax, legend=legend, alpha=alpha)
 
     if not pd.isna(fig):
         fig.set_size_inches(18.5, 10.5)
