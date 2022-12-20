@@ -84,6 +84,7 @@ class DDPGagent:
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         rewards = torch.FloatTensor(rewards).to(device)
+        rewards = rewards.unsqueeze(1)
         next_states = torch.FloatTensor(next_states).to(device)
         return self.fit(states, actions, rewards, next_states)
 
