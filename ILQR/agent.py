@@ -102,7 +102,7 @@ class iLQRAgent(iLQR):
         xs, us = self.fit(x0, us_init, n_iterations=n_iterations,
                           tol=tol, on_iteration=on_iteration)
         # Store fit parameters.
-        cost_trace = self._trajectory_cost(xs, us)
+        cost_trace = self._step_cost(xs, us)
 
         return xs, us, cost_trace
 
