@@ -82,7 +82,7 @@ def main(path):
               inv_tx=inv_transform_x, inv_tu=inv_transform_u,
               x_dim=9, y_dim=9)
 
-    loss = {x: list() for x in ['ioc', 'policy', 'critic']}
+    loss = {x: list() for x in ['policy', 'critic', 'ioc']}
     gcl.set_cost(cost_net)
     # ilqr.is_stochastic = True
 
@@ -155,7 +155,7 @@ def main(path):
         ax.plot(loss[key])
         ax.set_xlabel('episodes')
         ax.set_title(key + ' loss')
-    fig.savefig(PATH + 'train_performance.png')
+    fig.savefig(path + 'train_performance.png')
     env4agent.noise_on = False
     states, actions, scores = n_rollouts(
         agent, env4agent, n=N, t_x=inv_transform_x)
@@ -165,11 +165,11 @@ def main(path):
     cum_costs = np.cumsum(costs, axis=1)
     scores = np.concatenate([scores, costs, cum_costs], axis=-1)
     fig1, _ = plot_rollouts(states, env4agent.time, STATE_NAMES)
-    fig1.savefig(PATH + 'state_rollouts.png')
+    fig1.savefig(path + 'state_rollouts.png')
     fig2, _ = plot_rollouts(actions, env4agent.time, ACTION_NAMES)
-    fig2.savefig(PATH + 'action_rollouts.png')
+    fig2.savefig(path + 'action_rollouts.png')
     fig3, _ = plot_rollouts(scores, env4agent.time, REWARD_NAMES + COST_NAMES)
-    fig3.savefig(PATH + 'score_rollouts.png')
+    fig3.savefig(path + 'score_rollouts.png')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
     print('Termino de simualcion...')
@@ -179,15 +179,15 @@ def main(path):
                      score_labels=REWARD_NAMES + COST_NAMES,
                      path=subpath
                      )
-    agent.save(PATH)
-    gcl.save(PATH)
-    gcl.ilqr.save(PATH)
-    create_report(PATH,
+    agent.save(path)
+    gcl.save(path)
+    gcl.ilqr.save(path)
+    create_report(path,
                   title='Entrenamiento GCL',
                   method='gcl',
                   extra_method='ilqr'
                   )
-    return PATH
+    return path
 
 
 if __name__ == "__main__":
