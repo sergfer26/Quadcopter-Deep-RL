@@ -3,6 +3,7 @@ from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from .params import PARAMS_iLQR
+from scipy.stats import multivariate_normal as m_n
 
 q1 = PARAMS_iLQR['q1']
 q2 = PARAMS_iLQR['q2']
@@ -58,3 +59,82 @@ class FiniteDiffCostBounded(FiniteDiffCost):
             return total
 
         super().__init__(l_bounded, l_terminal, state_size, action_size, x_eps, u_eps)
+
+
+class OfflineCost(FiniteDiffCost):
+
+    def __init__(self, l, l_terminal, state_size, action_size,
+                 x_eps=None, u_eps=None,
+                 eta=0.1, nu=0.001, _lambda=None,
+                 N=10, mean=None
+                 ):
+
+        # Steps of the trajectory
+        self.N = N
+        # Parameters of the old control
+        self._k = np.zeros((N, action_size))
+        self._K = np.zeros((N, action_size, state_size))
+        self._C = np.stack([np.identity(action_size)
+                            for _ in range(self.N)])
+        # Lagrange's multipliers
+        self.eta = eta
+        self.nu = nu * np.ones(N)
+        self._lambda = _lambda if _lambda is not None else np.ones(action_size)
+        # Parameters of the nonlinear policy
+        self.cov = np.identity(action_size)
+        self.mean = lambda x: np.ones(
+            action_size) if not callable(mean) else mean
+
+        def _cost(x, u, i):
+            c = 0.0
+            c += l(x, u, i) - u.T@self._lambda
+            c -= self.nu[i] * m_n.logpdf(x=u, mean=self.mean(x), cov=self.cov)
+            c /= (self.eta + nu[i])
+            c -= eta * m_n.logpdf(x=u, mean=self._K[i]
+                                  @ x + self._k[i], cov=self._C[i]) / (self.eta + self.nu[i])
+            return c
+
+        super().__init__(_cost, l_terminal, state_size, action_size, x_eps, u_eps)
+
+    def update_control(self, control):
+        self._K = control._K
+        self._k = control._k
+        self._C = control._C
+
+
+class MPCCost(FiniteDiffCost):
+
+    def __init__(self, state_size, action_size,
+                 x_eps=None, u_eps=None,
+                 nu=0.001, _lambda=None,
+                 N=10, mean=None
+                 ):
+        # Steps of the trajectory
+        self.N = N
+        # Parameters of the old control
+        self._k = np.zeros((N, action_size))
+        self._K = np.zeros((N, action_size, state_size))
+        self._C = np.stack([np.identity(action_size)
+                            for _ in range(self.N)])
+        # Lagrange's multipliers
+        self.nu = nu * np.ones(N)
+        self._lambda = _lambda if _lambda is not None else np.ones(action_size)
+        # Parameters of the nonlinear policy
+        self.cov = np.identity(action_size)
+        self.mean = lambda x: np.ones(
+            action_size) if not callable(mean) else mean
+
+        def _cost(x, u, i):
+            c = 0.0
+            c -= u.T@self._lambda
+            c -= nu[i] * self.nu[i] * \
+                m_n.logpdf(x=u, mean=self.mean(x), cov=self.cov)
+            c -= m_n.logpdf(x=u, mean=self._K[i]
+                            @ x + self._k[i], cov=self._C[i])
+
+        super().__init__(_cost, lambda x, i: 0, state_size, action_size, x_eps, u_eps)
+
+    def update_control(self, control):
+        self._K = control._K
+        self._k = control._k
+        self._C = control._C
