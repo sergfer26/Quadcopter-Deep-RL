@@ -61,6 +61,15 @@ class Actor(nn.Module):
         x = torch.tanh(self.out(x))
         return x
 
+    def to_numpy(self, x, t_x=None):
+        if callable(t_x):
+            x = t_x(x)
+        x = torch.FloatTensor(x)
+        return self.forward(x).detach().numpy()
+
+    def to_float(self, x, t_x=None):
+        return self.to_numpy(x, t_x=t_x).item()
+
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
