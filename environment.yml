@@ -5,7 +5,6 @@ channels:
 dependencies:
   - appnope=0.1.3
   - asttokens=2.0.8
-  - autopep8=1.7.0
   - backcall=0.2.0
   - backports=1.0
   - backports.functools_lru_cache=1.6.4
