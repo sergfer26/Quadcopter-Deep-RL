@@ -42,7 +42,7 @@ class iLQRAgent(iLQR):
         self.low = low
         self.high = high
         # Control parameters
-        self._C = np.array([np.identity(self.num_actions)
+        self._C = np.stack([np.identity(self.num_actions)
                            for _ in range(self.N)])
         self._nominal_us = np.empty((self.N, self.num_actions))
         self._nominal_xs = np.empty((self.N + 1, self.num_states))
@@ -122,8 +122,7 @@ class iLQRAgent(iLQR):
     def get_prob_action(self, state, action, t=0):
         g_xs = self._nominal_us[t] + self.alpha * self._k[t] + \
             self._K[t] @ (state - self._nominal_xs[t])
-        # self._C[t]  # + 1e-4 * np.identity(self.num_actions)
-        cov = np.identity(self.num_actions)
+        cov = self._C[t] + 1e-4 * np.identity(self.num_actions)
         return multivariate_normal.pdf(x=action, mean=g_xs, cov=cov)
 
     def _step_cost(self, xs, us):
@@ -193,8 +192,8 @@ class iLQRAgent(iLQR):
 
             try:
                 # Backward pass.
-                k, K = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
-                                           F_xx, F_ux, F_uu)
+                k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
+                                              F_xx, F_ux, F_uu)
 
                 # Backtracking line search.
                 for alpha in alphas:
@@ -241,11 +240,74 @@ class iLQRAgent(iLQR):
         # Store fit parameters.
         self._k = k
         self._K = K
+        self._C = C
         self._nominal_xs = xs
         self._nominal_us = us
         self.alpha = alpha
 
         return xs, us
+
+    def _backward_pass(self,
+                       F_x,
+                       F_u,
+                       L_x,
+                       L_u,
+                       L_xx,
+                       L_ux,
+                       L_uu,
+                       F_xx=None,
+                       F_ux=None,
+                       F_uu=None):
+        """ Computes the feedforward and feedback gains k and K.
+        Args:
+            F_x: Jacobian of state path w.r.t. x [N, state_size, state_size].
+            F_u: Jacobian of state path w.r.t. u [N, state_size, action_size].
+            L_x: Jacobian of cost path w.r.t. x [N+1, state_size].
+            L_u: Jacobian of cost path w.r.t. u [N, action_size].
+            L_xx: Hessian of cost path w.r.t. x, x
+                [N+1, state_size, state_size].
+            L_ux: Hessian of cost path w.r.t. u, x [N, action_size, state_size].
+            L_uu: Hessian of cost path w.r.t. u, u
+                [N, action_size, action_size].
+            F_xx: Hessian of state path w.r.t. x, x if Hessians are used
+                [N, state_size, state_size, state_size].
+            F_ux: Hessian of state path w.r.t. u, x if Hessians are used
+                [N, state_size, action_size, state_size].
+            F_uu: Hessian of state path w.r.t. u, u if Hessians are used
+                [N, state_size, action_size, action_size].
+        Returns:
+            Tuple of
+                k: feedforward gains [N, action_size].
+                K: feedback gains [N, action_size, state_size].
+        """
+        V_x = L_x[-1]
+        V_xx = L_xx[-1]
+        k = np.empty_like(self._k)
+        K = np.empty_like(self._K)
+        C = np.empty_like(self._C)
+
+        for i in range(self.N - 1, -1, -1):
+            if self._use_hessians:
+                Q_x, Q_u, Q_xx, Q_ux, Q_uu = self._Q(F_x[i], F_u[i], L_x[i],
+                                                     L_u[i], L_xx[i], L_ux[i],
+                                                     L_uu[i], V_x, V_xx,
+                                                     F_xx[i], F_ux[i], F_uu[i])
+            else:
+                Q_x, Q_u, Q_xx, Q_ux, Q_uu = self._Q(F_x[i], F_u[i], L_x[i],
+                                                     L_u[i], L_xx[i], L_ux[i],
+                                                     L_uu[i], V_x, V_xx)
+            # Eq (6).
+            k[i] = -np.linalg.solve(Q_uu, Q_u)
+            K[i] = -np.linalg.solve(Q_uu, Q_ux)
+            C[i] = np.linalg.inv(Q_uu)
+            # Eq (11b).
+            V_x = Q_x + K[i].T.dot(Q_uu).dot(k[i])
+            V_x += K[i].T.dot(Q_u) + Q_ux.T.dot(k[i])
+            # Eq (11c).
+            V_xx = Q_xx + K[i].T.dot(Q_uu).dot(K[i])
+            V_xx += K[i].T.dot(Q_ux) + Q_ux.T.dot(K[i])
+            V_xx = 0.5 * (V_xx + V_xx.T)  # To maintain symmetry.
+        return k, K, C
 
     def save(self, path):
         file_path = path + 'ilqr_control.npz'
