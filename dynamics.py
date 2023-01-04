@@ -1,22 +1,13 @@
 '''
  Quadrotor dynamics
 '''
-
-import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-
+from numpy.linalg import norm
+from params import PARAMS_ENV
 # from ilqr import iLQR
 # from ilqr.utils import GetSyms, Constrain
 # from ilqr.containers import Dynamics, Cost
-
-from numpy import cos as c
-from numpy import sin as s
-
 from scipy.spatial.transform import Rotation
-
-from numba import njit
-
 from Linear.equations import rotation2angles, angles2rotation
 
 
@@ -28,7 +19,9 @@ K = 0.001219  # 2.980 * 1e-6  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
-C1, C2, C3 = 0.5, 0.5, 0.05
+K1 = PARAMS_ENV['K1']
+K2 = PARAMS_ENV['K2']
+K3 = PARAMS_ENV['K3']
 
 omega0_per = .60
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
@@ -101,6 +94,26 @@ def inv_transform_u(u: np.ndarray, high=VEL_MAX, low=VEL_MIN):
     act_b = (high + low) / 2.
     action = act_k * u + act_b
     return action
+
+
+def penalty(state, action, i):
+    '''
+    falta
+    '''
+    # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
+    penalty = K1 * norm(state[3:6])
+    mat = angles2rotation(state[9:], flatten=False)
+    penalty += K2 * norm(np.identity(3) - mat)
+    penalty += K3 * norm(action)
+    return penalty
+
+
+def teminal_penalty(state, i):
+    # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
+    penalty = K1 * norm(state[3:6])
+    mat = angles2rotation(state[9:], flatten=False)
+    penalty += K2 * norm(np.identity(3) - mat)
+    return penalty
 
 
 if __name__ == "__main__":

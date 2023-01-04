@@ -1,5 +1,5 @@
 
-PARAMS_ENV = {'TIME_MAX': 15, 'STEPS': 375, 'omega0_per': 0.60, 'FLAG': False,
+PARAMS_ENV = {'TIME_MAX': 1/5, 'STEPS': 5, 'omega0_per': 0.60, 'FLAG': False,
               'K1': 0.25, 'K2': 0.1, 'K3': 0.005}
 # Si es false los vuelos pueden terminar
 

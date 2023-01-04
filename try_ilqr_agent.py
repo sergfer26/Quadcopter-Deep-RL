@@ -1,10 +1,10 @@
 import numpy as np
 import pathlib
-from ILQR.utils import ContinuousDynamics, FiniteDiffCost
+from GPS.utils import ContinuousDynamics, FiniteDiffCost
 from Linear.equations import f, W0
 from dynamics import VEL_MIN, VEL_MAX
 from env import QuadcopterEnv
-from ILQR.agent import iLQRAgent
+from GPS.controller import iLQRAgent
 from simulation import plot_rollouts, rollout, n_rollouts
 from matplotlib import pyplot as plt
 from Linear.agent import LinearAgent
@@ -13,14 +13,14 @@ from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES  # , SCORE_NAMES
 from get_report import create_report
 from utils import date_as_path
 from dynamics import transform_x, transform_u
-from ILQR.utils import FiniteDiffCostBounded
+from GPS.utils import FiniteDiffCostBounded
 # import pandas as pd
 
 PATH = 'results_ilqr/' + date_as_path() + '/'
 pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-N = 1000
 
 env = QuadcopterEnv(u0=W0)  # AgentEnv(QuadcopterEnv())
+env.set_time(400, 16)
 n_u = len(env.action_space.sample())
 n_x = len(env.observation_space.sample())
 
@@ -29,19 +29,19 @@ dt = env.time[-1] - env.time[-2]
 dynamics = ContinuousDynamics(
     f, state_size=n_x, action_size=n_u, u0=W0, dt=dt, method='lsoda')
 
-cost = FiniteDiffCostBounded(cost=lambda x, u, i: - env.get_reward(x, u),
-                             l_terminal=lambda x, i: -
-                             env.get_reward(x, np.zeros(n_u)),
-                             state_size=n_x,
-                             action_size=n_u,
-                             u_bound=0.6 * W0
-                             )
-# cost = FiniteDiffCost(l=lambda x, u, i: -env.get_reward(x, u),
-#                       l_terminal=lambda x, i: -
-#                       env.get_reward(x, np.zeros(n_u)),
-#                       state_size=n_x,
-#                       action_size=n_u
-#                       )
+# cost = FiniteDiffCostBounded(cost=lambda x, u, i: - env.get_reward(x, u),
+#                              l_terminal=lambda x, i: -
+#                              env.get_reward(x, np.zeros(n_u)),
+#                              state_size=n_x,
+#                              action_size=n_u,
+#                              u_bound=0.6 * W0
+#                              )
+cost = FiniteDiffCost(l=lambda x, u, i: -env.get_reward(x, u),
+                      l_terminal=lambda x, i: -
+                      env.get_reward(x, np.zeros(n_u)),
+                      state_size=n_x,
+                      action_size=n_u
+                      )
 N = env.steps - 1
 low = env.observation_space.low
 high = env.observation_space.high
@@ -98,7 +98,7 @@ create_animation(states, actions, env.time,
                  path=PATH + 'sample_rollouts/')
 
 agent.reset()
-states, actions, scores = n_rollouts(agent, env, n=N)
+states, actions, scores = n_rollouts(agent, env, n=100)
 
 fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
 fig1.savefig(PATH + 'state_rollouts.png')
@@ -109,21 +109,22 @@ fig3.savefig(PATH + 'score_rollouts.png')
 
 create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
 agent.save(PATH)
+print('los parametros del control fueron guardadados')
 
 sample_indices = np.random.randint(states.shape[0], size=3)
 states_samples = states[sample_indices]
 actions_samples = actions[sample_indices]
 scores_samples = scores[sample_indices]
 
-states = np.apply_along_axis(transform_x, -1, states)
-actions = np.apply_along_axis(transform_u, -1, actions)
-new_states = states[:, 1:, :]
-states = states[:, :-1, :]
-dones = np.zeros((actions.shape[0], env.steps - 1), dtype=bool)
-dones[:, -1] = True
-kwargs = dict(states=states, actions=actions,
-              next_states=new_states, dones=dones)
-np.savez(PATH + 'memory_transformed_x_u.npz', **kwargs)
+# states = np.apply_along_axis(transform_x, -1, states)
+# actions = np.apply_along_axis(transform_u, -1, actions)
+# new_states = states[:, 1:, :]
+# states = states[:, :-1, :]
+# dones = np.zeros((actions.shape[0], env.steps - 1), dtype=bool)
+# dones[:, -1] = True
+# kwargs = dict(states=states, actions=actions,
+#               next_states=new_states, dones=dones)
+# np.savez(PATH + 'memory_transformed_x_u.npz', **kwargs)
 
 
 create_animation(states_samples, actions_samples, env.time,

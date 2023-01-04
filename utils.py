@@ -2,7 +2,7 @@ import os
 import pytz
 import pathlib
 import numpy as np
-from GCL.utils import Memory
+from GPS.utils import Memory
 from mycolorpy import colorlist as mcp
 from matplotlib.pyplot import cm
 from matplotlib import pyplot as plt

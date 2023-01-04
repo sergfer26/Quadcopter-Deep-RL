@@ -36,7 +36,7 @@ if __name__ == '__main__':
     agent = LinearAgent(env)
     init_states = list()
 
-    for _ in range(10):
+    for _ in range(5):
         init_state = env.observation_space.sample()
         init_states.append(init_state)
         p = Process(target=rollout4mp, args=(
