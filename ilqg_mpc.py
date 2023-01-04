@@ -81,9 +81,9 @@ def fit_mpc_control(env, path='', i=None, j=None, N=374, horizon=25):
 
 
 def main(path):
-    N = 3
-    M = 2
-    horizon = 2
+    N = 10
+    M = 4
+    horizon = 35
     env = QuadcopterEnv()
     n_u = len(env.action_space.sample())
     n_x = len(env.observation_space.sample())
