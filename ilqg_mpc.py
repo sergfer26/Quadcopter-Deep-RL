@@ -75,15 +75,17 @@ def fit_mpc_control(env, path='', i=None, j=None, N=374, horizon=25):
     mpc_control.control(xs_init, us_init)
 
     if isinstance(i, int) and isinstance(j, int):
-        file_path = path + f'mpc_control_{i}_{j}.npz'
+        file_name = f'mpc_control_{i}_{j}.npz'
     else:
-        file_path = path + 'mpc_control.npz'
+        file_name = 'mpc_control.npz'
+
+    mpc_control.save(path, file_name)
 
 
 def main(path):
     N = 10
     M = 4
-    horizon = 35
+    horizon = 10
     env = QuadcopterEnv()
     n_u = len(env.action_space.sample())
     n_x = len(env.observation_space.sample())
