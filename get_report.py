@@ -1,4 +1,5 @@
 import re
+import os
 from reportlab.platypus import Table
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
@@ -7,7 +8,7 @@ from reportlab.platypus import TableStyle
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GCL
 from params import PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
-from ILQR.params import PARAMS_iLQR
+from GPS.params import PARAMS_iLQR
 # from PPO.params import PARAMS_PPO
 
 PARAMS_OBS = {re.sub(r'\$', '', k): u'\u00B1'+v for k,
@@ -208,8 +209,9 @@ def create_report(path, title=None, subtitle='', file_name=None,
         print(f'La opción method={extra_method} no es válida.')
 
     pdf.showPage()
-    add_text(pdf, ['Rendimiento de entrenamiento'], 30, 750)
-    add_image(path, pdf, 'train_performance.png', 100, 400, 350, 350)
+    if os.path.exists(path + 'train_performance.png'):
+        add_text(pdf, ['Rendimiento de entrenamiento'], 30, 750)
+        add_image(path, pdf, 'train_performance.png', 100, 400, 350, 350)
     add_text(pdf, ['Simulaciones (estados)'], 30, 390)
     add_image(path, pdf, 'state_rollouts.png', 30, -10, 500, 500)
 
