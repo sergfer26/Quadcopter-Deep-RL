@@ -27,4 +27,5 @@ credentials.txt
 results_gcl/
 ILQR/sample_rollouts/
 results_ilqr/
-
+GPS/sample_rollouts/
+results_mpc/
