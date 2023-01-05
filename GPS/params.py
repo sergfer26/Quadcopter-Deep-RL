@@ -8,5 +8,6 @@ PARAMS_iLQR = {
     'n_iterations': 100,
     'q1': 0.5,
     'q2': 0.01,
-    'is_stochastic': True
+    'is_stochastic': True,
+    'horizon': 5
 }

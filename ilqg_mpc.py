@@ -16,6 +16,7 @@ from get_report import create_report
 from utils import date_as_path
 from multiprocessing import Process
 from dynamics import penalty, teminal_penalty
+from GPS.params import PARAMS_iLQR as params
 
 
 def fit_lqg(env, expert, path='', i=None):
@@ -90,7 +91,7 @@ def fit_mpc_control(env, path='', i=None, j=None, N=374, horizon=25):
 def main(path):
     N = 10
     M = 4
-    horizon = 10
+    horizon = params['horizon']
     env = QuadcopterEnv()
     n_u = len(env.action_space.sample())
     n_x = len(env.observation_space.sample())
