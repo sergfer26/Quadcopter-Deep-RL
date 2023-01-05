@@ -2,7 +2,7 @@ import time
 import pathlib
 import send_email
 import numpy as np
-from matplotlib import pyplot as plt
+from ilqr.cost import FiniteDiffCost
 from Linear.equations import W0, f
 from GPS.controller import iLQRAgent, MPC
 from GPS.utils import OfflineCost, MPCCost
@@ -12,7 +12,7 @@ from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from Linear.agent import LinearAgent
 from simulation import plot_rollouts, rollout
 from get_report import create_report
-from animation import create_animation
+# from animation import create_animation
 from utils import date_as_path
 from multiprocessing import Process
 from dynamics import penalty, teminal_penalty
@@ -29,14 +29,19 @@ def fit_lqg(env, expert, path='', i=None):
         f, state_size=n_x, action_size=n_u, u0=W0, dt=dt, method='lsoda')
 
     ####### Instancias control iLQG #######
-    cost = OfflineCost(penalty, teminal_penalty,
-                       state_size=n_x,
-                       action_size=n_u,
-                       eta=10,
-                       _lambda=np.zeros(n_u),
-                       nu=0,
-                       N=steps
-                       )
+    # cost = OfflineCost(penalty, teminal_penalty,
+    #                    state_size=n_x,
+    #                    action_size=n_u,
+    #                    eta=10,
+    #                    _lambda=np.zeros(n_u),
+    #                    nu=0,
+    #                    N=steps
+    #                    )
+    cost = FiniteDiffCost(l=penalty,
+                          l_terminal=teminal_penalty,
+                          state_size=n_x,
+                          action_size=n_u
+                          )
 
     control = iLQRAgent(dynamics, cost, steps, low, high,
                         state_names=STATE_NAMES)
@@ -129,10 +134,11 @@ def main(path):
 
     states = np.empty((N, M, T + 1, n_x))
     actions = np.empty((N, M, T, n_u))
-    for i, j in range(N, M):
-        file = np.load(path + f'mpc_control_{i}_{j}.npz')
-        states[i, j] = file['xs']
-        actions[i, j] = file['us']
+    for i in range(N):
+        for j in range(M):
+            file = np.load(path + f'mpc_control_{i}_{j}.npz')
+            states[i, j] = file['xs']
+            actions[i, j] = file['us']
 
     states = states.reshape((N * M, T + 1, -1))
     actions = actions.reshape((N * M, T, -1))
@@ -158,12 +164,12 @@ def main(path):
     subpath = path + 'mpc_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
     print('Termino de simualcion...')
-    create_animation(states, actions, env.time, scores=scores,
-                     state_labels=STATE_NAMES,
-                     action_labels=ACTION_NAMES,
-                     score_labels=REWARD_NAMES,
-                     path=subpath
-                     )
+    # create_animation(states, actions, env.time, scores=scores,
+    #                  state_labels=STATE_NAMES,
+    #                  action_labels=ACTION_NAMES,
+    #                  score_labels=REWARD_NAMES,
+    #                  path=subpath
+    #                  )
 
     return path
 
