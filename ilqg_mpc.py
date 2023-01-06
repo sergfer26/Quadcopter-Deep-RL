@@ -2,10 +2,11 @@ import time
 import pathlib
 import send_email
 import numpy as np
+from functools import partial
 from ilqr.cost import FiniteDiffCost
 from Linear.equations import W0, f
 from GPS.controller import iLQRAgent, MPC
-from GPS.utils import OfflineCost, MPCCost
+from GPS.utils import OfflineCost, MPCCost, FiniteDiffCostBounded
 from GPS.utils import ContinuousDynamics
 from env import QuadcopterEnv
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
@@ -14,12 +15,25 @@ from simulation import plot_rollouts, rollout
 from get_report import create_report
 # from animation import create_animation
 from utils import date_as_path
-from multiprocessing import Process
+from multiprocessing import Process, Pool
 from dynamics import penalty, teminal_penalty
 from GPS.params import PARAMS_iLQR as params
 
 
-def fit_lqg(env, expert, path='', i=None):
+def fit_mpc(env, expert, i, T, horizon, M, path=''):
+    '''
+    i : int
+        Indice de trayectoria producida por iLQG.
+    T : int
+        Número de pasos de la trayectoria.
+    horizon : int
+        Tamaño de la ventana de horizonte del MPC.
+    M : int
+        Indice de trayectoria producida por MPC.
+    '''
+    time_max = env.time_max
+    dt = env.time[-1] - env.time[-2]
+    env.set_time(T + horizon, time_max + int(horizon*dt))
     dt = env.time[-1] - env.time[-2]
     low = env.observation_space.low
     high = env.observation_space.high
@@ -29,7 +43,7 @@ def fit_lqg(env, expert, path='', i=None):
     dynamics = ContinuousDynamics(
         f, state_size=n_x, action_size=n_u, u0=W0, dt=dt, method='lsoda')
 
-    ####### Instancias control iLQG #######
+    # ###### Instancias control iLQG #######
     # cost = OfflineCost(penalty, teminal_penalty,
     #                    state_size=n_x,
     #                    action_size=n_u,
@@ -38,100 +52,79 @@ def fit_lqg(env, expert, path='', i=None):
     #                    nu=0,
     #                    N=steps
     #                    )
-    cost = FiniteDiffCost(l=penalty,
-                          l_terminal=teminal_penalty,
-                          state_size=n_x,
-                          action_size=n_u
-                          )
-
+    cost = FiniteDiffCostBounded(cost=penalty,
+                                 l_terminal=teminal_penalty,
+                                 state_size=n_x,
+                                 action_size=n_u,
+                                 u_bound=0.6 * W0
+                                 )
     control = iLQRAgent(dynamics, cost, steps, low, high,
                         state_names=STATE_NAMES)
     xs_init, us_init, _ = rollout(expert, env)
     control.fit_control(xs_init[0], us_init)
-    if isinstance(i, int):
-        file_name = f'control_{i}.npz'
-    else:
-        file_name = f'control.npz'
-    control.save(path=path, file_name=file_name)
+    control.save(path=path, file_name=f'control_{i}.npz')
+    env.set_time(T, time_max)
+    with Pool(processes=4) as pool:
+        pool.map(partial(_fit_child, control.low, control.high,
+                 dt, T, horizon, path, i), range(M))
+        pool.close()
+        pool.join()
 
 
-def fit_mpc_control(env, path='', i=None, j=None, N=374, horizon=25):
-    dt = env.time[-1] - env.time[-2]
-    low = env.observation_space.low
-    high = env.observation_space.high
+def foo(x):
+    print(x)
+
+
+def _fit_child(low, high, dt, N, horizon, path, i, j):
     n_u = 4  # env.num_actions
     n_x = 12  # env.num_states
     dynamics = ContinuousDynamics(
         f, state_size=n_x, action_size=n_u, u0=W0, dt=dt, method='lsoda')
 
-    ####### Instancias control MPC-iLQG #######
+    # ###### Instancias control MPC-iLQG #######
     mpc_cost = MPCCost(n_x, n_u, nu=1, _lambda=np.zeros(n_u), N=N)
 
     mpc_control = MPC(dynamics, mpc_cost, N, low, high,
                       horizon=horizon, state_names=STATE_NAMES)
 
-    if isinstance(i, int):
-        file_path = path + f'control_{i}.npz'
-    else:
-        file_path = path + 'control.npz'
-
+    file_path = path + f'control_{i}.npz'
     mpc_control.update_offline_control(file_path=file_path)
+
     xs_init = mpc_control.off_nominal_xs
     us_init = mpc_control.off_nominal_us
     mpc_control.control(xs_init, us_init)
 
-    if isinstance(i, int) and isinstance(j, int):
-        file_name = f'mpc_control_{i}_{j}.npz'
-    else:
-        file_name = 'mpc_control.npz'
-
+    file_name = f'mpc_control_{i}_{j}.npz'
     mpc_control.save(path, file_name)
 
 
 def main(path):
-    N = 10
-    M = 4
+    N = 3
+    M = 2
     horizon = params['horizon']
     env = QuadcopterEnv()
     n_u = len(env.action_space.sample())
     n_x = len(env.observation_space.sample())
+    time_max = env.time_max
 
-    dt = env.time[-1] - env.time[-2]
     T = env.steps - 1
 
-    ####### Instancias control lineal #######
+    # ###### Instancias control lineal #######
 
     expert = LinearAgent(env)
-    time_max = env.time_max
-    env.set_time(T + horizon, time_max + int(horizon*dt))
 
-    ti = time.time()
-    processes_lqg = list()
+    processes = list()
     for i in range(N):
-        p = Process(target=fit_lqg, args=(env, expert, path, i))
-        processes_lqg.append(p)
+        p = Process(target=fit_mpc, args=(env, expert, i, T, horizon, M, path))
+        processes.append(p)
         p.start()
 
     ti = time.time()
-    for p in processes_lqg:
+    for p in processes:
         p.join()
+
     tf = time.time()
-    print(f'tiempo de ajuste iLQG: {tf - ti}')
-
-    env.set_time(T, time_max)
-
-    processes_mpc = list()
-    for i, j in zip(range(N), range(M)):
-        p = Process(target=fit_mpc_control, args=(
-            env, path, i, j, T, horizon))
-        processes_mpc.append(p)
-        p.start()
-
-    ti = time.time()
-    for p in processes_mpc:
-        p.join()
-    tf = time.time()
-    print(f'tiempo de ajuste MPC: {tf - ti}')
+    print(f'tiempo de ajuste de trayectorias MPC: {tf - ti}')
 
     states = np.empty((N, M, T + 1, n_x))
     actions = np.empty((N, M, T, n_u))

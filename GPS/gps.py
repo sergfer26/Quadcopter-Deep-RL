@@ -17,6 +17,7 @@ class GPS:
                  learning_rate=0.01):
         self.n_x = n_x
         self.n_u = n_u
+
         self.memory = Memory(memory_size, n_u, n_x, T=T)
         self.policy = policy
         self.lamb = np.ones((N, T, n_u))
@@ -71,3 +72,5 @@ class GPS:
 
     def fit_policy(self, states, actions):
         pass
+
+    def fit_lqg()
