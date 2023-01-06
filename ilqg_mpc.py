@@ -64,7 +64,7 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     control.fit_control(xs_init[0], us_init)
     control.save(path=path, file_name=f'control_{i}.npz')
     env.set_time(T, time_max)
-    with Pool(processes=4) as pool:
+    with Pool(processes=M) as pool:
         pool.map(partial(_fit_child, control.low, control.high,
                  dt, T, horizon, path, i), range(M))
         pool.close()
