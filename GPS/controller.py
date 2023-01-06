@@ -511,20 +511,20 @@ class MPC(iLQRAgent):
     def save(self, path, file_name='mpc_control.npz'):
         file_path = path + file_name
         np.savez(file_path,
-                 C=self._C,
-                 K=self._K,
-                 k=self._k,
-                 xs=self._nominal_xs,
-                 us=self._nominal_us,
-                 alphas=self._alphas
+                 C=self._C[:self.N],
+                 K=self._K[:self.N],
+                 k=self._k[:self.N],
+                 xs=self._nominal_xs[:self.N+1],
+                 us=self._nominal_us[:self.N],
+                 alphas=self._alphas[:self.N]
                  )
 
     def load(self, path, file_name='mpc_control.npz'):
         file_path = path + file_name
         npzfile = np.load(file_path)
-        self._k = npzfile['k']
-        self._K = npzfile['K']
-        self._C = npzfile['C']
-        self._nominal_xs = npzfile['xs']
-        self._nominal_us = npzfile['us']
-        self._alphas = npzfile['alphas']
+        self._k[:self.N] = npzfile['k']
+        self._K[:self.N] = npzfile['K']
+        self._C[:self.N] = npzfile['C']
+        self._nominal_xs[:self.N + 1] = npzfile['xs']
+        self._nominal_us[:self.N] = npzfile['us']
+        self._alphas[:self.N] = npzfile['alphas']
