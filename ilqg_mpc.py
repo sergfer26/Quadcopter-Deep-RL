@@ -71,10 +71,6 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
         pool.join()
 
 
-def foo(x):
-    print(x)
-
-
 def _fit_child(low, high, dt, N, horizon, path, i, j):
     n_u = 4  # env.num_actions
     n_x = 12  # env.num_states
