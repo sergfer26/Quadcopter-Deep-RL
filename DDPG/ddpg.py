@@ -2,13 +2,12 @@ import pathlib
 import pickle
 import torch
 import copy
-import numpy as np
 import torch.autograd
 import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
 # from .models_merge import Actor, Critic, weights_init
-from .models import Actor, Critic, weights_init
+from .models import Actor, Critic
 from .utils import Memory
 from .params import PARAMS_DDPG
 

@@ -63,7 +63,11 @@ class NormalizedEnv(gym.ActionWrapper):
 
         act_k = (high - low) / 2.
         act_b = (high + low) / 2.
-        return act_k * action + act_b
+        try:
+            aux = act_k * action + act_b
+        except:
+            breakpoint()
+        return aux
 
     def reverse_action(self, action):
         high = self.action_space.high
