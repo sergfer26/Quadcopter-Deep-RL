@@ -1,22 +1,25 @@
 import numpy as np
 import warnings
 from scipy.stats import multivariate_normal
-from ilqr.controller import iLQR
-from scipy.linalg import issymmetric
+from scipy.linalg import brentq
+from ilqr import iLQR, RecedingHorizonController
 from .params import PARAMS_iLQR as PARAMS
-from copy import deepcopy
+from .utils import mvn_kl_div, OnlineCost, OfflineCost
+from ilqr.dynamics import constrain
 
 
-class iLQRAgent(iLQR):
+class iLQG(iLQR):
 
     # env: gym.Env, dynamics: Dynamics, cost: Cost):
-    def __init__(self, dynamics, cost, steps, low, high,
+    def __init__(self, dynamics,
+                 cost: OfflineCost, steps: int,
+                 low_action: np.ndarray = None, high_action: np.ndarray = None,
                  min_reg=PARAMS['min_reg'],
                  max_reg=PARAMS['max_reg'],
                  reg=PARAMS['reg'],
                  delta_0=PARAMS['delta_0'],
-                 is_stochastic=PARAMS['is_stochastic'],
-                 state_names=None):
+                 is_stochastic=PARAMS['is_stochastic']
+                 ):
         '''
         dynamics : `ilqr.Dynamics`
             Es el sistema dinámico bajo el cual funciona el sistema.
@@ -31,27 +34,38 @@ class iLQRAgent(iLQR):
         high : `np.ndarray`
             Es el límite superior del espacio del estado.
         '''
-        super(iLQRAgent, self).__init__(dynamics, cost, steps, max_reg, False)
+        super(iLQG, self).__init__(dynamics, cost, steps, max_reg, False)
+        # time step index for simulation
+        self.i = 0
+
+        # Regularization parameters
         self._mu_min = min_reg
         self._mu = reg
         self._delta_0 = delta_0
         self.alpha = 1.0
-        self.i = 0
+
+        # Cost regularization parametrs
+        self._eta1 = 0.1
+        self._eta2 = 0.2
+        self.cost.eta = self._eta2
+        self._eps = 10.0
+        self._dkl_tol = 1e-1
+
+        # Dynamics characteristics
         self.num_states = dynamics._state_size
         self.num_actions = dynamics._action_size
-        self.low = low
-        self.high = high
+        self.contrain_action = False
+        if (low_action is not None) & (high_action is not None):
+            self.contrain_action = True
+        self.low_action = low_action
+        self.high_action = high_action
+
         # Control parameters
         self._C = np.stack([np.identity(self.num_actions)
                            for _ in range(self.N)])
         self._nominal_us = np.empty((self.N, self.num_actions))
         self._nominal_xs = np.empty((self.N + 1, self.num_states))
         self.is_stochastic = is_stochastic
-        self.action_names = [f'u_{i}' for i in range(0, self.num_actions)]
-        if isinstance(state_names, list):
-            self.state_names = state_names
-        else:
-            self.state_names = [f's_{i}' for i in range(0, self.num_states)]
 
     def _rollout(self, x0, us):
         '''
@@ -119,6 +133,16 @@ class iLQRAgent(iLQR):
 
         return action
 
+    def rollout(self, x0):
+        self.reset()
+        us = np.empty_like(self._nominal_us)
+        xs = np.empty_like(self._nominal_xs)
+        xs[0] = x0
+        for i in range(self.N):
+            us[i] = self.get_action(xs[i])
+            xs[i+1] = self.dynamics.f(xs[i], us[i], i)
+        return xs, us
+
     def get_prob_action(self, state, action, t=0):
         g_xs = self._nominal_us[t] + self.alpha * self._k[t] + \
             self._K[t] @ (state - self._nominal_xs[t])
@@ -141,7 +165,7 @@ class iLQRAgent(iLQR):
         text = f'— it= {iteration}, J= {J_opt}, accepted= {accepted}, converged= {converged}'
         print(text)
 
-    def fit(self, x0, us_init, n_iterations=100, tol=1e-6, on_iteration=None, i=0):
+    def fit(self, x0, us_init, n_iterations=100, tol=1e-6, on_iteration=None):
         """Computes the optimal controls.
 
         Args:
@@ -157,7 +181,7 @@ class iLQRAgent(iLQR):
                     xs: Current state path.
                     us: Current action path.
                     J_opt: Optimal cost-to-go.
-                    accepted: Whether this iteration yielded an accepted 
+                    accepted: Whether this iteration yielded an accepted
                     result.
                     converged: Whether this iteration converged successfully.
                 Default: None.
@@ -176,9 +200,10 @@ class iLQRAgent(iLQR):
         alpha = 1.0
 
         us = us_init.copy()
-        N = us.shape[0]
-        k = self._k[i:i + N]
-        K = self._K[i:i + N]
+        # N = us.shape[0]
+        k = self._k
+        K = self._K
+        C = self._C
 
         changed = True
         converged = False
@@ -194,12 +219,12 @@ class iLQRAgent(iLQR):
 
             try:
                 # Backward pass.
-                k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
-                                              F_xx, F_ux, F_uu)
+                k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux,
+                                              L_uu, F_xx, F_ux, F_uu)
 
                 # Backtracking line search.
                 for alpha in alphas:
-                    xs_new, us_new = self._control(xs, us, k, K, alpha)
+                    xs_new, us_new = self._control(xs, us, k, K, C, alpha)
                     J_new = self._trajectory_cost(xs_new, us_new)
 
                     if J_new < J_opt:
@@ -220,10 +245,13 @@ class iLQRAgent(iLQR):
                         # Accept this.
                         accepted = True
                         break
+
             except np.linalg.LinAlgError as e:
                 # Quu was not positive-definite and this diverged.
                 # Try again with a higher regularization term.
                 warnings.warn(str(e))
+                # reg = self._mu * np.eye(self.dynamics.state_size)
+                # Q_uu = L_uu + F_u.T.dot(V_xx + reg).dot(F_u)
 
             if not accepted:
                 # Increase regularization term.
@@ -240,11 +268,11 @@ class iLQRAgent(iLQR):
                 break
 
         # Store fit parameters.
-        self._k[i:i + N] = k
-        self._K[i:i + N] = K
-        self._C[i:i + N] = C
-        self._nominal_xs[i:i + N + 1] = xs
-        self._nominal_us[i:i + N] = us
+        self._k = k
+        self._K = K
+        self._C = C
+        self._nominal_xs = xs
+        self._nominal_us = us
         self.alpha = alpha
 
         return xs, us
@@ -312,7 +340,7 @@ class iLQRAgent(iLQR):
             V_xx = 0.5 * (V_xx + V_xx.T)  # To maintain symmetry.
         return k, K, C
 
-    def _control(self, xs, us, k, K, alpha=1.0):
+    def _control(self, xs, us, k, K, C, alpha=1.0, is_stochastic=True, constrained=True):
         """Applies the controls for a given trajectory.
 
         Args:
@@ -335,8 +363,11 @@ class iLQRAgent(iLQR):
         for i in range(N):
             # Eq (12).
             us_new[i] = us[i] + alpha * k[i] + K[i].dot(xs_new[i] - xs[i])
-            if self.is_stochastic:
-                us_new[i] = multivariate_normal.rvs(us_new[i], self._C[i], 1)
+            if constrained:
+                us_new[i] = constrain(
+                    us_new[i], self.low_action, self.high_action)
+            if is_stochastic:
+                us_new[i] = multivariate_normal.rvs(us_new[i], C[i], 1)
 
             # Eq (8c).
             xs_new[i + 1] = self.dynamics.f(xs_new[i], us_new[i], i)
@@ -346,15 +377,105 @@ class iLQRAgent(iLQR):
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
         np.savez(file_path,
-                 C=self._C,
+                 C=np.round(self._C, 3),
                  K=self._K,
                  k=self._k,
                  xs=self._nominal_xs,
                  us=self._nominal_us,
-                 alpha=self.alpha
+                 alpha=self.alpha,
+                 eta=self.cost.eta
                  )
 
     def load(self, path, file_name='ilqr_control.npz'):
+        file_path = path + file_name
+        npzfile = np.load(file_path)
+        self._k = npzfile['k']
+        self._K = npzfile['K']
+        self._C = np.round(npzfile['C'], 5)
+        self._nominal_xs = npzfile['xs']
+        self._nominal_us = npzfile['us']
+        self.alpha = npzfile['alpha']
+
+    def step(self, eta: float):
+        us = self._nominal_us
+        N = us.shape[0]
+        self.cost.eta = eta
+        (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
+         F_uu) = self._forward_rollout(self.x0, us)
+
+        k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
+                                      F_xx, F_ux, F_uu)
+
+        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
+        params = self.cost.control_parameters()
+        params['is_stochastic'] = False
+        us_old = self._control(**params)[1]
+        C_old = params['C']
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C[j], C_old[j])
+                      for j in range(N)])
+        return kl_div
+
+    def optimize(self, kl_step: float,
+                 min_eta: float = 1e-4,
+                 max_eta: float = 1e3,
+                 rtol: float = 1e-3, kl_maxiter=2):
+        """Perform iLQG trajectory optimization.
+        Args:
+            kl_step: KL divergence threshold to previous policy
+            min_eta: Minimal value of the Lagrangian multiplier
+            max_eta: Maximal value of the Lagrangian multiplier
+            rtol: Tolerance of found solution to kl_step. Levine et al. 
+            propose a value of 0.1 in "Learning Neural Network Policies with
+                  Guided Policy Search under Unknown Dynamics", chapter 3.1
+            full_history: Whether to return ahistory of all optimization 
+            steps, for debug purposes
+        Returns:
+            result: A `ILQRStepResult` or
+                    a list of `ILQRStepResult` if `full_history` is enabled 
+                    (in order they were visited)
+        """
+        # Check if constraind is fulfilled at maximum deviation
+        if self.step(min_eta) <= kl_step:
+            # return self.step(min_eta)
+            self.cost.eta = min_eta
+        else:
+            # Check if constraint cen be fulfilled at all
+            if self.step(max_eta) > kl_step:
+                raise ValueError(f"max_eta eta to low ({max_eta})")
+
+            # Find the point where kl divergence equals the kl_step
+            def constraint_violation(log_eta):
+                return self.step(np.exp(log_eta)) - kl_step
+
+            # Search root of the constraint violation
+            # Perform search in log-space, as this requires much fewer
+            # iterations
+            print("Brent's method begins...")
+            log_eta, r = brentq(
+                constraint_violation, np.log(min_eta), np.log(max_eta),
+                rtol=rtol, maxiter=kl_maxiter, disp=False, full_output=True)
+
+            print(np.exp(log_eta))
+            self.cost.eta = np.exp(log_eta)
+
+        print("iLQR optimization step")
+        xs, us = self.fit(self.x0, self.us_init,
+                          n_iterations=PARAMS['n_iterations'],
+                          tol=PARAMS['tol'],
+                          on_iteration=self.on_iteration)
+        cost_trace = self._step_cost(xs, us)
+        return xs, us, cost_trace, r
+
+
+class DummyControl():
+
+    def __init__(self, N, path, file_name):
+        self.load(path, file_name)
+        self.is_stochastic = True
+        self.i = 0
+        self.N = N
+
+    def load(self, path, file_name):
         file_path = path + file_name
         npzfile = np.load(file_path)
         self._k = npzfile['k']
@@ -364,97 +485,8 @@ class iLQRAgent(iLQR):
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
 
-
-class MPC(iLQRAgent):
-
-    def __init__(self, dynamics, cost, steps, low, high,
-                 horizon=25,
-                 min_reg=PARAMS['min_reg'],
-                 max_reg=PARAMS['max_reg'],
-                 reg=PARAMS['reg'], delta_0=PARAMS['delta_0'],
-                 state_names=None):
-        super().__init__(dynamics, cost, steps + horizon, low, high,
-                         min_reg, max_reg, reg, delta_0, state_names)
-        self.N = steps
-        self.i = 0
-        self.horizon = horizon
-        self._alphas = np.ones(self.N)
-        self._F = 0.01 * np.identity(self.num_states)
-        self._mean = np.empty((self.N + horizon, self.num_states))
-        self._sigma = np.empty(
-            (self.N + horizon, self.num_states, self.num_states))
-
-    def update_offline_control(self, control=None, file_path=None):
-        if isinstance(control, iLQRAgent):
-            self.off_k = control._k
-            self.off_K = control._K
-            self.off_C = control._C
-            self.off_nominal_us = control._nominal_us
-            self.off_nominal_xs = control._nominal_xs
-            self.off_alpha = control.alpha
-        elif isinstance(file_path, str):
-            npzfile = np.load(file_path)
-            self.off_k = npzfile['k']
-            self.off_K = npzfile['K']
-            self.off_C = npzfile['C']
-            self.off_nominal_xs = npzfile['xs']
-            self.off_nominal_us = npzfile['us']
-            self.off_alpha = npzfile['alpha']
-        else:
-            warnings.warn("No path nor control was provided")
-
-    def _mean_dynamics(self, x, u, i, mu=None):
-        r'''
-        Cálcula la media de la dinamica del sistema
-        $$
-        \mu_{t^{'}} = \mathbb{E}[X \sim p(x_t^{'}|x_{t})]
-        \forall t^{'} \in [t+1, t + H]
-        $$
-        '''
-        if not isinstance(mu, np.ndarray):
-            mu = np.zeros(self.num_states)
-        f_x = self.dynamics.f_x(x, u, i)
-        f_u = self.dynamics.f_u(x, u, i)
-        u_hat = self.off_nominal_us[i]
-        x_hat = self.off_nominal_xs[i]
-        k = self.off_k[i]
-        K = self.off_K[i]
-
-        f_xu = np.hstack([f_x, f_u])
-        new_u = u_hat + self.off_alpha * k + K @ (mu - x_hat)
-        return f_xu @ np.hstack([mu, new_u])
-
-    def _cov_dynamics(self, x, u, i, sigma=None):
-        if not isinstance(sigma, np.ndarray):
-            sigma = np.zeros(self.num_actions)
-        f_x = self.dynamics.f_x(x, u, i)
-        f_u = self.dynamics.f_u(x, u, i)
-        f_xu = np.hstack([f_x, f_u])
-        K = self.off_K[i]
-        C = self.off_C[i]
-        a1 = np.hstack([sigma, sigma @ K.T])
-        a2 = np.hstack([K @ sigma, C + K @ sigma @ K.T])
-        sigma = f_xu @ np.vstack([a1, a2]) @ f_xu.T + self._F
-        return sigma
-
-    def _dynamics_dist(self, xs, us, i, horizon):
-        mu = xs[i]
-        sigma = self._F
-        self._sigma[i] = sigma
-        N = us.shape[0]
-        for k in range(i+1, i + horizon):
-            if k < N:
-                index = k-1
-            else:
-                index = -1
-            mu = self._mean_dynamics(xs[index], us[index], i=index, mu=mu)
-            sigma = self._cov_dynamics(
-                xs[index], us[index], i=index, sigma=sigma)
-            self._mean[k] = mu
-            self._sigma[k] = np.round(sigma, 2)
-
     def get_action(self, state, update_time_step=True):
-        mean = self._nominal_us[self.i] + self._alpha[self.i] * self._k[self.i] + \
+        mean = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
             self._K[self.i] @ (state - self._nominal_xs[self.i])
         if self.is_stochastic:
             action = multivariate_normal.rvs(mean, self._C[self.i], 1)
@@ -466,65 +498,22 @@ class MPC(iLQRAgent):
 
         return action
 
-    def control(self,
-                xs_init,
-                us_init,
-                initial_n_iterations=100,
-                subsequent_n_iterations=1,
-                *args,
-                **kwargs):
-        '''
-        Argumentos
-        ----------
-        xs_init : trayectoria inicial de estados con
-                dimensiones (N + horizon + 1, num_states)
-        us_init : trayectoria inicial de acciones con
-                dimensiones (N + horizon, num_actions)
 
-        Retornos
-        --------
-        xs : trayectoria de estados resultante del método
-            mpc.
-        us : trayectoria de acciones resultante del método
-            mpc.
-        '''
-        n_iterations = initial_n_iterations
-        us_init = deepcopy(us_init)
-        xs = np.empty_like(xs_init)
-        us = np.empty_like(us_init)
-        xs[0] = xs_init[0]
-        for i in range(0, self.N):
-            self._dynamics_dist(xs_init, us_init, i, self.horizon)
-            x, u = self.fit(xs[i],
-                            us_init[i: i + self.horizon],
-                            n_iterations=n_iterations,
-                            i=i,
-                            *args,
-                            **kwargs)
-            self._alphas[i] = self.alpha
-            xs[i + 1] = x[1]
-            us[i] = u[0]
-            us_init[i:i + self.horizon] = u
+class iLQG_Online(iLQG):
 
-        return xs[:self.N], us[:self.N]
+    def __init__(self, dynamics, cost: OnlineCost,
+                 steps: int, low_action: np.ndarray = None,
+                 high_action: np.ndarray = None,
+                 min_reg=PARAMS['min_reg'],
+                 max_reg=PARAMS['max_reg'],
+                 reg=PARAMS['reg'],
+                 delta_0=PARAMS['delta_0'],
+                 is_stochastic=PARAMS['is_stochastic']):
+        super().__init__(dynamics, cost, steps, low_action, high_action,
+                         min_reg, max_reg, reg, delta_0, is_stochastic)
 
-    def save(self, path, file_name='mpc_control.npz'):
-        file_path = path + file_name
-        np.savez(file_path,
-                 C=self._C[:self.N],
-                 K=self._K[:self.N],
-                 k=self._k[:self.N],
-                 xs=self._nominal_xs[:self.N+1],
-                 us=self._nominal_us[:self.N],
-                 alphas=self._alphas[:self.N]
-                 )
-
-    def load(self, path, file_name='mpc_control.npz'):
-        file_path = path + file_name
-        npzfile = np.load(file_path)
-        self._k[:self.N] = npzfile['k']
-        self._K[:self.N] = npzfile['K']
-        self._C[:self.N] = npzfile['C']
-        self._nominal_xs[:self.N + 1] = npzfile['xs']
-        self._nominal_us[:self.N] = npzfile['us']
-        self._alphas[:self.N] = npzfile['alphas']
+    def fit(self, x0, us_init, n_iterations=100, tol=0.000001, on_iteration=None):
+        xs, us = self.cost.control.rollout(x0)
+        # update the cost parameters
+        self.cost._dist_dynamics(xs, us)
+        return super().fit(x0, us_init, n_iterations, tol, on_iteration)
