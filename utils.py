@@ -1,13 +1,13 @@
-import os
+# import os
 import pytz
-import pathlib
+# import pathlib
 import numpy as np
-from GPS.utils import Memory
+# from GPS.utils import Memory
 from mycolorpy import colorlist as mcp
 from matplotlib.pyplot import cm
 from matplotlib import pyplot as plt
 from datetime import datetime
-from simulation import n_rollouts
+# from simulation import n_rollouts
 
 
 def smooth(y, box_pts):
@@ -16,28 +16,29 @@ def smooth(y, box_pts):
     return y_smooth
 
 
+"""
 def load_memory(expert, env, n, path='Linear/', n_x=None, n_u=None, t_x=None, t_u=None):
     '''
-    Carga el almacenamiento de las demostraciones del experto.
+Carga el almacenamiento de las demostraciones del experto.
 
-    Argumenetos
-    -----------
-    env : QuadcopterEnv
-        Entorno del quadricoptero.
-    n : int
-        Número de simulaciones
-    path : str
-        Dirección donde será/esta guardada la memoria.
-    n_x, n_u : int
-        Dimensión de los estados y las acciones respectivamente.
-    t_x, t_u : function
-        Transformaciones aplicadas a las salidas de `env`.
+Argumenetos
+-----------
+env: QuadcopterEnv
+Entorno del quadricoptero.
+n: int
+Número de simulaciones
+path: str
+Dirección donde será/esta guardada la memoria.
+n_x, n_u: int
+Dimensión de los estados y las acciones respectivamente.
+t_x, t_u: function
+Transformaciones aplicadas a las salidas de `env`.
 
-    Retornos
-    --------
-    memory : `GCL.utils.Memory``
-        Es el almacenamiento de las demostraciones del experto.
-    '''
+Retornos
+--------
+memory: `GCL.utils.Memory``
+Es el almacenamiento de las demostraciones del experto.
+'''
     if n_x is None:
         n_x = env.observation_space.shape[0]
     if n_u is None:
@@ -67,6 +68,7 @@ def load_memory(expert, env, n, path='Linear/', n_x=None, n_u=None, t_x=None, t_
     memory.push(states=states, actions=actions,
                 next_states=new_states, dones=dones)
     return memory
+"""
 
 
 def date_as_path():
@@ -102,7 +104,7 @@ def plot_performance(*args, xlabel=None, ylabel=None,
     dpi : int
         Número de pixeles.
     cmp : str
-        Nombre del colormap de matplotlib: 
+        Nombre del colormap de matplotlib:
         https://matplotlib.org/stable/tutorials/colors/colormaps.html
     alphas : `list`o `np.ndarray`
         Arreglo de las transparencis de las curvas.
