@@ -1,23 +1,56 @@
 import numpy as np
-import random
-import numpy as np
-from collections import deque
+import warnings
+from os.path import exists
+from ilqr.controller import iLQR
+
 from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from .params import PARAMS_iLQR
-from scipy.stats import multivariate_normal as m_n
+from scipy.stats import multivariate_normal as normal
 
 q1 = PARAMS_iLQR['q1']
 q2 = PARAMS_iLQR['q2']
 
 
+def mvn_kl_div(mu1, mu2, sigma1, sigma2):
+    '''
+    Kullback-Leiber divergence for a multivariate normal
+    distribution X1 from another mvn X2.
+    https://statproofbook.github.io/P/mvn-kl.html
+
+    Arguments
+    ---------
+    mu1 : `np.ndarray`
+        Mean of X1 as numerical array with dimension (n,).
+    mu2 _ `np.ndarray`
+        Mean of X2 as numerical array with dimension (n,).
+    sigma1: `np.ndarray`
+        Covariance matrix of X1 as numerical array with dimensions (n, n).
+    sigma2 : `np.ndarray`
+        Covariance matrix of X2 as numerical array with dimensions (n, n).
+
+    Return
+    ------
+    kl_div : `float`
+        divergence measure.
+    '''
+    n = mu1.shape[0]
+    inv_sigma2 = np.linalg.inv(sigma2)
+    div = 0.0
+    div += (mu2 - mu1).T @ inv_sigma2 @ (mu2 - mu1)
+    div += np.trace(inv_sigma2 @ sigma1)
+    div -= np.log(np.linalg.det(sigma1)/np.linalg.det(sigma2))
+    div -= n
+    return 0.5 * div
+
+
 class ContinuousDynamics(FiniteDiffDynamics):
 
-    def __init__(self, f, state_size, action_size, dt=0.1, x_eps=None, u_eps=None, u0=None, method='lsoda'):
+    def __init__(self, f, n_x, n_u, dt=0.1, x_eps=None, u_eps=None, u0=None, method='lsoda'):
         # def f_d(x, u, i): return x + f(x, u)*dt
         if not isinstance(u0, np.ndarray):
-            u0 = np.zeros(action_size)
+            u0 = np.zeros(n_u)
 
         if method == 'euler':
             def f_d(x, u, i):
@@ -29,7 +62,7 @@ class ContinuousDynamics(FiniteDiffDynamics):
                 t = [i * dt, (i+1)*dt]
                 return odeint(f, x, t, args=(w1, w2, w3, w4))[1]
 
-        super().__init__(f_d, state_size, action_size, x_eps, u_eps)
+        super().__init__(f_d, n_x, n_u, x_eps, u_eps)
 
 
 class FiniteDiffCostBounded(FiniteDiffCost):
@@ -47,206 +80,253 @@ class FiniteDiffCostBounded(FiniteDiffCost):
 
 class OfflineCost(FiniteDiffCost):
 
-    def __init__(self, l, l_terminal, state_size, action_size,
+    def __init__(self, cost, l_terminal, n_x, n_u,
                  x_eps=None, u_eps=None,
-                 eta=0.1, nu=0.001, _lambda=None,
-                 N=10, mean=None
+                 eta=0.1, nu=None, lamb=None,
+                 T=10, policy_mean=None, policy_cov=None
                  ):
+        '''Constructs an Offline cost for Guided policy search.
+
+        Args:
+            l: Instantaneous cost function to approximate.
+                Signature: (x, u, i) -> scalar.
+            l_terminal: Terminal cost function to approximate.
+                Signature: (x, i) -> scalar.
+            n_x: State size.
+            n_u: Action size.
+            x_eps: Increment to the state to use when estimating the gradient.
+                Default: np.sqrt(np.finfo(float).eps).
+            u_eps: Increment to the action to use when estimating the gradient.
+                Default: np.sqrt(np.finfo(float).eps).
+            eta : Langrange's multiplier, old policy weight.
+                Default: 0.1.
+            nu : Langrange's multiplier, neural network weight.
+                Default: 0.001.
+            _lambda : Langrange's multiplier, contraint weight.
+                Default: None (np.array).
+        '''
 
         # Steps of the trajectory
-        self.N = N
+        self.T = T
         # Parameters of the old control
-        self._k = np.zeros((N, action_size))
-        self._K = np.zeros((N, action_size, state_size))
-        self._C = np.stack([np.identity(action_size)
-                            for _ in range(self.N)])
+        self._k = np.zeros((T, n_u))
+        self._K = np.zeros((T, n_u, n_u))
+        self._C = np.stack([np.identity(n_u)
+                            for _ in range(T)])
         # Lagrange's multipliers
         self.eta = eta
-        self.nu = nu * np.ones(N)
-        self._lambda = _lambda if _lambda is not None else np.ones(action_size)
+        self.nu = 0.001 * np.ones(T) if nu is None else nu
+        self.lamb = 0.001 * np.ones((T, n_u)) if lamb is None else lamb
         # Parameters of the nonlinear policy
-        self.cov = np.identity(action_size)
-        self.mean = lambda x: np.ones(
-            action_size) if not callable(mean) else mean
+        self.policy_cov = np.identity(n_u) if not callable(
+            policy_cov) else policy_cov
+        self.policy_mean = lambda x: np.ones(
+            n_u) if not callable(policy_mean) else policy_mean
+
+        self.cost = cost  # l_bounded
+        self.control_updated = False
 
         def _cost(x, u, i):
             c = 0.0
-            c += l(x, u, i) - u.T@self._lambda
-            c -= self.nu[i] * m_n.logpdf(x=u, mean=self.mean(x), cov=self.cov)
+            c += self.cost(x, u, i) - u.T@self.lamb[i]
+            c -= self.nu[i] * \
+                normal.logpdf(x=u, mean=self.policy_mean(x),
+                              cov=self.policy_cov)
             c /= (self.eta + self.nu[i])
-            c -= eta * m_n.logpdf(x=u, mean=self._K[i]
-                                  @ x + self._k[i], cov=self._C[i]) / (self.eta + self.nu[i])
+            # if self.control_updated:
+            mean_control = self._control(x, i)
+            # try:
+            c -= self.eta * normal.logpdf(x=u, mean=mean_control,
+                                          cov=self._C[i]) / (self.eta + self.nu[i])
+            # except:
+            #    breakpoint()
             return c
 
-        super().__init__(_cost, l_terminal, state_size, action_size, x_eps, u_eps)
+        super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
 
-    def update_control(self, control):
-        self._K = control._K
-        self._k = control._k
-        self._C = control._C
+    def _control(self, x, i):
+        us = self._us[i]
+        xs = self._xs[i]
+        return us + self._alpha * self._k[i] + self._K[i] @ (x - xs)
+
+    def update_control(self, control: iLQR = None, file_path: str = None):
+        if isinstance(control, iLQR):
+            self._K = control._K.copy()
+            self._k = control._k.copy()
+            self._C = control._C.copy()
+            self._xs = control._nominal_xs.copy()
+            self._us = control._nominal_us.copy()
+            self._alpha = 0.0 + control.alpha
+        elif exists(file_path):
+            file = np.load(file_path)
+            self._K = file['K']
+            self._k = file['k']
+            self._C = file['C']
+            self._xs = file['xs']
+            self._us = file['us']
+            self._alpha = file['alpha']
+        else:
+            warnings.warn("No path nor control was provided")
+        # self.control_updated = True
+
+    def control_parameters(self):
+        return dict(
+            xs=self._xs,
+            us=self._us,
+            k=self._k,
+            K=self._K,
+            C=self._C,
+            alpha=self._alpha
+        )
 
 
-class MPCCost(FiniteDiffCost):
+class OnlineCost(FiniteDiffCost):
 
     def __init__(self, state_size, action_size,
+                 control,
                  x_eps=None, u_eps=None,
-                 nu=0.001, _lambda=None,
-                 N=10, mean_policy=None,
+                 nu=0.001, lamb=None,
+                 policy_mean=None
                  ):
+        self.control = control
+        self.n_x = state_size
+        self.n_u = action_size
+
         # Steps of the trajectory
-        self.N = N
-        # Parameters of the old control
-        self.old_x = np.empty(state_size)
-        self.old_u = np.empty(action_size)
+        self.N = control.N
 
         # Lagrange's multipliers
-        self.nu = nu * np.ones(N)
-        self._lambda = _lambda if _lambda is not None else np.ones(action_size)
+        self.nu = nu * np.ones(self.N)
+        self.lamb = lamb if lamb is not None else np.ones(action_size)
         # Parameters of the nonlinear policy
-        self.cov = np.identity(action_size)
-        self.mean_policy = lambda x: np.ones(
-            action_size) if not callable(mean_policy) else mean_policy
+        self.policy_cov = np.identity(action_size)
+        self.policy_mean = lambda x: np.ones(
+            action_size) if not callable(policy_mean) else policy_mean
         self.cov_dynamics = np.stack(
-            [np.identity(state_size) for _ in range(N)])
-        self.mean_dynamics = np.zeros((N, state_size))
+            [np.identity(state_size) for _ in range(self.N)])
+        self.mean_dynamics = np.zeros((self.N, state_size))
+        self._F = 1e-3 * np.identity(self.n_x)
 
         super().__init__(self._cost, lambda x, i: 0, state_size, action_size, x_eps, u_eps)
 
-    def update_dynamics(self, control):
-        self.mean_dynamics = control._mean
-        self.cov_dynamics = control._sigma
+    def _mean_dynamics(self, x, u, i, mu=None):
+        r'''
+        Cálcula la media de la dinamica del sistema
+        $$
+        \mu_{t^{'}} = \mathbb{E}[X \sim p(x_t^{'}|x_{t})]
+        \forall t^{'} \in [t+1, t + H]
+        $$
+        '''
+        if not isinstance(mu, np.ndarray):
+            mu = np.zeros(self.n_x)
+        f_x = self.control.dynamics.f_x(x, u, i)
+        f_u = self.control.dynamics.f_u(x, u, i)
+        u_hat = self.control._nominal_us[i]
+        x_hat = self.control._nominal_xs[i]
+        k = self.control._k[i]
+        K = self.control._K[i]
+
+        f_xu = np.hstack([f_x, f_u])
+        new_u = u_hat + self.control.alpha * k + K @ (mu - x_hat)
+        return f_xu @ np.hstack([mu, new_u])
+
+    def _cov_dynamics(self, x, u, i, sigma=None):
+        if not isinstance(sigma, np.ndarray):
+            sigma = np.zeros_like(self._F)
+        f_x = self.control.dynamics.f_x(x, u, i)
+        f_u = self.control.dynamics.f_u(x, u, i)
+        f_xu = np.hstack([f_x, f_u])
+        K = self.control._K[i]
+        C = self.control._C[i]
+        a1 = np.hstack([sigma, sigma @ K.T])
+        try:
+            a2 = np.hstack([K @ sigma, C + K @ sigma @ K.T])
+        except:
+            breakpoint()
+        sigma = f_xu @ np.vstack([a1, a2]) @ f_xu.T + self._F
+        return sigma
+
+    def _dist_dynamics(self, xs, us):
+        mu = xs[0]
+        sigma = self._F
+        N = us.shape[0]
+        for i in range(N):
+            mu = self._mean_dynamics(xs[i], us[i], i=i, mu=mu)
+            sigma = self._cov_dynamics(xs[i], us[i], i=i, sigma=sigma)
+            self.mean_dynamics[i] = mu
+            self.cov_dynamics[i] = np.round(sigma, 5)
+
+    def update_control(self, control):
+        self.control = control
 
     def _cost(self, x, u, i):
         c = 0.0
-        c -= u.T@self._lambda
+        c -= u.T@self.lamb
         # log policy distribution
         c -= self.nu[i] * \
-            m_n.logpdf(x=u, mean=self.mean_policy(x), cov=self.cov)
+            normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
         # log dynamics distribution
         try:
-            c -= m_n.logpdf(x=x,
-                            mean=self.mean_dynamics[i],
-                            cov=self.cov_dynamics[i])
+            c -= normal.logpdf(x=x,
+                               mean=self.mean_dynamics[i],
+                               cov=self.cov_dynamics[i])
         except:
             breakpoint()
         return c
 
 
-class Memory:
+def rollout(agent, env, flag=False, state_init=None):
+    '''
+    Simulación de interacción entorno-agente
 
-    def __init__(self, max_size, action_dim, state_dim, T):
-        self.max_size = max_size
-        self.action_dim = action_dim
-        self.state_dim = state_dim
-        self.T = T
-        self.buffer = deque(maxlen=max_size)
+    Argumentos
+    ----------
+    agent : `(DDPG.DDPGAgent, Linear.Agent, GPS.iLQRAgent)`
+        Instancia que representa al agente que toma acciones 
+        en la simulación.
+    env : `gym.Env`
+        Entorno de simualción de gym.
+    flag : bool
+        ...
+    state_init : `np.ndarray`
+        Arreglo que representa el estado inicial de la simulación.
 
-    def push(self, trajectory=None, **kwargs):
-        '''
-        Método para agregar trayectorias al buffer de la memoria.
-
-        Argumentos
-        ----------
-        trajectory (ocional): list
-            La lista con las tuplas que representan la experiencia a lo largo
-            de un episodio. Cada tupla debe tener la siguiente estructura:
-            (state, action, new_state, done). `len(trajectory) -> self.T`.
-        states : `np.ndarray`
-            Es un arreglo que representa los estados de una o `m` simulaciones.
-            `states.shape -> (self.T, self.state_dim)`
-            o `states.shape -> (m, self.T, self.state_dim)`
-        actions : `np.ndarray`
-            Es un arrreglo que representa las acciones de una o `m`
-            simulaciones.
-            `actions.shape -> (self.T, self.action_dim)`
-            o `states.shape -> (m, self.T, self.action_dim)`
-        next_states : `np.ndarray`
-            Es un arreglo que representa los nuevos estados de una o `m`
-            simulaciones.
-            `next_states.shape -> (self.T, self.state_dim)`
-            o `next_states.shape -> (m, self.T, self.state_dim)`
-        dones : `np.array`
-            Es un arreglo que representa los booleanos de termino de una
-            simulación o `m` simulaciones.
-            `dones.shape -> self.T` o `next_states.shape -> (m, self.T)`
-        '''
-        if isinstance(trajectory, list):
-            states, actions, next_states, dones = self._preprocess_traj(
-                trajectory)
-        elif len(kwargs) > 0:
-            states = kwargs['states']
-            actions = kwargs['actions']
-            next_states = kwargs['next_states']
-            dones = kwargs['dones']
-        if len(states.shape) == 2:
-            x = [states, actions, next_states, dones]
-            self.buffer.append(x)
-        elif len(states.shape) == 3:
-            for i in range(states.shape[0]):
-                x = [states[i, :, :], actions[i, :, :],
-                     next_states[i, :, :], dones[i, :]]
-                self.buffer.append(x)
-        else:
-            print('No pudo procesar la información')
-
-    def sample(self, sample_size, t_x=None, t_u=None):
-        '''
-        Muestrea trayectorias de simulaciones.
-
-        Argumentos
-        ----------
-        sample_size : int
-            Representa el tamaño de muestra.
-
-        Retornos
-        --------
-        states : `np.ndarray`
-            Arreglo que representa los estados de `sample_size` simulaciones.
-            `states.shape -> (sample_size, self.T, self.state_dim)`.
-        actions : `np.ndarray`
-            Arreglo que representa las acciones de `sample_size` simulaciones.
-            `states.shape -> (sample_size, self.T, self.action_dim)`.
-        new_states : `np.ndarray`
-            Arreglo que representa los nuevos estados de `sample_size`
-            simulaciones.
-            `states.shape -> (sample_size, self.T, self.state_dim)`.
-        dones : `np.ndarray`
-            Arreglo que representa los booleanos de terminado de
-            `sample_size` simulaciones.
-            `dones.shape -> (sample_size, self.T)`.
-        '''
-        samples = random.sample(self.buffer, sample_size)
-        states = np.empty((sample_size, self.T, self.state_dim))
-        actions = np.empty((sample_size, self.T, self.action_dim))
-        new_states = np.empty((sample_size, self.T, self.state_dim))
-        dones = np.empty((sample_size, self.T))
-        for i in range(sample_size):
-            states[i, :, :] = samples[i][0]
-            actions[i, :, :] = samples[i][1]
-            new_states[i, :, :] = samples[i][2]
-            dones[i, :] = samples[i][3]
-        if callable(t_x):
-            states = np.apply_along_axis(t_x, -1, states)
-            new_states = np.apply_along_axis(t_x, -1, new_states)
-        if callable(t_u):
-            actions = np.apply_along_axis(t_u, -1, actions)
-        return states, actions, new_states, dones
-
-    def _preprocess_traj(self, trajectory):
-        states = np.zeros((self.T, self.state_dim))
-        actions = np.zeros((self.T, self.action_dim))
-        next_states = np.zeros((self.T, self.state_dim))
-        dones = np.zeros((self.T, 1))
-        for i, experience in enumerate(trajectory):
-            state, action, next_state, done = experience
-            states[i, :] = state
-            actions[i, :] = action
-            next_states[i, :] = next_state
-            dones[i, :] = done
-        return states, actions, next_states, dones
-
-    def __len__(self):
-        return len(self.buffer)
-
-    def clear(self):
-        self.buffer.clear()
+    Retornos
+    --------
+    states : `np.ndarray`
+        Trayectoria de estados en la simulación con dimensión (env.steps, n_x).
+    acciones : `np.ndarray`
+        Trayectoria de acciones en la simulación con dimensión 
+        (env.steps -1, n_u).
+    scores : `np.ndarray`
+        Trayectoria de puntajes (incluye reward) en la simulación con
+        dimensión (env.steps -1, ?).
+    '''
+    # t = env.time
+    env.flag = flag
+    state = env.reset()
+    if hasattr(agent, 'reset') and callable(getattr(agent, 'reset')):
+        agent.reset()
+    if isinstance(state_init, np.ndarray):
+        env.state = state_init
+        state = state_init
+    states = np.zeros((env.steps, env.observation_space.shape[0]))
+    actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
+    scores = np.zeros((env.steps - 1, 2))  # r_t, Cr_t
+    states[0, :] = state
+    episode_reward = 0
+    i = 0
+    while True:
+        action = agent.get_action(state)
+        new_state, reward, done, info = env.step(action)
+        episode_reward += reward
+        states[i + 1, :] = state
+        if isinstance(info, dict) and ('real_action' in info.keys()):
+            action = info['real_action']  # env.action(action)
+        actions[i, :] = action
+        scores[i, :] = np.array([reward, episode_reward])
+        state = new_state
+        if done:
+            break
+        i += 1
+    return states, actions, scores
