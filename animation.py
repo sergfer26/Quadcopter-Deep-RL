@@ -2,7 +2,7 @@ import numpy as np
 import imageio
 from Linear.equations import angles2rotation
 from Linear.agent import LinearAgent
-from GPS.controller import iLQRAgent
+from GPS.controller import iLQG
 from simulation import n_rollouts
 from env import QuadcopterEnv
 from numpy import cos, sin
