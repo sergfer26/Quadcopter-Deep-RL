@@ -9,6 +9,32 @@ from progressbar import progressbar
 
 
 def rollout(agent, env, flag=False, state_init=None):
+    '''
+    Simulación de interacción entorno-agente
+
+    Argumentos
+    ----------
+    agent : `(DDPG.DDPGAgent, Linear.Agent, GPS.iLQRAgent)`
+        Instancia que representa al agente que toma acciones 
+        en la simulación.
+    env : `gym.Env`
+        Entorno de simualción de gym.
+    flag : bool
+        ...
+    state_init : `np.ndarray`
+        Arreglo que representa el estado inicial de la simulación.
+
+    Retornos
+    --------
+    states : `np.ndarray`
+        Trayectoria de estados en la simulación con dimensión (env.steps, n_x).
+    acciones : `np.ndarray`
+        Trayectoria de acciones en la simulación con dimensión 
+        (env.steps -1, n_u).
+    scores : `np.ndarray`
+        Trayectoria de puntajes (incluye reward) en la simulación con
+        dimensión (env.steps -1, ?).
+    '''
     # t = env.time
     env.flag = flag
     state = env.reset()
