@@ -6,11 +6,7 @@ from ilqr.controller import iLQR
 from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
-from .params import PARAMS_iLQR
 from scipy.stats import multivariate_normal as normal
-
-q1 = PARAMS_iLQR['q1']
-q2 = PARAMS_iLQR['q2']
 
 
 def mvn_kl_div(mu1, mu2, sigma1, sigma2):
@@ -61,21 +57,7 @@ class ContinuousDynamics(FiniteDiffDynamics):
                 w1, w2, w3, w4 = u + u0
                 t = [i * dt, (i+1)*dt]
                 return odeint(f, x, t, args=(w1, w2, w3, w4))[1]
-
         super().__init__(f_d, n_x, n_u, x_eps, u_eps)
-
-
-class FiniteDiffCostBounded(FiniteDiffCost):
-
-    def __init__(self, cost, l_terminal, state_size, action_size, x_eps=None,
-                 u_eps=None, u_bound=None, q1=q1, q2=q2):
-        def l_bounded(x, u, i):
-            total = cost(x, u, i)
-            if isinstance(u_bound, np.ndarray):
-                total += q1 * np.exp(q2 * (u ** 2 - u_bound ** 2)).sum()
-            return total
-
-        super().__init__(l_bounded, l_terminal, state_size, action_size, x_eps, u_eps)
 
 
 class OfflineCost(FiniteDiffCost):
@@ -102,10 +84,9 @@ class OfflineCost(FiniteDiffCost):
                 Default: 0.1.
             nu : Langrange's multiplier, neural network weight.
                 Default: 0.001.
-            _lambda : Langrange's multiplier, contraint weight.
+            lambd : Langrange's multiplier, contraint weight.
                 Default: None (np.array).
         '''
-
         # Steps of the trajectory
         self.T = T
         # Parameters of the old control
@@ -120,26 +101,22 @@ class OfflineCost(FiniteDiffCost):
         # Parameters of the nonlinear policy
         self.policy_cov = np.identity(n_u) if not callable(
             policy_cov) else policy_cov
-        self.policy_mean = lambda x: np.ones(
+        self.policy_mean = lambda x: np.zeros(
             n_u) if not callable(policy_mean) else policy_mean
 
         self.cost = cost  # l_bounded
-        self.control_updated = False
 
         def _cost(x, u, i):
+            C = self._C[i] + 5e-1 * np.identity(u.shape[-1])
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
                 normal.logpdf(x=u, mean=self.policy_mean(x),
                               cov=self.policy_cov)
             c /= (self.eta + self.nu[i])
-            # if self.control_updated:
             mean_control = self._control(x, i)
-            # try:
             c -= self.eta * normal.logpdf(x=u, mean=mean_control,
-                                          cov=self._C[i]) / (self.eta + self.nu[i])
-            # except:
-            #    breakpoint()
+                                          cov=C) / (self.eta + self.nu[i])
             return c
 
         super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
@@ -165,6 +142,8 @@ class OfflineCost(FiniteDiffCost):
             self._xs = file['xs']
             self._us = file['us']
             self._alpha = file['alpha']
+            if 'eta' in file.files:
+                self.eta = file['eta']
         else:
             warnings.warn("No path nor control was provided")
         # self.control_updated = True
@@ -182,32 +161,49 @@ class OfflineCost(FiniteDiffCost):
 
 class OnlineCost(FiniteDiffCost):
 
-    def __init__(self, state_size, action_size,
+    def __init__(self, n_x, n_u,
                  control,
                  x_eps=None, u_eps=None,
                  nu=0.001, lamb=None,
                  policy_mean=None
                  ):
+        '''Constructs an Online cost for Guided policy search.
+
+        Args:
+            n_x: State size.
+            n_u: Action size.
+            control: ilqr.iLQR instance controller.
+            x_eps: Increment to the state to use when estimating the gradient.
+                Default: np.sqrt(np.finfo(float).eps).
+            u_eps: Increment to the action to use when estimating the gradient.
+                Default: np.sqrt(np.finfo(float).eps).
+            eta : Langrange's multiplier, old policy weight.
+                Default: 0.1.
+            nu : Langrange's multiplier, neural network weight.
+                Default: 0.001.
+            lamb : Langrange's multiplier, contraint weight.
+                Default: None (np.array).
+        '''
         self.control = control
-        self.n_x = state_size
-        self.n_u = action_size
+        self.n_x = n_x
+        self.n_u = n_u
 
         # Steps of the trajectory
         self.N = control.N
 
         # Lagrange's multipliers
         self.nu = nu * np.ones(self.N)
-        self.lamb = lamb if lamb is not None else np.ones(action_size)
+        self.lamb = lamb if lamb is not None else np.ones(n_u)
         # Parameters of the nonlinear policy
-        self.policy_cov = np.identity(action_size)
+        self.policy_cov = np.identity(n_u)
         self.policy_mean = lambda x: np.ones(
-            action_size) if not callable(policy_mean) else policy_mean
+            n_u) if not callable(policy_mean) else policy_mean
         self.cov_dynamics = np.stack(
-            [np.identity(state_size) for _ in range(self.N)])
-        self.mean_dynamics = np.zeros((self.N, state_size))
+            [np.identity(n_x) for _ in range(self.N)])
+        self.mean_dynamics = np.zeros((self.N, n_x))
         self._F = 1e-3 * np.identity(self.n_x)
 
-        super().__init__(self._cost, lambda x, i: 0, state_size, action_size, x_eps, u_eps)
+        super().__init__(self._cost, lambda x, i: 0, n_x, n_u, x_eps, u_eps)
 
     def _mean_dynamics(self, x, u, i, mu=None):
         r'''
