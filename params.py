@@ -1,6 +1,6 @@
 
-PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 250, 'omega0_per': 0.60, 'FLAG': False,
-              'K1': 0.25, 'K2': 0.1, 'K3': 0.005}
+PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 251, 'omega0_per': 0.60, 'FLAG': False,
+              'K1': .25, 'K11': .01, 'K2': .1, 'K21': .01, 'K3': .005}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
@@ -13,7 +13,7 @@ PARAMS_TRAIN_GCL = {'REWARD_UPDATES': 2, 'DEMO_SIZE': 64, 'SAMP_SIZE': 128,
                     'n': 2, 'SHOW': False}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '4.0', '$y$': '4.0', '$z$': '4.0',
+              '$x$': '2', '$y$': '2', '$z$': '2',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/16', r'$\theta$': 'np.pi/16',
               '$\phi$': 'np.pi/16'}
