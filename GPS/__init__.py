@@ -1,4 +1,4 @@
 from .policy import Policy
 from .gps import GPS
-from .utils import ContinuousDynamics
-from .controller import iLQG
+from .utils import ContinuousDynamics, OnlineCost, OfflineCost
+from .controller import iLQG, OnlineController, OfflineController
