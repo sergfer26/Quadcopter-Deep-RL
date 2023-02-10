@@ -21,7 +21,9 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
 K1 = PARAMS_ENV['K1']
+K11 = PARAMS_ENV['K11']
 K2 = PARAMS_ENV['K2']
+K21 = PARAMS_ENV['K21']
 K3 = PARAMS_ENV['K3']
 
 omega0_per = .60
@@ -148,9 +150,9 @@ def penalty(state, action, i):
 def terminal_penalty(state, i):
     # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
     penalty = K1 * norm(state[3:6])
-    penalty += 0.01 * norm(state[:3])
+    penalty += K11 * norm(state[:3])
     mat = angles2rotation(state[9:], flatten=False)
-    penalty += 0.01 * norm(state[6:9])
+    penalty += K21 * norm(state[6:9])
     penalty += K2 * norm(np.identity(3) - mat)
     return penalty
 
