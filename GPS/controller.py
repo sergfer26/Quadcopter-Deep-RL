@@ -450,7 +450,8 @@ class OfflineController(iLQG):
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
-        self.cost.eta = npzfile['eta']
+        if isinstance(self.cost, OfflineCost):
+            self.cost.eta = npzfile['eta']
 
     def step(self, eta: float):
         us = self._nominal_us
