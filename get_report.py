@@ -8,7 +8,7 @@ from reportlab.platypus import TableStyle
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GCL
 from params import PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
-from GPS.params import PARAMS_iLQR
+from GPS.params import PARAMS_LQG, PARAMS_OFFLINE
 # from PPO.params import PARAMS_PPO
 
 PARAMS_OBS = {re.sub(r'\$', '', k): u'\u00B1'+v for k,
@@ -201,8 +201,11 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_UTILS, 400, 340)
 
     elif extra_method == 'ilqr':
-        add_text(pdf, ['Parámetros de', 'iLQR'], 350, 550)
-        add_table(pdf, PARAMS_iLQR, 350, 310)
+        add_text(pdf, ['Parámetros de', 'iLQG'], 350, 580)
+        add_table(pdf, PARAMS_LQG, 350, 310)
+
+        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 300)
+        add_table(pdf, PARAMS_OFFLINE, 350, 180)
     elif method is None:
         pass
     else:
