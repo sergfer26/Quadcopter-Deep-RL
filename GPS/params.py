@@ -1,4 +1,4 @@
-PARAMS_iLQR = {
+PARAMS_LQG = {
     'min_reg': 0.001,
     'max_reg': 1e4,
     'reg': 20,
@@ -6,9 +6,18 @@ PARAMS_iLQR = {
     'delta_0': 2.0,
     'tol': 1e-6,
     'n_iterations': 100,
-    'q1': 0.5,
-    'q2': 0.01,
     'is_stochastic': True,
-    'horizon': 5,
-    'kl_step': 6
+    'is_constrained': False,
+    'cov_reg': 4e-1
+}
+PARAMS_OFFLINE = {
+    'kl_step': 12,
+    'min_eta': 1e-4,
+    'max_eta': 1e3,
+    'rtol': 1e-2,
+    'kl_maxiter': 2
+}
+
+PARAMS_ONLINE = {
+    'step_size': 50
 }
