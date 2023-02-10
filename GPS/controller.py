@@ -1,9 +1,9 @@
 import numpy as np
 import warnings
 from scipy.stats import multivariate_normal
-from scipy.linalg import brentq
+from scipy.optimize import brentq
 from ilqr import iLQR, RecedingHorizonController
-from .params import PARAMS_iLQR as PARAMS
+from .params import PARAMS_LQG
 from .utils import mvn_kl_div, OnlineCost, OfflineCost
 from ilqr.dynamics import constrain
 
@@ -12,13 +12,14 @@ class iLQG(iLQR):
 
     # env: gym.Env, dynamics: Dynamics, cost: Cost):
     def __init__(self, dynamics,
-                 cost: OfflineCost, steps: int,
+                 cost, steps: int,
                  low_action: np.ndarray = None, high_action: np.ndarray = None,
-                 min_reg=PARAMS['min_reg'],
-                 max_reg=PARAMS['max_reg'],
-                 reg=PARAMS['reg'],
-                 delta_0=PARAMS['delta_0'],
-                 is_stochastic=PARAMS['is_stochastic']
+                 min_reg=PARAMS_LQG['min_reg'],
+                 max_reg=PARAMS_LQG['max_reg'],
+                 reg=PARAMS_LQG['reg'],
+                 delta_0=PARAMS_LQG['delta_0'],
+                 is_stochastic=PARAMS_LQG['is_stochastic'],
+                 is_constrained=PARAMS_LQG['is_constrained']
                  ):
         '''
         dynamics : `ilqr.Dynamics`
@@ -44,19 +45,12 @@ class iLQG(iLQR):
         self._delta_0 = delta_0
         self.alpha = 1.0
 
-        # Cost regularization parametrs
-        self._eta1 = 0.1
-        self._eta2 = 0.2
-        self.cost.eta = self._eta2
-        self._eps = 10.0
-        self._dkl_tol = 1e-1
-
         # Dynamics characteristics
         self.num_states = dynamics._state_size
         self.num_actions = dynamics._action_size
-        self.contrain_action = False
-        if (low_action is not None) & (high_action is not None):
-            self.contrain_action = True
+        self.is_constrained = is_constrained
+        # if (low_action is not None) & (high_action is not None):
+        #     self.is_constrained = True
         self.low_action = low_action
         self.high_action = high_action
 
@@ -81,8 +75,8 @@ class iLQG(iLQR):
         return xs, cost
 
     def fit_control(self, x0, us_init,
-                    n_iterations=PARAMS['n_iterations'],
-                    tol=PARAMS['tol'],
+                    n_iterations=PARAMS_LQG['n_iterations'],
+                    tol=PARAMS_LQG['tol'],
                     callback=True):
         '''
         Argumentos
@@ -121,12 +115,14 @@ class iLQG(iLQR):
         return xs, us, cost_trace
 
     def get_action(self, state, update_time_step=True):
-        mean = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
+        action = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
             self._K[self.i] @ (state - self._nominal_xs[self.i])
+        # if self.is_constrained:
+        #     action = constrain(action, self.low_action, self.high_action)
         if self.is_stochastic:
-            action = multivariate_normal.rvs(mean, self._C[self.i], 1)
-        else:
-            action = mean
+            C = self._C[self.i] + PARAMS_LQG['cov_reg'] * \
+                np.identity(self.num_actions)
+            action = multivariate_normal.rvs(action, C, 1)
         if update_time_step:
             self.i += 1
             self.i = self.i % (self.N)
@@ -146,7 +142,8 @@ class iLQG(iLQR):
     def get_prob_action(self, state, action, t=0):
         g_xs = self._nominal_us[t] + self.alpha * self._k[t] + \
             self._K[t] @ (state - self._nominal_xs[t])
-        cov = self._C[t] + 1e-4 * np.identity(self.num_actions)
+        cov = self._C[t] + PARAMS_LQG['cov_reg'] * \
+            np.identity(self.num_actions)
         return multivariate_normal.pdf(x=action, mean=g_xs, cov=cov)
 
     def _step_cost(self, xs, us):
@@ -164,6 +161,21 @@ class iLQG(iLQR):
         us = us.tolist()
         text = f'— it= {iteration}, J= {J_opt}, accepted= {accepted}, converged= {converged}'
         print(text)
+
+    def fit2(self, x0, us_init):
+        (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
+         F_uu) = self._forward_rollout(x0, us_init)
+        k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
+                                      F_xx, F_ux, F_uu)
+        xs_new, us_new = self._control(
+            xs, us_init, k, K, C, 1.0, False, False)
+        self._k = k
+        self._K = K
+        self._C = C
+        self._nominal_xs = xs_new
+        self._nominal_us = us_new
+        self.alpha = 1.0
+        return xs_new, us_new
 
     def fit(self, x0, us_init, n_iterations=100, tol=1e-6, on_iteration=None):
         """Computes the optimal controls.
@@ -196,7 +208,7 @@ class iLQG(iLQR):
         self._delta = self._delta_0
 
         # Backtracking line search candidates 0 < alpha <= 1.
-        alphas = eval(PARAMS['alphas'])  # 1.1**(-np.arange(10)**2)
+        alphas = eval(PARAMS_LQG['alphas'])  # 1.1**(-np.arange(10)**2)
         alpha = 1.0
 
         us = us_init.copy()
@@ -224,7 +236,9 @@ class iLQG(iLQR):
 
                 # Backtracking line search.
                 for alpha in alphas:
-                    xs_new, us_new = self._control(xs, us, k, K, C, alpha)
+                    xs_new, us_new = self._control(xs, us, k, K, C, alpha,
+                                                   is_stochastic=self.is_stochastic,
+                                                   is_constrained=self.is_constrained)
                     J_new = self._trajectory_cost(xs_new, us_new)
 
                     if J_new < J_opt:
@@ -340,7 +354,8 @@ class iLQG(iLQR):
             V_xx = 0.5 * (V_xx + V_xx.T)  # To maintain symmetry.
         return k, K, C
 
-    def _control(self, xs, us, k, K, C, alpha=1.0, is_stochastic=True, constrained=True):
+    def _control(self, xs, us, k, K, C, alpha=1.0,
+                 is_stochastic=True, is_constrained=True):
         """Applies the controls for a given trajectory.
 
         Args:
@@ -363,16 +378,56 @@ class iLQG(iLQR):
         for i in range(N):
             # Eq (12).
             us_new[i] = us[i] + alpha * k[i] + K[i].dot(xs_new[i] - xs[i])
-            if constrained:
+            if is_constrained:
                 us_new[i] = constrain(
                     us_new[i], self.low_action, self.high_action)
             if is_stochastic:
-                us_new[i] = multivariate_normal.rvs(us_new[i], C[i], 1)
+                cov = C[i] + PARAMS_LQG['cov_reg'] * \
+                    np.identity(self.num_actions)
+                us_new[i] = multivariate_normal.rvs(us_new[i], cov, 1)
 
             # Eq (8c).
             xs_new[i + 1] = self.dynamics.f(xs_new[i], us_new[i], i)
 
         return xs_new, us_new
+
+    def save(self, path, file_name='ilqr_control.npz'):
+        file_path = path + file_name
+        np.savez(file_path,
+                 C=self._C,
+                 K=self._K,
+                 k=self._k,
+                 xs=self._nominal_xs,
+                 us=self._nominal_us,
+                 alpha=self.alpha,
+                 )
+
+    def load(self, path, file_name='ilqr_control.npz'):
+        file_path = path + file_name
+        npzfile = np.load(file_path)
+        self._k = npzfile['k']
+        self._K = npzfile['K']
+        self._C = np.round(npzfile['C'], 5)
+        self._nominal_xs = npzfile['xs']
+        self._nominal_us = npzfile['us']
+        self.alpha = npzfile['alpha']
+
+
+class OfflineController(iLQG):
+
+    def __init__(self, dynamics,
+                 cost: OfflineCost, steps: int,
+                 low_action: np.ndarray = None,
+                 high_action: np.ndarray = None,
+                 min_reg=PARAMS_LQG['min_reg'],
+                 max_reg=PARAMS_LQG['max_reg'],
+                 reg=PARAMS_LQG['reg'],
+                 delta_0=PARAMS_LQG['delta_0'],
+                 is_stochastic=PARAMS_LQG['is_stochastic']):
+        super().__init__(dynamics, cost, steps, low_action, high_action,
+                         min_reg, max_reg, reg, delta_0, is_stochastic)
+        # Cost regularization parametrs
+        self._dkl_tol = 1e-1
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
@@ -395,6 +450,7 @@ class iLQG(iLQR):
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
+        self.cost.eta = npzfile['eta']
 
     def step(self, eta: float):
         us = self._nominal_us
@@ -406,9 +462,10 @@ class iLQG(iLQR):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
+        us_new = self._control(xs, us, k, K, C, self.alpha, False, False)[1]
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
+        params['is_constrained'] = self.is_constrained
         us_old = self._control(**params)[1]
         C_old = params['C']
         kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C[j], C_old[j])
@@ -417,31 +474,34 @@ class iLQG(iLQR):
 
     def optimize(self, kl_step: float,
                  min_eta: float = 1e-4,
-                 max_eta: float = 1e3,
-                 rtol: float = 1e-3, kl_maxiter=2):
+                 max_eta: float = 1e4,
+                 rtol: float = 1e-2, kl_maxiter=2):
         """Perform iLQG trajectory optimization.
         Args:
             kl_step: KL divergence threshold to previous policy
             min_eta: Minimal value of the Lagrangian multiplier
             max_eta: Maximal value of the Lagrangian multiplier
-            rtol: Tolerance of found solution to kl_step. Levine et al. 
+            rtol: Tolerance of found solution to kl_step. Levine et al.
             propose a value of 0.1 in "Learning Neural Network Policies with
                   Guided Policy Search under Unknown Dynamics", chapter 3.1
-            full_history: Whether to return ahistory of all optimization 
+            full_history: Whether to return ahistory of all optimization
             steps, for debug purposes
         Returns:
             result: A `ILQRStepResult` or
-                    a list of `ILQRStepResult` if `full_history` is enabled 
+                    a list of `ILQRStepResult` if `full_history` is enabled
                     (in order they were visited)
         """
         # Check if constraind is fulfilled at maximum deviation
+        r = None
         if self.step(min_eta) <= kl_step:
             # return self.step(min_eta)
             self.cost.eta = min_eta
         else:
             # Check if constraint cen be fulfilled at all
-            if self.step(max_eta) > kl_step:
-                raise ValueError(f"max_eta eta to low ({max_eta})")
+            min_kl = self.step(max_eta)
+            if min_kl > kl_step:
+                raise ValueError(
+                    f"max_eta eta to low ({max_eta}), kl ({min_kl})")
 
             # Find the point where kl divergence equals the kl_step
             def constraint_violation(log_eta):
@@ -460,11 +520,32 @@ class iLQG(iLQR):
 
         print("iLQR optimization step")
         xs, us = self.fit(self.x0, self.us_init,
-                          n_iterations=PARAMS['n_iterations'],
-                          tol=PARAMS['tol'],
+                          n_iterations=PARAMS_LQG['n_iterations'],
+                          tol=PARAMS_LQG['tol'],
                           on_iteration=self.on_iteration)
         cost_trace = self._step_cost(xs, us)
         return xs, us, cost_trace, r
+
+
+class OnlineController(iLQG):
+
+    def __init__(self, dynamics, cost: OnlineCost,
+                 steps: int, low_action: np.ndarray = None,
+                 high_action: np.ndarray = None,
+                 min_reg=PARAMS_LQG['min_reg'],
+                 max_reg=PARAMS_LQG['max_reg'],
+                 reg=PARAMS_LQG['reg'],
+                 delta_0=PARAMS_LQG['delta_0'],
+                 is_stochastic=PARAMS_LQG['is_stochastic']):
+        super().__init__(dynamics, cost, steps, low_action, high_action,
+                         min_reg, max_reg, reg, delta_0, is_stochastic)
+
+    def fit(self, x0, us_init, n_iterations=100, tol=0.000001,
+            on_iteration=None):
+        xs, us = self.cost.control.rollout(x0)
+        # update the cost parameters
+        self.cost._dist_dynamics(xs, us)
+        return super().fit(x0, us_init, n_iterations, tol, on_iteration)
 
 
 class DummyControl():
@@ -497,23 +578,3 @@ class DummyControl():
             self.i = self.i % (self.N)
 
         return action
-
-
-class iLQG_Online(iLQG):
-
-    def __init__(self, dynamics, cost: OnlineCost,
-                 steps: int, low_action: np.ndarray = None,
-                 high_action: np.ndarray = None,
-                 min_reg=PARAMS['min_reg'],
-                 max_reg=PARAMS['max_reg'],
-                 reg=PARAMS['reg'],
-                 delta_0=PARAMS['delta_0'],
-                 is_stochastic=PARAMS['is_stochastic']):
-        super().__init__(dynamics, cost, steps, low_action, high_action,
-                         min_reg, max_reg, reg, delta_0, is_stochastic)
-
-    def fit(self, x0, us_init, n_iterations=100, tol=0.000001, on_iteration=None):
-        xs, us = self.cost.control.rollout(x0)
-        # update the cost parameters
-        self.cost._dist_dynamics(xs, us)
-        return super().fit(x0, us_init, n_iterations, tol, on_iteration)
