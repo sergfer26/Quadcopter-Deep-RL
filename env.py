@@ -44,10 +44,8 @@ F1, F2, F3, F4 = F
 c1, c2, c3, c4 = C
 
 
-'''Quadcopter Environment that follows gym interface'''
-
-
 class QuadcopterEnv(gym.Env):
+    '''Quadcopter Environment that follows gym interface'''
     metadata = {'render.modes': ['human']}
 
     def __init__(self, u0=None, low=LOW_OBS, high=HIGH_OBS):
