@@ -82,7 +82,7 @@ def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
 
     # ###### Instancias control MPC-iLQG #######
     cost = OnlineCost(n_x, n_u, control, nu=np.zeros(T),
-                      lamb=np.zeros((T, n_u)))
+                      lamb=np.zeros((T, n_u)), F=PARAMS_ONLINE['F'])
 
     mpc_control = OnlineController(dynamics, cost, T, low_action, high_action)
     agent = RecedingHorizonController(x0, mpc_control)
@@ -121,8 +121,8 @@ def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
 
 
 def main(path):
-    N = 3
-    M = 2
+    N = 6
+    M = 4
     horizon = PARAMS_ONLINE['step_size']
     env = QuadcopterEnv()
     n_u = len(env.action_space.sample())
@@ -194,6 +194,5 @@ def main(path):
 if __name__ == '__main__':
     PATH = 'results_mpc/' + date_as_path() + '/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    main(PATH)
-    # send_email.report_sender(main, args=[PATH])
+    send_email.report_sender(main, args=[PATH])
     print(PATH)
