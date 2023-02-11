@@ -8,7 +8,7 @@ PARAMS_LQG = {
     'n_iterations': 100,
     'is_stochastic': True,
     'is_constrained': False,
-    'cov_reg': 4e-1
+    'cov_reg': 3e-1
 }
 PARAMS_OFFLINE = {
     'kl_step': 12,
@@ -19,5 +19,6 @@ PARAMS_OFFLINE = {
 }
 
 PARAMS_ONLINE = {
-    'step_size': 50
+    'step_size': 50,
+    'F': 1e-4
 }

@@ -165,8 +165,9 @@ class OnlineCost(FiniteDiffCost):
     def __init__(self, n_x, n_u,
                  control,
                  x_eps=None, u_eps=None,
-                 nu=0.001, lamb=None,
-                 policy_mean=None
+                 nu=1e-3, lamb=None,
+                 policy_mean=None,
+                 F=1e-3
                  ):
         '''Constructs an Online cost for Guided policy search.
 
@@ -181,9 +182,12 @@ class OnlineCost(FiniteDiffCost):
             eta : Langrange's multiplier, old policy weight.
                 Default: 0.1.
             nu : Langrange's multiplier, neural network weight.
-                Default: 0.001.
+                Default: 1e-3.
             lamb : Langrange's multiplier, contraint weight.
                 Default: None (np.array).
+            F : Model noise p(x'|x, u).
+                Default: 1e-3.
+
         '''
         self.control = control
         self.n_x = n_x
@@ -202,7 +206,7 @@ class OnlineCost(FiniteDiffCost):
         self.cov_dynamics = np.stack(
             [np.identity(n_x) for _ in range(self.N)])
         self.mean_dynamics = np.zeros((self.N, n_x))
-        self._F = 1e-3 * np.identity(self.n_x)
+        self._F = F * np.identity(self.n_x)
 
         super().__init__(self._cost, lambda x, i: 0, n_x, n_u, x_eps, u_eps)
 
