@@ -13,7 +13,6 @@ from params import PARAMS_ENV, PARAMS_OBS
 
 TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['STEPS']
-FLAG = PARAMS_ENV['FLAG']
 
 # constantes de la recompensa
 K1 = PARAMS_ENV['K1']
@@ -56,7 +55,7 @@ class QuadcopterEnv(gym.Env):
             low=low, high=high, dtype=np.float64)
         self.state = self.reset()  # estado interno del ambiente
         self.set_time(STEPS, TIME_MAX)
-        self.flag = FLAG
+        self.flag = False
         self.is_cuda_available()
         self.W0 = W0 if not isinstance(u0, np.ndarray) else u0
 
