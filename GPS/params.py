@@ -11,11 +11,11 @@ PARAMS_LQG = {
     'cov_reg': 3e-1
 }
 PARAMS_OFFLINE = {
-    'kl_step': 12,
+    'kl_step': 10,
     'min_eta': 1e-4,
     'max_eta': 1e3,
     'rtol': 1e-2,
-    'kl_maxiter': 2
+    'kl_maxiter': 1
 }
 
 PARAMS_ONLINE = {
