@@ -4,6 +4,7 @@ import send_email
 import numpy as np
 from functools import partial
 from Linear.equations import W0, f
+import matplotlib.pyplot as plt
 from ilqr import RecedingHorizonController
 from GPS.controller import OfflineController, OnlineController
 from GPS.utils import OfflineCost, OnlineCost
@@ -17,7 +18,7 @@ from animation import create_animation
 from utils import date_as_path
 from multiprocessing import Process, Pool
 from dynamics import penalty, terminal_penalty
-from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
+from GPS.params import PARAMS_OFFLINE, PARAMS_ONLINE
 
 
 def fit_mpc(env, expert, i, T, horizon, M, path=''):
@@ -34,8 +35,8 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     dt = env.time[-1] - env.time[-2]
     low_action = env.action_space.low
     high_action = env.action_space.high
-    n_u = 4  # env.num_actions
-    n_x = 12  # env.num_states
+    n_u = env.num_actions
+    n_x = env.num_states
     steps = env.steps - 1
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
@@ -61,6 +62,7 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     control.optimize(kl_step=PARAMS_OFFLINE['kl_step'], min_eta=cost.eta)
     control.save(path=path, file_name=f'control_{i}.npz')
     x0 = [env.observation_space.sample() for _ in range(M)]
+    # _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, 0)
     with Pool(processes=M) as pool:
         pool.map(partial(_fit_child, x0, low_action, high_action,
                  dt, T, horizon, path, i), range(M))
@@ -69,10 +71,10 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
 
 
 def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
-    n_u = 4  # env.num_actions
-    n_x = 12  # env.num_states
     if isinstance(x0, list):
         x0 = x0[j]
+    n_u = low_action.shape[-1]
+    n_x = x0.shape[-1]
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
     control = OfflineController(dynamics, None, T, low_action, high_action)
@@ -87,7 +89,7 @@ def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
 
     _, us_init = control.rollout(x0)
 
-    traj = agent.control(us_init, us_init,
+    traj = agent.control(us_init,
                          step_size=horizon,
                          initial_n_iterations=50,
                          subsequent_n_iterations=25)
@@ -97,15 +99,16 @@ def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
     K = np.empty_like(control._K)
     k = np.empty_like(control._k)
     alpha = np.empty_like(control._nominal_us)
-    for i in range(mpc_control.N // horizon):
+    r = 0
+    for t in range(mpc_control.N // horizon):
         xs, us = next(traj)
-        C[i: i + horizon] = mpc_control._C[:horizon]
-        K[i: i + horizon] = mpc_control._K[:horizon]
-        alpha[i: i + horizon] = mpc_control.alpha
-        k[i: i + horizon] = mpc_control._k[:horizon]
-        states[:, j: j + horizon + 1] = xs
-        actions[:, j: j + horizon] = us
-        j += horizon
+        C[t: t + horizon] = mpc_control._C[:horizon]
+        K[t: t + horizon] = mpc_control._K[:horizon]
+        alpha[t: t + horizon] = mpc_control.alpha
+        k[t: t + horizon] = mpc_control._k[:horizon]
+        states[r: r + horizon + 1] = xs
+        actions[r: r + horizon] = us
+        r += horizon
 
     file_name = f'mpc_control_{i}_{j}.npz'
     mpc_control._C = C
@@ -131,7 +134,6 @@ def main(path):
     # ###### Instancias control lineal #######
 
     expert = LinearAgent(env)
-
     processes = list()
     for i in range(N):
         p = Process(target=fit_mpc, args=(env, expert, i, T, horizon, M, path))
@@ -162,6 +164,7 @@ def main(path):
 
     env.set_time(T, time_max)
 
+    plt.style.use("fivethirtyeight")
     fig1, _ = plot_rollouts(states[:, :-1], env.time, STATE_NAMES)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES)
@@ -191,5 +194,6 @@ def main(path):
 if __name__ == '__main__':
     PATH = 'results_mpc/' + date_as_path() + '/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    send_email.report_sender(main, args=[PATH])
+    main(PATH)
+    # send_email.report_sender(main, args=[PATH])
     print(PATH)
