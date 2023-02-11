@@ -7,6 +7,7 @@ from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal as normal
+# from scipy.linalg import issymmetric
 
 
 def mvn_kl_div(mu1, mu2, sigma1, sigma2):
@@ -235,10 +236,7 @@ class OnlineCost(FiniteDiffCost):
         K = self.control._K[i]
         C = self.control._C[i]
         a1 = np.hstack([sigma, sigma @ K.T])
-        try:
-            a2 = np.hstack([K @ sigma, C + K @ sigma @ K.T])
-        except:
-            breakpoint()
+        a2 = np.hstack([K @ sigma, C + K @ sigma @ K.T])
         sigma = f_xu @ np.vstack([a1, a2]) @ f_xu.T + self._F
         return sigma
 
@@ -256,18 +254,18 @@ class OnlineCost(FiniteDiffCost):
         self.control = control
 
     def _cost(self, x, u, i):
+        cov = np.round(self.cov_dynamics[i], 6)
+        # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
+        #     breakpoint()
         c = 0.0
-        c -= u.T@self.lamb
+        c -= u.T@self.lamb[i]
         # log policy distribution
         c -= self.nu[i] * \
             normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
         # log dynamics distribution
-        try:
-            c -= normal.logpdf(x=x,
-                               mean=self.mean_dynamics[i],
-                               cov=self.cov_dynamics[i])
-        except:
-            breakpoint()
+        c -= normal.logpdf(x=x,
+                           mean=self.mean_dynamics[i],
+                           cov=cov)
         return c
 
 
