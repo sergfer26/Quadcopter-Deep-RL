@@ -8,7 +8,7 @@ from reportlab.platypus import TableStyle
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GCL
 from params import PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
-from GPS.params import PARAMS_LQG, PARAMS_OFFLINE
+from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
 # from PPO.params import PARAMS_PPO
 
 PARAMS_OBS = {re.sub(r'\$', '', k): u'\u00B1'+v for k,
@@ -178,7 +178,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
     add_text(pdf, ['Espacio de', 'observación'], 100, 750)
     add_table(pdf, PARAMS_OBS, 100, 480)
 
-    add_text(pdf, ['Parámetros del',  'ambiente'], 100, 450)
+    add_text(pdf, ['Parámetros del', 'ambiente'], 100, 450)
     add_table(pdf, PARAMS_ENV, 100, 250)
 
     add_text(pdf, ['Parámetros de', 'optimiazación de red'], 100, 220)
@@ -202,10 +202,14 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
     elif extra_method == 'ilqr':
         add_text(pdf, ['Parámetros de', 'iLQG'], 350, 580)
-        add_table(pdf, PARAMS_LQG, 350, 310)
+        add_table(pdf, PARAMS_LQG, 350, 320)
 
         add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 300)
-        add_table(pdf, PARAMS_OFFLINE, 350, 180)
+        add_table(pdf, PARAMS_OFFLINE, 350, 160)
+
+        add_text(pdf, ['Parámetros de', '"Online control"'], 350, 140)
+        add_table(pdf, PARAMS_ONLINE, 350, 50)
+
     elif method is None:
         pass
     else:
