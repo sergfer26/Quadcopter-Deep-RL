@@ -432,7 +432,7 @@ class OfflineController(iLQG):
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
         np.savez(file_path,
-                 C=np.round(self._C, 3),
+                 C=self._C,
                  K=self._K,
                  k=self._k,
                  xs=self._nominal_xs,
