@@ -36,7 +36,7 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     low_action = env.action_space.low
     high_action = env.action_space.high
     n_u = env.action_space.shape[0]
-    n_x = env.observation_state.shape[0]
+    n_x = env.observation_space.shape[0]
     steps = env.steps - 1
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
