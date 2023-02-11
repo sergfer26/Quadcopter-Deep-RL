@@ -165,9 +165,9 @@ def main(path):
     env.set_time(T, time_max)
 
     plt.style.use("fivethirtyeight")
-    fig1, _ = plot_rollouts(states[:, :-1], env.time, STATE_NAMES)
-    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES)
-    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES)
+    fig1, _ = plot_rollouts(states[:, :-1], env.time, STATE_NAMES, alpha=0.1)
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.1)
+    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.1)
     fig1.savefig(path + 'state_rollouts.png')
     fig2.savefig(path + 'action_rollouts.png')
     fig3.savefig(path + 'score_rollouts.png')
