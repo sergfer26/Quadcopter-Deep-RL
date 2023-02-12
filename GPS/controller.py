@@ -389,15 +389,13 @@ class OfflineController(iLQG):
 
     def __init__(self, dynamics,
                  cost: OfflineCost, steps: int,
-                 low_action: np.ndarray = None,
-                 high_action: np.ndarray = None,
                  min_reg=PARAMS_LQG['min_reg'],
                  max_reg=PARAMS_LQG['max_reg'],
                  reg=PARAMS_LQG['reg'],
                  delta_0=PARAMS_LQG['delta_0'],
                  is_stochastic=PARAMS_LQG['is_stochastic']):
-        super().__init__(dynamics, cost, steps, low_action, high_action,
-                         min_reg, max_reg, reg, delta_0, is_stochastic)
+        super().__init__(dynamics, cost, steps, min_reg, max_reg,
+                         reg, delta_0, is_stochastic)
         # Cost regularization parametrs
         self._dkl_tol = 1e-1
 
@@ -503,15 +501,14 @@ class OfflineController(iLQG):
 class OnlineController(iLQG):
 
     def __init__(self, dynamics, cost: OnlineCost,
-                 steps: int, low_action: np.ndarray = None,
-                 high_action: np.ndarray = None,
+                 steps: int,
                  min_reg=PARAMS_LQG['min_reg'],
                  max_reg=PARAMS_LQG['max_reg'],
                  reg=PARAMS_LQG['reg'],
                  delta_0=PARAMS_LQG['delta_0'],
                  is_stochastic=PARAMS_LQG['is_stochastic']):
-        super().__init__(dynamics, cost, steps, low_action, high_action,
-                         min_reg, max_reg, reg, delta_0, is_stochastic)
+        super().__init__(dynamics, cost, steps, min_reg, max_reg,
+                         reg, delta_0, is_stochastic)
 
     def fit(self, x0, us_init, n_iterations=100, tol=0.000001,
             on_iteration=None):
