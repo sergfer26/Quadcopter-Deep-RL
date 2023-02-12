@@ -33,8 +33,6 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
         Indice de trayectoria producida por MPC.
     '''
     dt = env.time[-1] - env.time[-2]
-    low_action = env.action_space.low
-    high_action = env.action_space.high
     n_u = env.action_space.shape[0]
     n_x = env.observation_space.shape[0]
     steps = env.steps - 1
@@ -54,7 +52,7 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
         file_path='results_offline/23_02_09_17_21/ilqr_control.npz'
     )
     # 'results_offline/23_02_01_13_30/ilqr_control.npz'
-    control = OfflineController(dynamics, cost, steps, low_action, high_action)
+    control = OfflineController(dynamics, cost, steps)
     xs_init, us_init, _ = rollout(expert, env, state_init=np.zeros(n_x))
     control.x0 = xs_init[0]
     control.us_init = us_init
@@ -64,27 +62,26 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     x0 = [env.observation_space.sample() for _ in range(M)]
     # _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, 0)
     with Pool(processes=M) as pool:
-        pool.map(partial(_fit_child, x0, low_action, high_action,
-                 dt, T, horizon, path, i), range(M))
+        pool.map(partial(_fit_child, x0, dt, T, horizon, path, i), range(M))
         pool.close()
         pool.join()
 
 
-def _fit_child(x0, low_action, high_action, dt, T, horizon, path, i, j):
+def _fit_child(x0, dt, T, horizon, path, i, j):
     if isinstance(x0, list):
         x0 = x0[j]
-    n_u = low_action.shape[-1]
+    n_u = W0.shape[-1]
     n_x = x0.shape[-1]
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
-    control = OfflineController(dynamics, None, T, low_action, high_action)
+    control = OfflineController(dynamics, None, T)
     control.load(path, file_name=f'control_{i}.npz')
 
     # ###### Instancias control MPC-iLQG #######
     cost = OnlineCost(n_x, n_u, control, nu=np.zeros(T),
                       lamb=np.zeros((T, n_u)), F=PARAMS_ONLINE['F'])
 
-    mpc_control = OnlineController(dynamics, cost, T, low_action, high_action)
+    mpc_control = OnlineController(dynamics, cost, T)
     agent = RecedingHorizonController(x0, mpc_control)
 
     _, us_init = control.rollout(x0)
@@ -173,7 +170,7 @@ def main(path):
     fig3.savefig(path + 'score_rollouts.png')
     create_report(path,
                   title='Prueba MPC',
-                  method='gcl',
+                  method=None,
                   extra_method='ilqr'
                   )
 
