@@ -2,10 +2,9 @@ import numpy as np
 import warnings
 from scipy.stats import multivariate_normal
 from scipy.optimize import brentq
-from ilqr import iLQR, RecedingHorizonController
+from ilqr import iLQR
 from .params import PARAMS_LQG
 from .utils import mvn_kl_div, OnlineCost, OfflineCost
-from ilqr.dynamics import constrain
 
 
 class iLQG(iLQR):
@@ -13,13 +12,11 @@ class iLQG(iLQR):
     # env: gym.Env, dynamics: Dynamics, cost: Cost):
     def __init__(self, dynamics,
                  cost, steps: int,
-                 low_action: np.ndarray = None, high_action: np.ndarray = None,
                  min_reg=PARAMS_LQG['min_reg'],
                  max_reg=PARAMS_LQG['max_reg'],
                  reg=PARAMS_LQG['reg'],
                  delta_0=PARAMS_LQG['delta_0'],
-                 is_stochastic=PARAMS_LQG['is_stochastic'],
-                 is_constrained=PARAMS_LQG['is_constrained']
+                 is_stochastic=PARAMS_LQG['is_stochastic']
                  ):
         '''
         dynamics : `ilqr.Dynamics`
@@ -48,11 +45,6 @@ class iLQG(iLQR):
         # Dynamics characteristics
         self.num_states = dynamics._state_size
         self.num_actions = dynamics._action_size
-        self.is_constrained = is_constrained
-        # if (low_action is not None) & (high_action is not None):
-        #     self.is_constrained = True
-        self.low_action = low_action
-        self.high_action = high_action
 
         # Control parameters
         self._C = np.stack([np.identity(self.num_actions)
@@ -117,11 +109,9 @@ class iLQG(iLQR):
     def get_action(self, state, update_time_step=True):
         action = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
             self._K[self.i] @ (state - self._nominal_xs[self.i])
-        # if self.is_constrained:
-        #     action = constrain(action, self.low_action, self.high_action)
         if self.is_stochastic:
-            C = self._C[self.i] + PARAMS_LQG['cov_reg'] * \
-                np.identity(self.num_actions)
+            C = self._C[self.i]  # + PARAMS_LQG['cov_reg'] * \
+            # np.identity(self.num_actions)
             action = multivariate_normal.rvs(action, C, 1)
         if update_time_step:
             self.i += 1
@@ -161,21 +151,6 @@ class iLQG(iLQR):
         us = us.tolist()
         text = f'— it= {iteration}, J= {J_opt}, accepted= {accepted}, converged= {converged}'
         print(text)
-
-    def fit2(self, x0, us_init):
-        (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
-         F_uu) = self._forward_rollout(x0, us_init)
-        k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
-                                      F_xx, F_ux, F_uu)
-        xs_new, us_new = self._control(
-            xs, us_init, k, K, C, 1.0, False, False)
-        self._k = k
-        self._K = K
-        self._C = C
-        self._nominal_xs = xs_new
-        self._nominal_us = us_new
-        self.alpha = 1.0
-        return xs_new, us_new
 
     def fit(self, x0, us_init, n_iterations=100, tol=1e-6, on_iteration=None):
         """Computes the optimal controls.
@@ -355,7 +330,7 @@ class iLQG(iLQR):
         return k, K, C
 
     def _control(self, xs, us, k, K, C, alpha=1.0,
-                 is_stochastic=True, is_constrained=True):
+                 is_stochastic=True):
         """Applies the controls for a given trajectory.
 
         Args:
@@ -378,12 +353,9 @@ class iLQG(iLQR):
         for i in range(N):
             # Eq (12).
             us_new[i] = us[i] + alpha * k[i] + K[i].dot(xs_new[i] - xs[i])
-            if is_constrained:
-                us_new[i] = constrain(
-                    us_new[i], self.low_action, self.high_action)
             if is_stochastic:
-                cov = C[i] + PARAMS_LQG['cov_reg'] * \
-                    np.identity(self.num_actions)
+                cov = C[i]  # + PARAMS_LQG['cov_reg'] * \
+                # np.identity(self.num_actions)
                 us_new[i] = multivariate_normal.rvs(us_new[i], cov, 1)
 
             # Eq (8c).
