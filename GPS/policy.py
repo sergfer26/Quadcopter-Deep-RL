@@ -1,8 +1,10 @@
 import torch
+import numpy as np
 import torch.autograd
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from scipy.stats import multivariate_normal
 
 device = 'cpu'
 if torch.cuda.is_available():
@@ -10,11 +12,14 @@ if torch.cuda.is_available():
 
 
 class Policy(nn.Module):
-    def __init__(self, env, hidden_sizes):
+    def __init__(self, env, hidden_sizes, is_stochastic=True):
         super(Policy, self).__init__()
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
         self.env = env
+        self.is_stochastic = is_stochastic
+
+        self._sigma = np.identity(action_dim)
         # Definición de la arquitectura
         if not isinstance(hidden_sizes, list):
             h_sizes = [64, 64]
@@ -51,4 +56,7 @@ class Policy(nn.Module):
     def get_action(self, state):
         state = Variable(torch.from_numpy(state).float())
         action = self.forward(state.to(device))
-        return action.detach().cpu().numpy()
+        action = action.detach().cpu().numpy()
+        if self.is_stochastic:
+            action = multivariate_normal.rvs(action, self._sigma, 1)
+        return action
