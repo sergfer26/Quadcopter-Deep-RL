@@ -187,6 +187,8 @@ class iLQG(iLQR):
         alpha = 1.0
 
         us = us_init.copy()
+        xs_old = None
+        us_old = None
         # N = us.shape[0]
         k = self._k
         K = self._K
@@ -212,7 +214,7 @@ class iLQG(iLQR):
                 # Backtracking line search.
                 for alpha in alphas:
                     xs_new, us_new = self._control(xs, us, k, K, C, alpha,
-                                                   is_stochastic=self.is_stochastic)
+                                                   is_stochastic=False)
                     J_new = self._trajectory_cost(xs_new, us_new)
 
                     if J_new < J_opt:
@@ -261,6 +263,8 @@ class iLQG(iLQR):
         self._k = k
         self._K = K
         self._C = C
+        self._xs = xs_old
+        self._us = us_old
         self._nominal_xs = xs
         self._nominal_us = us
         self.alpha = alpha
@@ -372,7 +376,9 @@ class iLQG(iLQR):
                  k=self._k,
                  xs=self._nominal_xs,
                  us=self._nominal_us,
-                 alpha=self.alpha,
+                 xs_old=self._xs,
+                 us_old=self._us,
+                 alpha=self.alpha
                  )
 
     def load(self, path, file_name='ilqr_control.npz'):
@@ -408,6 +414,8 @@ class OfflineController(iLQG):
                  k=self._k,
                  xs=self._nominal_xs,
                  us=self._nominal_us,
+                 xs_old=self._xs,
+                 us_old=self._us,
                  alpha=self.alpha,
                  eta=self.cost.eta
                  )
@@ -516,35 +524,3 @@ class OnlineController(iLQG):
         # update the cost parameters
         self.cost._dist_dynamics(xs, us)
         return super().fit(x0, us_init, n_iterations, tol, on_iteration)
-
-
-class DummyControl():
-
-    def __init__(self, N, path, file_name):
-        self.load(path, file_name)
-        self.is_stochastic = True
-        self.i = 0
-        self.N = N
-
-    def load(self, path, file_name):
-        file_path = path + file_name
-        npzfile = np.load(file_path)
-        self._k = npzfile['k']
-        self._K = npzfile['K']
-        self._C = npzfile['C']
-        self._nominal_xs = npzfile['xs']
-        self._nominal_us = npzfile['us']
-        self.alpha = npzfile['alpha']
-
-    def get_action(self, state, update_time_step=True):
-        mean = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
-            self._K[self.i] @ (state - self._nominal_xs[self.i])
-        if self.is_stochastic:
-            action = multivariate_normal.rvs(mean, self._C[self.i], 1)
-        else:
-            action = mean
-        if update_time_step:
-            self.i += 1
-            self.i = self.i % (self.N)
-
-        return action
