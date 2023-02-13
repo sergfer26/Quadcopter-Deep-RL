@@ -1,17 +1,18 @@
-from torch.distributions.multivariate_normal import _batch_mahalanobis
-from .utils import OfflineCost
-from os.path import exists
 import torch
 import pathlib
 import numpy as np
-import torch.optim as optim
-from copy import deepcopy
-from .controller import iLQG, DummyControl
 import multiprocessing as mp
-from functools import partial
-from GPS.utils import ContinuousDynamics, rollout
 
-from .params import PARAMS_OFFLINE
+from torch import optim
+from copy import deepcopy
+from os.path import exists
+from functools import partial
+from .utils import OnlineCost, OfflineCost
+from ilqr import RecedingHorizonController
+from GPS.utils import ContinuousDynamics, rollout
+from .params import PARAMS_OFFLINE, PARAMS_ONLINE
+from .controller import OnlineController, OfflineController
+from torch.distributions.multivariate_normal import _batch_mahalanobis
 
 KL_STEP = PARAMS_OFFLINE['kl_step']
 
@@ -27,8 +28,7 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=2, M=3,  # memory_size=1000,
-                 learning_rate=0.01, u_bound=None):
+                 N=3, M=2, learning_rate=0.01):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -51,11 +51,11 @@ class GPS:
         '''
         T = env.steps - 1
         self.N = N  # Number of fitted iLQG controlllers.
-        self.M = M  # Number of simulations from iLQG controllers.
+        self.M = M  # Number of fitted MPC controllers per iLQG c.
         self.T = T  # Number of steps done in a simulation.
 
         self.n_x = env.observation_space.shape[0]  # State dimention.
-        self.n_u = env.action_space.shape[0]        # Action dimention.
+        self.n_u = env.action_space.shape[0]       # Action dimention.
 
         # Transformation for control arguments
         self.t_x = t_x  # x_t -> o_t
@@ -97,28 +97,50 @@ class GPS:
         self.manager = mp.Manager()
         self.buffer = self.manager.dict()
 
-        # Control iLQG parameters.
-        self._K = np.empty((N, T, self.n_u, self.n_x))
-        self._k = np.empty((N, T, self.n_u))
-        self._C = np.empty((N, T, self.n_u, self.n_u))
-        self._nominal_xs = np.empty((N, T + 1, self.n_x))
-        self._nominal_us = np.empty((N, T, self.n_u))
-        self._alphas = np.empty(N)
+    def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
+        '''
+        Calcula la siguiente expresión 
+            u_s = \hat{u_s} + \alpha k + K (x_s - \hat{x_s})
 
-    def mean_control(self, xs, i):
-        nominal_us = self._nominal_us[i]
-        x = xs - self._nominal_xs[i]
-        us_mean = np.einsum('BNi,MBi ->MBN', self._K[i], x[:, :-1])
+        Argumentos
+        ----------
+        xs : `np.ndarray`
+            Conjunto de trayectorias de estados con dimensiones (B, n_x).
+        nominal_xs : `np.ndarray`
+            Conjunto de trayectorias nominales de estado con dimensiones (B, n_x).
+        nominal_us : `np.ndarray`
+            Conjunto de trayectorias nominales de acción con dimensiones (B, n_u).
+        K : `np.ndarray`
+            Conjunto de parámetros para estado con dimensiones (B, n_u, n_x).
+        k : `np.ndarray`
+            Conjunto de parámetros para acción con dimensiones (B, n_u).
+        alpha : `np.ndarray`
+            Conjunto de parámetro de regularización con dimensiones (B,).
+
+        Donde B representa la dimensión del batch y puede tener dimensión: 3, 2, 1.
+
+        Retorno
+        -------
+        us_mean : `np.ndarray`
+            Conjunto de trayectorias resultantes de acciones con dimensión (B, n_u).
+        '''
+        if len(xs.shape) == 4:  # (N, M, T, n_x)
+            arg_x = 'NMTux,NMTx ->NMTu'
+            arg_k = 'NMT,NMTu ->NMTu'
+        elif len(xs.shape) == 3:  # (N, T, n_x)
+            arg_x = 'NTux,NTx ->NTu'
+            arg_k = 'NT,NTu ->NTu'
+        elif len(xs.shape) == 2:  # (T, x)
+            arg_x = 'Tux,Tx -> Tu'
+            arg_k = 'T,Tu ->Tu'
+        us_mean = np.einsum(arg_x, K, xs - nominal_xs)
         us_mean += nominal_us
-        us_mean += self._alphas[i] * self._k[i]
+        us_mean += np.einsum(arg_k, alpha, k)
         return us_mean
 
-    def cov_policy(self):
-        Q = np.empty((self.N, self.n_u, self.n_u))
-        for i in range(self.N):
-            Q[i] = np.sum([np.linalg.inv(self._C[i, j])
-                          for j in range(self.M)], axis=0)
-        return np.sum(Q, axis=0) / (self.N * self.T)
+    def cov_policy(self, C):
+        Q = np.linalg.inv(C)
+        return np.linalg.inv(np.mean(Q, axis=(0, 1, 2)))
 
     def policy_loss(self, states, actions, C, sigma):
         '''
@@ -147,6 +169,14 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
+        if len(states.shape) == 4:
+            arg1 = 'NMT,NT-> NMT'
+            arg2 = 'NMTu,NTu-> NMT'
+        elif len(states.shape) == 3:
+            arg1 = 'NT,NT-> NT'
+            arg2 = 'NMTu,NTu-> NMT'
+        else:
+            print('states de dimensión {states.shape} no es compatible')
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         C = torch.FloatTensor(C).to(device)
@@ -164,9 +194,9 @@ class GPS:
         # loss -= 0.5 * torch.einsum('bii->b', C @ self.policy.sigma)
         loss += 0.5 * torch.log(torch.linalg.det(sigma))
         kld = loss
-        loss = loss * nu  # torch.mul(loss.mT.T, nu.T)
+        loss = torch.einsum(arg1, loss, nu)
         # reg = actions * lamb
-        loss += torch.einsum('ijk,ijk->ij', actions, lamb)  # reg.sum(dim=-1)
+        loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
         loss = torch.sum(loss.flatten(), dim=0)
         # kld = torch.mean(kld, dim=0)
         return loss, kld
@@ -182,21 +212,55 @@ class GPS:
         return xs, us
 
     def _load_fitted_lqg(self, path):
+        '''
+        Retornos
+        --------
+        K : `np.ndarray`
+            Dimensión (N, M, T, n_u, n_x).
+        k : `np.ndarray`
+            Dimensión (N, M, T, n_u).
+        C : `np.ndarray`
+            Dimensión (N, M, T, n_u, n_u)
+        xs : `np.ndarray`
+            Dimensión (N, M, T, n_x)
+        us : `np.ndarray`
+            Dimensión (N, M, T, n_u)
+        xs_old : `np.ndarray`
+            Dimensión (N, M, T, n_x)
+        us_old : `np.ndarray`
+            Dimensión (N, M, T, n_u)
+        alphas : `np.ndarray`
+            Dimensión (N, M, T)
+        '''
+        K = np.empty((self.N, self.M, self.T, self.n_u, self.n_x))
+        k = np.empty((self.N, self.M, self.T, self.n_u))
+        C = np.empty((self.N, self.M, self.T, self.n_u, self.n_u))
+        xs = np.empty((self.N, self.M, self.T + 1, self.n_x))
+        us = np.empty((self.N, self.M, self.T, self.n_u))
+        alphas = np.empty((self.N, self.M, self.T))
+        xs_old = np.empty_like(xs)
+        us_old = np.empty_like(us)
         for i in range(self.N):
-            file = np.load(path + f'control_{i}.npz')
-            self._K[i] = file['K']
-            self._k[i] = file['k']
-            self._C[i] = file['C']
-            self._nominal_xs[i] = file['xs']
-            self._nominal_us[i] = file['us']
-            self._alphas[i] = file['alpha']
+            for j in range(self.M):
+                file = np.load(path + f'mpc_control_{i}_{j}.npz')
+                K[i, j] = file['K']
+                k[i, j] = file['k']
+                C[i, j] = file['C']
+                xs[i, j] = file['xs']
+                us[i, j] = file['us']
+                xs_old[i, j] = file['xs_old']
+                us_old[i, j] = file['us_old']
+                alphas[i, j] = file['alpha']
+        xs = xs[:, :, :, :-1]
+
+        return K, k, C, xs, us, xs_old, us_old, alphas
 
     def _update_lamb(self, us_policy, us_control):
         new_lamb = self.lamb
         mean_policy = np.mean(us_policy, axis=1)
         mean_control = np.mean(us_control, axis=1)
         u = mean_policy - mean_control
-        new_lamb += self.alpha_lamb * np.einsum('Bi, Biu -> Biu', self.nu, u)
+        new_lamb += self.alpha_lamb * np.einsum('NT, NTu -> NTu', self.nu, u)
         return new_lamb
 
     def _update_nu(self, div):
@@ -267,24 +331,18 @@ class GPS:
             self.eta[i] = file['eta']
 
         # 1.2 Loading fitted parameters
-        self._load_fitted_lqg(path)
+        K, k, C, xs, us, xs_old, us_old, alphas = self._load_fitted_lqg(path)
         # 1.3 Loading simulations
-        xs, us = self._load_buffer(path)
+        # xs, us = self._load_buffer(path)
         # 2. Policy fitting
-        us_mean = np.array([self.mean_control(xs[i], i)
-                            for i in range(self.N)])
-        self.policy_sigma = self.cov_policy()
+        us_mean = self.mean_control(xs, xs_old, us_old, K, k, alphas)
+        self.policy._sigma = self.cov_policy(C)
         if callable(self.t_x):
             xs = np.apply_along_axis(self.t_x, -1, xs)  # x_t -> o_t
-        total_loss = 0.0
-        samples_div = np.empty((self.N, self.M, self.T))
-        for j in range(self.M):
-            x = xs[:, j, :-1]
-            u = us_mean[:, j]
-            loss, div = self.policy_loss(x, u, self._C, self.policy_sigma)
-            total_loss += loss
-            samples_div[:, j] = div.detach().cpu().numpy()
-        mean_div = np.mean(samples_div, axis=1)  # (N, T)
+
+        loss, div = self.policy_loss(xs, us_mean, C, self.policy._sigma)
+        div = div.detach().cpu().numpy()
+        mean_div = np.mean(div, axis=1)  # (N, T)
 
         # 2.1 Update policy network
         self.policy_optimizer.zero_grad()
@@ -293,7 +351,7 @@ class GPS:
 
         # 3. Update Langrange's multipliers
         # x_t -> o_t
-        us_policy = self.policy.get_action(xs[:, :, :-1])
+        us_policy = self.policy.get_action(xs)
         if callable(self.inv_t_u):  # a_t -> u_t
             us_policy = np.apply_along_axis(self.inv_t_u, -1, us_policy)
         self.lamb = self._update_lamb(us_policy, us)
@@ -307,8 +365,8 @@ class GPS:
         return loss, div
 
 
-def fit_ilqg(env, policy, cost_kwargs, dynamics_kwargs, i, T, M, path='',
-             policy_env=None, t_x=None, inv_t_x=None, policy_sigma=None):
+def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M, path='',
+             t_x=None, inv_t_x=None, policy_sigma=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -321,16 +379,13 @@ def fit_ilqg(env, policy, cost_kwargs, dynamics_kwargs, i, T, M, path='',
     '''
     if not isinstance(policy_sigma, np.ndarray):
         policy_sigma = np.indentity(dynamics_kwargs['n_u'])
-    low = env.observation_space.low
-    high = env.observation_space.high
-    steps = env.steps - 1
     dynamics = ContinuousDynamics(**dynamics_kwargs)
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
     cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x)
     cost.cov_policy = policy_sigma
-    control = iLQG(dynamics, cost, steps, low, high)
+    control = OfflineController(dynamics, cost, T)
 
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
@@ -340,31 +395,83 @@ def fit_ilqg(env, policy, cost_kwargs, dynamics_kwargs, i, T, M, path='',
     else:
         control.load('results_offline/23_02_01_13_30/')
 
+    # También actualiza eta
     cost.update_control(control)
 
-    if policy_env is None:
-        policy_env = env
-    xs, us_init, _ = rollout(policy, policy_env)
+    xs, us_init, _ = rollout(
+        policy, policy_env, state_init=np.zeros(control.num_states))
     if callable(inv_t_x):
         xs = np.apply_along_axis(inv_t_x, -1, xs)  # o_t -> x_t
 
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = xs[0], us_init
-    control.optimize(KL_STEP, cost.eta)[3]
+    control.optimize(KL_STEP, cost.eta)
     control.save(path=path, file_name=f'control_{i}.npz')
+    x0 = np.array([policy_env.observation_space.sample() for _ in range(M)])
+    if callable(inv_t_x):
+        x0 = np.apply_along_axis(inv_t_x, -1, x0).tolist()
+    nu = cost_kwargs['nu']
+    lamb = cost_kwargs['lamb']
     with mp.Pool(processes=M) as pool:
-        pool.map(partial(_fit_child, env,
-                 T, path, i), range(M))
+        pool.map(partial(_fit_child, x0, T, nu, lamb, dynamics_kwargs,
+                         path, i), range(M))
         pool.close()
         pool.join()
 
 
-def _fit_child(env, T, path, i, j):
+def _fit_child(x0, T, nu, lamb, dynamics_kwargs, path, i, j):
+    if isinstance(x0, list):
+        x0 = x0[j]
+    dynamics = ContinuousDynamics(**dynamics_kwargs)
+    control = OfflineController(dynamics, None, T)
+    control.load(path, file_name=f'control_{i}.npz')
 
-    file_name = f'control_{i}.npz'
-    control = DummyControl(T, path, file_name)
-    xs, us, _ = rollout(control, env)
-    np.savez(path + f'traj_{i}_{j}.npz',
-             xs=xs,
-             us=us
-             )
+    # Creación de instancias control MPC-iLQG
+    n_x = dynamics.n_x
+    n_u = dynamics.n_u
+    cost = OnlineCost(n_x, n_u, control, nu=nu,
+                      lamb=lamb, F=PARAMS_ONLINE['F'])
+    mpc_control = OnlineController(dynamics, cost, T)
+    agent = RecedingHorizonController(x0, mpc_control)
+    us_init = control.rollout(x0)[1]
+    horizon = PARAMS_ONLINE['step_size']
+    traj = agent.control(us_init,
+                         step_size=horizon,
+                         initial_n_iterations=50,
+                         subsequent_n_iterations=25)
+    states = np.empty((T + 1, n_x))
+    actions = np.empty((T, n_u))
+    C = np.empty_like(control._C)
+    K = np.empty_like(control._K)
+    k = np.empty_like(control._k)
+    alpha = np.empty_like(control._nominal_us)
+    r = 0
+    for t in range(mpc_control.N // horizon):
+        xs, us = next(traj)
+        C[t: t + horizon] = mpc_control._C[:horizon]
+        K[t: t + horizon] = mpc_control._K[:horizon]
+        alpha[t: t + horizon] = mpc_control.alpha
+        k[t: t + horizon] = mpc_control._k[:horizon]
+        states[r: r + horizon + 1] = xs
+        actions[r: r + horizon] = us
+        r += horizon
+
+    mpc_control._C = C
+    mpc_control._K = K
+    mpc_control._k = k
+    mpc_control.alpha = alpha
+    mpc_control._nominal_us = actions
+    mpc_control._nominal_xs = states
+    mpc_control.save(path, f'mpc_control_{i}_{j}.npz')
+
+    # Ajuste MPC
+
+# def _fit_child(env, T, path, i, j):
+#
+#     file_name = f'control_{i}.npz'
+#     control = DummyControl(T, path, file_name)
+#     xs, us, _ = rollout(control, env)
+#     np.savez(path + f'traj_{i}_{j}.npz',
+#              xs=xs,
+#              us=us
+#              )
