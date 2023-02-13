@@ -212,8 +212,7 @@ class iLQG(iLQR):
                 # Backtracking line search.
                 for alpha in alphas:
                     xs_new, us_new = self._control(xs, us, k, K, C, alpha,
-                                                   is_stochastic=self.is_stochastic,
-                                                   is_constrained=self.is_constrained)
+                                                   is_stochastic=self.is_stochastic)
                     J_new = self._trajectory_cost(xs_new, us_new)
 
                     if J_new < J_opt:
@@ -221,6 +220,8 @@ class iLQG(iLQR):
                             converged = True
 
                         J_opt = J_new
+                        xs_old = xs
+                        us_old = us
                         xs = xs_new
                         us = us_new
                         changed = True
@@ -433,10 +434,9 @@ class OfflineController(iLQG):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        us_new = self._control(xs, us, k, K, C, self.alpha, False, False)[1]
+        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
-        params['is_constrained'] = self.is_constrained
         us_old = self._control(**params)[1]
         C_old = params['C']
         kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C[j], C_old[j])
