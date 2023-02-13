@@ -5,7 +5,7 @@ from tqdm import tqdm
 from utils import date_as_path
 import matplotlib.pyplot as plt
 from Linear.equations import f, W0
-from GPS import GPS, Policy, iLQRAgent, ContinuousDynamics
+from GPS import GPS, Policy, ContinuousDynamics
 from ilqr.cost import FiniteDiffCost
 from env import QuadcopterEnv
 from Linear.agent import LinearAgent
