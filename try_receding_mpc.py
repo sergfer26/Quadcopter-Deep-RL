@@ -15,8 +15,10 @@ from utils import date_as_path
 from dynamics import penalty, terminal_penalty
 from ilqr import RecedingHorizonController
 from tqdm import tqdm
-# import pandas as pd
+import warnings
 
+# import pandas as pd
+warnings.filterwarnings("ignore")
 PATH = 'results_mpc/' + date_as_path() + '/'
 pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
 
@@ -42,10 +44,9 @@ cost = FiniteDiffCost(l=penalty,
                       action_size=n_u
                       )
 N = env.steps - 1
-low = env.action_space.low
-high = env.action_space.high
-controller = iLQG(dynamics, cost, N, low, high)
-controller.load('results_offline/23_02_01_13_30/', 'ilqr_control.npz')
+
+controller = iLQG(dynamics, cost, N)
+controller.load('results_offline/23_02_09_17_21/', 'ilqr_control.npz')
 x0 = env.observation_space.sample()  # states_init[0]
 agent = RecedingHorizonController(x0, controller)
 # expert = LinearAgent(env)
