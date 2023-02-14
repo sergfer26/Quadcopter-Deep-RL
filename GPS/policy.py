@@ -3,6 +3,7 @@ import numpy as np
 import torch.autograd
 import torch.nn as nn
 import torch.nn.functional as F
+import pathlib
 from torch.autograd import Variable
 from scipy.stats import multivariate_normal
 
@@ -17,6 +18,7 @@ class Policy(nn.Module):
         state_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
         self.env = env
+        self.state_dim = state_dim
         self.is_stochastic = is_stochastic
 
         self._sigma = np.identity(action_dim)
@@ -60,3 +62,11 @@ class Policy(nn.Module):
         if self.is_stochastic:
             action = multivariate_normal.rvs(action, self._sigma, 1)
         return action
+
+    def save(self, path):
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        torch.save(self.state_dict(), path + "/policy")
+
+    def load(self, path):
+        self.load_state_dict(torch.load(
+            path + "policy", map_location=device))
