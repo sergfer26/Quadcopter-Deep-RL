@@ -211,6 +211,13 @@ class GPS:
                     us[i, j] = file['us']
         return xs, us
 
+    def _update_eta(self, path):
+        eta = np.empty(self.N)
+        for i in range(self.N):
+            file = np.load(path + f'control_{i}.npz')
+            eta[i] = file['eta']
+        return eta
+
     def _load_fitted_lqg(self, path):
         '''
         Retornos
@@ -290,7 +297,7 @@ class GPS:
             cost_kwargs['nu'] = self.nu[i]
             cost_kwargs['eta'] = self.eta[i]
             p = mp.Process(target=fit_ilqg,
-                           args=(self.env,
+                           args=(self.policy.env,
                                  self.policy,
                                  cost_kwargs,
                                  self.dynamics_kwargs,
@@ -298,7 +305,6 @@ class GPS:
                                  self.T,
                                  self.M,
                                  path,
-                                 self.policy.env,
                                  self.t_x,
                                  self.inv_t_x,
                                  self.policy_sigma
@@ -333,7 +339,7 @@ class GPS:
         # 1.2 Loading fitted parameters
         K, k, C, xs, us, xs_old, us_old, alphas = self._load_fitted_lqg(path)
         # 1.3 Loading simulations
-        # xs, us = self._load_buffer(path)
+        self.eta = self._update_eta(path)
         # 2. Policy fitting
         us_mean = self.mean_control(xs, xs_old, us_old, K, k, alphas)
         self.policy._sigma = self.cov_policy(C)
@@ -393,13 +399,14 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M, path='',
         # file_name = file_name if exists(file_name) else 'control.npz'
         control.load(path, file_name)
     else:
-        control.load('results_offline/23_02_01_13_30/')
+        # 'results_offline/23_02_01_13_30/'
+        control.load('results_offline/23_02_09_17_21/')
 
     # También actualiza eta
     cost.update_control(control)
 
     xs, us_init, _ = rollout(
-        policy, policy_env, state_init=np.zeros(control.num_states))
+        policy, policy_env, state_init=np.zeros(policy.state_dim))
     if callable(inv_t_x):
         xs = np.apply_along_axis(inv_t_x, -1, xs)  # o_t -> x_t
 
@@ -427,12 +434,13 @@ def _fit_child(x0, T, nu, lamb, dynamics_kwargs, path, i, j):
     control.load(path, file_name=f'control_{i}.npz')
 
     # Creación de instancias control MPC-iLQG
-    n_x = dynamics.n_x
-    n_u = dynamics.n_u
+    n_x = dynamics._state_size
+    n_u = dynamics._action_size
     cost = OnlineCost(n_x, n_u, control, nu=nu,
                       lamb=lamb, F=PARAMS_ONLINE['F'])
     mpc_control = OnlineController(dynamics, cost, T)
     agent = RecedingHorizonController(x0, mpc_control)
+    control.is_stochastic = False
     us_init = control.rollout(x0)[1]
     horizon = PARAMS_ONLINE['step_size']
     traj = agent.control(us_init,
