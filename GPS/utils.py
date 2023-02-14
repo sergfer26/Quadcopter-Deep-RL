@@ -267,9 +267,12 @@ class OnlineCost(FiniteDiffCost):
         c -= self.nu[i] * \
             normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
         # log dynamics distribution
-        c -= normal.logpdf(x=x,
-                           mean=self.mean_dynamics[i],
-                           cov=cov)
+        try:
+            c -= normal.logpdf(x=x,
+                               mean=self.mean_dynamics[i],
+                               cov=cov)
+        except:
+            print(cov)
         return c
 
 
