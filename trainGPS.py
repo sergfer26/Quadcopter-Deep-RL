@@ -73,6 +73,7 @@ def main(path):
               )
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     # 3. Graphs
+    plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(16, 12), dpi=250)
     gs = fig.add_gridspec(nrows=4, ncols=3)
     ax1 = fig.add_subplot(gs[:3, :2])
