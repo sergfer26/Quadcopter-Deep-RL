@@ -1,5 +1,5 @@
 import pathlib
-import torch
+import time
 import numpy as np
 from tqdm import tqdm
 from utils import date_as_path
@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from Linear.equations import f, W0
 from GPS import GPS, Policy
 from env import QuadcopterEnv
-from simulation import rollout
 from DDPG.utils import AgentEnv
 from dynamics import transform_x, transform_u
 from dynamics import inv_transform_u, inv_transform_x
@@ -59,6 +58,8 @@ def main(path):
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0, method='lsoda')
     # 2. Training
+    ti = time.time()
+
     gps = GPS(env,
               policy,
               dynamics_kwargs,
@@ -71,6 +72,8 @@ def main(path):
               N=PARAMS['N'],
               M=PARAMS['M']
               )
+    tf = time.time()
+    print(f'tiempo de ajuste de política por MPC-GPS: {tf - ti}')
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     # 3. Graphs
     plt.style.use("fivethirtyeight")
@@ -92,10 +95,10 @@ def main(path):
         ax.plot(dic[key])
         ax.set_title(key)
     # 3.3 lambdas
-    time = np.linspace(1, K, K)
+    index = np.linspace(1, K, K)
     labels = [f'$\lambda_{n_u}$']
     ax = np.array([ax41, ax42, ax43, ax44])
-    plot_rollouts(lambdas, time, labels, ax=ax)
+    plot_rollouts(lambdas, index, labels, ax=ax)
     if SHOW:
         plt.show()
     else:
