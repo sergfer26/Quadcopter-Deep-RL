@@ -1,6 +1,7 @@
 import pathlib
 import time
 import numpy as np
+import send_email
 from tqdm import tqdm
 from utils import date_as_path
 from utils import plot_performance
@@ -135,4 +136,7 @@ if __name__ == '__main__':
     rollouts = PARAMS['rollouts']
     PATH = 'results_gps/' + date_as_path() + '/'
     pathlib.Path(PATH + 'buffer/').mkdir(parents=True, exist_ok=True)
-    main(PATH)
+    if not SHOW:
+        send_email.report_sender(main, args=[PATH])
+    else:
+        main(PATH)
