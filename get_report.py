@@ -5,7 +5,7 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
-from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GCL
+from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GPS
 from params import PARAMS_OBS
 from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
 from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
@@ -188,9 +188,9 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
 
-    elif method == 'gcl':
-        add_text(pdf, ['Parámetros de', 'entrenamiento GCL'], 350, 750)
-        add_table(pdf, PARAMS_TRAIN_GCL, 350, 600)
+    elif method == 'gps':
+        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 750)
+        add_table(pdf, PARAMS_TRAIN_GPS, 350, 600)
     elif method is None:
         pass
     else:
