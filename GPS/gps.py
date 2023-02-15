@@ -294,51 +294,51 @@ class GPS:
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
 
-        processes = list()
-        # 1. Control fitting
-        for i in range(self.N):
-            cost_kwargs = deepcopy(self.cost_kwargs)
-            cost_kwargs['lamb'] = self.lamb[i]
-            cost_kwargs['nu'] = self.nu[i]
-            cost_kwargs['eta'] = self.eta[i]
-            p = mp.Process(target=fit_ilqg,
-                           args=(self.policy.env,
-                                 self.policy,
-                                 cost_kwargs,
-                                 self.dynamics_kwargs,
-                                 i,
-                                 self.T,
-                                 self.M,
-                                 path,
-                                 self.t_x,
-                                 self.inv_t_x,
-                                 self.inv_t_u,
-                                 self.policy_sigma
-                                 )
-                           )
-            processes.append(p)
-            p.start()
-
-        for p in processes:
-            p.join()
-
-        # i = 0
-        # cost_kwargs = deepcopy(self.cost_kwargs)
-        # cost_kwargs['lamb'] = self.lamb[i]
-        # cost_kwargs['nu'] = self.nu[i]
-        # args = (self.policy.env,
-        #         self.policy,
-        #         cost_kwargs,
-        #         self.dynamics_kwargs,
-        #         i,
-        #         self.T,
-        #         self.M,
-        #         path,
-        #         self.t_x,
-        #         self.inv_t_x,
-        #         self.policy._sigma
-        #         )
-        # fit_ilqg(*args)
+        # processes = list()
+        # # 1. Control fitting
+        # for i in range(self.N):
+        #     cost_kwargs = deepcopy(self.cost_kwargs)
+        #     cost_kwargs['lamb'] = self.lamb[i]
+        #     cost_kwargs['nu'] = self.nu[i]
+        #     cost_kwargs['eta'] = self.eta[i]
+        #     p = mp.Process(target=fit_ilqg,
+        #                    args=(self.policy.env,
+        #                          self.policy,
+        #                          cost_kwargs,
+        #                          self.dynamics_kwargs,
+        #                          i,
+        #                          self.T,
+        #                          self.M,
+        #                          path,
+        #                          self.t_x,
+        #                          self.inv_t_x,
+        #                          self.inv_t_u,
+        #                          self.policy_sigma
+        #                          )
+        #                    )
+        #     processes.append(p)
+        #     p.start()
+#
+        # for p in processes:
+        #     p.join()
+#
+        i = 0
+        cost_kwargs = deepcopy(self.cost_kwargs)
+        cost_kwargs['lamb'] = self.lamb[i]
+        cost_kwargs['nu'] = self.nu[i]
+        args = (self.policy.env,
+                self.policy,
+                cost_kwargs,
+                self.dynamics_kwargs,
+                i,
+                self.T,
+                self.M,
+                path,
+                self.t_x,
+                self.inv_t_x,
+                self.policy._sigma
+                )
+        fit_ilqg(*args)
         # 1.1 update eta
         self.eta = self._update_eta(path)
         # 1.2 Loading fitted parameters
@@ -419,15 +419,15 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         x0 = np.apply_along_axis(inv_t_x, -1, x0).tolist()
     nu = cost_kwargs['nu']
     lamb = cost_kwargs['lamb']
-    with mp.Pool(processes=M) as pool:
-        pool.map(partial(_fit_child, policy, policy_sigma, t_x, inv_t_u, x0,
-                         T, nu, lamb, dynamics_kwargs,
-                         path, i), range(M))
-        pool.close()
-        pool.join()
-    # _fit_child(policy, policy_sigma, t_x, inv_t_u, x0,
-    #            T, nu, lamb, dynamics_kwargs,
-    #            path, i, 0)
+    # with mp.Pool(processes=M) as pool:
+    #     pool.map(partial(_fit_child, policy, policy_sigma, t_x, inv_t_u, x0,
+    #                      T, nu, lamb, dynamics_kwargs,
+    #                      path, i), range(M))
+    #     pool.close()
+    #     pool.join()
+    _fit_child(policy, policy_sigma, t_x, inv_t_u, x0,
+               T, nu, lamb, dynamics_kwargs,
+               path, i, 0)
 
 
 def _fit_child(policy, sigma, t_x, inv_t_u, x0, T, nu, lamb,
