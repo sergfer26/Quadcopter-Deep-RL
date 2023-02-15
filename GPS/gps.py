@@ -99,7 +99,7 @@ class GPS:
 
     def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
         '''
-        Calcula la siguiente expresión 
+        Calcula la siguiente expresión
             u_s = \hat{u_s} + \alpha k + K (x_s - \hat{x_s})
 
         Argumentos
@@ -125,7 +125,7 @@ class GPS:
         Retorno
         -------
         us_mean : `np.ndarray`
-            Conjunto de trayectorias resultantes de acciones con 
+            Conjunto de trayectorias resultantes de acciones con
             dimensión (B, n_u).
         '''
         if len(xs.shape) == 4:  # (N, M, T, n_x)
@@ -293,50 +293,50 @@ class GPS:
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
-        processes = list()
-        # 1. Control fitting
-        for i in range(self.N):
-            cost_kwargs = deepcopy(self.cost_kwargs)
-            cost_kwargs['lamb'] = self.lamb[i]
-            cost_kwargs['nu'] = self.nu[i]
-            cost_kwargs['eta'] = self.eta[i]
-            p = mp.Process(target=fit_ilqg,
-                           args=(self.policy.env,
-                                 self.policy,
-                                 cost_kwargs,
-                                 self.dynamics_kwargs,
-                                 i,
-                                 self.T,
-                                 self.M,
-                                 path,
-                                 self.t_x,
-                                 self.inv_t_x,
-                                 self.inv_t_u,
-                                 self.policy_sigma
-                                 )
-                           )
-            processes.append(p)
-            p.start()
-
-        for p in processes:
-            p.join()
-        # i = 0
-        # cost_kwargs = deepcopy(self.cost_kwargs)
-        # cost_kwargs['lamb'] = self.lamb[i]
-        # cost_kwargs['nu'] = self.nu[i]
-        # args = (self.policy.env,
-        #         self.policy,
-        #         cost_kwargs,
-        #         self.dynamics_kwargs,
-        #         i,
-        #         self.T,
-        #         self.M,
-        #         path,
-        #         self.t_x,
-        #         self.inv_t_x,
-        #         self.policy_sigma
-        #         )
-        # fit_ilqg(*args)
+        # processes = list()
+        # # 1. Control fitting
+        # for i in range(self.N):
+        #     cost_kwargs = deepcopy(self.cost_kwargs)
+        #     cost_kwargs['lamb'] = self.lamb[i]
+        #     cost_kwargs['nu'] = self.nu[i]
+        #     cost_kwargs['eta'] = self.eta[i]
+        #     p = mp.Process(target=fit_ilqg,
+        #                    args=(self.policy.env,
+        #                          self.policy,
+        #                          cost_kwargs,
+        #                          self.dynamics_kwargs,
+        #                          i,
+        #                          self.T,
+        #                          self.M,
+        #                          path,
+        #                          self.t_x,
+        #                          self.inv_t_x,
+        #                          self.inv_t_u,
+        #                          self.policy_sigma
+        #                          )
+        #                    )
+        #     processes.append(p)
+        #     p.start()
+#
+        # for p in processes:
+        #     p.join()
+        i = 0
+        cost_kwargs = deepcopy(self.cost_kwargs)
+        cost_kwargs['lamb'] = self.lamb[i]
+        cost_kwargs['nu'] = self.nu[i]
+        args = (self.policy.env,
+                self.policy,
+                cost_kwargs,
+                self.dynamics_kwargs,
+                i,
+                self.T,
+                self.M,
+                path,
+                self.t_x,
+                self.inv_t_x,
+                self.policy._sigma
+                )
+        fit_ilqg(*args)
         # 1.1 update eta
         self.eta = self._update_eta(path)
         # 1.2 Loading fitted parameters
@@ -382,7 +382,7 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         Indice de trayectoria producida por MPC.
     '''
     if not isinstance(policy_sigma, np.ndarray):
-        policy_sigma = np.indentity(dynamics_kwargs['n_u'])
+        policy_sigma = np.identity(dynamics_kwargs['n_u'])
     dynamics = ContinuousDynamics(**dynamics_kwargs)
 
     # ###### Instancias control iLQG #######
@@ -398,8 +398,8 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         control.load(path, file_name)
     else:
         # 'results_offline/23_02_01_13_30/'
+        # 'results_offline/23_02_15_09_14/' -> para 2 seg
         control.load('results_offline/23_02_09_17_21/')
-
     # También actualiza eta
     cost.update_control(control)
 
@@ -417,15 +417,15 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         x0 = np.apply_along_axis(inv_t_x, -1, x0).tolist()
     nu = cost_kwargs['nu']
     lamb = cost_kwargs['lamb']
-    with mp.Pool(processes=M) as pool:
-        pool.map(partial(_fit_child, policy, policy_sigma, t_x, inv_t_u, x0,
-                         T, nu, lamb, dynamics_kwargs,
-                         path, i), range(M))
-        pool.close()
-        pool.join()
-    # _fit_child(policy, policy_sigma, t_x, x0,
-    #            T, nu, lamb, dynamics_kwargs,
-    #            path, i, 0)
+    # with mp.Pool(processes=M) as pool:
+    #     pool.map(partial(_fit_child, policy, policy_sigma, t_x, inv_t_u, x0,
+    #                      T, nu, lamb, dynamics_kwargs,
+    #                      path, i), range(M))
+    #     pool.close()
+    #     pool.join()
+    _fit_child(policy, policy_sigma, t_x, inv_t_u, x0,
+               T, nu, lamb, dynamics_kwargs,
+               path, i, 0)
 
 
 def _fit_child(policy, sigma, t_x, inv_t_u, x0, T, nu, lamb,
