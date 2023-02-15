@@ -263,7 +263,7 @@ class OnlineCost(FiniteDiffCost):
         policy_cov = self.policy_cov + \
             PARAMS_ONLINE['cov_reg'] * np.identity(u.shape[-1])
         cov_dynamics = self.cov_dynamics[i] + \
-            PARAMS_LQG['cov_reg'] * np.identity(u.shape[-1])
+            PARAMS_LQG['cov_reg'] * np.identity(x.shape[-1])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
         c = 0.0
