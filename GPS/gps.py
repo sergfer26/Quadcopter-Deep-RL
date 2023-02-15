@@ -258,8 +258,8 @@ class GPS:
                 xs_old[i, j] = file['xs_old']
                 us_old[i, j] = file['us_old']
                 alphas[i, j] = file['alpha']
-        xs = xs[:, :, :, :-1]
-
+        xs = xs[:, :, :-1]
+        xs_old = xs_old[:, :, :-1]
         return K, k, C, xs, us, xs_old, us_old, alphas
 
     def _update_lamb(self, us_policy, us_control):
@@ -451,6 +451,8 @@ def _fit_child(policy, sigma, t_x, x0, T, nu, lamb, dynamics_kwargs, path, i, j)
                          subsequent_n_iterations=25)
     states = np.empty((T + 1, n_x))
     actions = np.empty((T, n_u))
+    xs_old = np.empty_like(states)
+    us_old = np.empty_like(actions)
     C = np.empty_like(control._C)
     K = np.empty_like(control._K)
     k = np.empty_like(control._k)
@@ -464,14 +466,18 @@ def _fit_child(policy, sigma, t_x, x0, T, nu, lamb, dynamics_kwargs, path, i, j)
         k[t: t + horizon] = mpc_control._k[:horizon]
         states[r: r + horizon + 1] = xs
         actions[r: r + horizon] = us
+        xs_old[r: r + horizon + 1] = mpc_control._xs[:horizon+1]
+        us_old[r: r + horizon + 1] = mpc_control._us[:horizon+1]
         r += horizon
 
     mpc_control._C = C
     mpc_control._K = K
     mpc_control._k = k
     mpc_control.alpha = alpha
-    mpc_control._nominal_us = actions
-    mpc_control._nominal_xs = states
+    mpc_control._nominal_us = states
+    mpc_control._nominal_xs = actions
+    mpc_control._xs = xs_old
+    mpc_control._us = us_old
     mpc_control.save(path, f'mpc_control_{i}_{j}.npz')
 
     # Ajuste MPC
