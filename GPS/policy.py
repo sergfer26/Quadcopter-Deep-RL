@@ -46,21 +46,21 @@ class Policy(nn.Module):
         x = torch.tanh(self.out(x))
         return x
 
-    def to_numpy(self, x, t_x=None):
+    def to_numpy(self, x, t_x=None, t_u=None):
         if callable(t_x):
             x = t_x(x)
         x = torch.FloatTensor(x)
-        return self.forward(x.to(device)).detach().cpu().numpy()
-
-    def to_float(self, x, t_x=None):
-        return self.to_numpy(x, t_x=t_x).item()
+        out = self.forward(x.to(device)).detach().cpu().numpy()
+        if callable(t_u):
+            out = t_u(out)
+        return out
 
     def get_action(self, state):
         state = Variable(torch.from_numpy(state).float())
         action = self.forward(state.to(device))
         action = action.detach().cpu().numpy()
-        if self.is_stochastic:
-            action = multivariate_normal.rvs(action, self._sigma, 1)
+        # if self.is_stochastic:
+        #     action = multivariate_normal.rvs(action, self._sigma, 1)
         return action
 
     def save(self, path):
