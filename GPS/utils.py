@@ -260,18 +260,19 @@ class OnlineCost(FiniteDiffCost):
         self.control = control
 
     def _cost(self, x, u, i):
-        cov = np.round(self.cov_dynamics[i], 6)
+        policy_cov = self.policy_cov + \
+            PARAMS_LQG['cov_reg'] * np.identity(u.shape[-1])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
         c = 0.0
         c -= u.T@self.lamb[i]
         # log policy distribution
         c -= self.nu[i] * \
-            normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
+            normal.logpdf(x=u, mean=self.policy_mean(x), cov=policy_cov)
         # log dynamics distribution
         c -= normal.logpdf(x=x,
                            mean=self.mean_dynamics[i],
-                           cov=cov)
+                           cov=self.cov_dynamics[i])
         return c
 
 
