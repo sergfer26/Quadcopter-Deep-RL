@@ -189,8 +189,8 @@ class iLQG(iLQR):
         alpha = 1.0
 
         us = us_init.copy()
-        xs_old = None
-        us_old = None
+        xs_old = np.zeros_like(self._nominal_xs)
+        us_old = np.zeros_like(self._nominal_us)
         # N = us.shape[0]
         k = self._k
         K = self._K
@@ -218,13 +218,13 @@ class iLQG(iLQR):
                     xs_new, us_new = self._control(xs, us, k, K, C, alpha,
                                                    is_stochastic=self.is_stochastic)
                     J_new = self._trajectory_cost(xs_new, us_new)
-                    xs_old = xs
-                    us_old = us
                     if J_new < J_opt:
                         if np.abs((J_opt - J_new) / J_opt) < tol:
                             converged = True
 
                         J_opt = J_new
+                        xs_old = xs
+                        us_old = us
                         xs = xs_new
                         us = us_new
                         changed = True
