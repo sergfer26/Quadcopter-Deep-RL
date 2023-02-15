@@ -51,6 +51,8 @@ class iLQG(iLQR):
                            for _ in range(self.N)])
         self._nominal_us = np.empty((self.N, self.num_actions))
         self._nominal_xs = np.empty((self.N + 1, self.num_states))
+        self._xs = np.empty_like(self._nominal_xs)
+        self._us = np.empty_like(self._nominal_us)
         self.is_stochastic = is_stochastic
 
     def _rollout(self, x0, us):
@@ -216,14 +218,13 @@ class iLQG(iLQR):
                     xs_new, us_new = self._control(xs, us, k, K, C, alpha,
                                                    is_stochastic=self.is_stochastic)
                     J_new = self._trajectory_cost(xs_new, us_new)
-
+                    xs_old = xs
+                    us_old = us
                     if J_new < J_opt:
                         if np.abs((J_opt - J_new) / J_opt) < tol:
                             converged = True
 
                         J_opt = J_new
-                        xs_old = xs
-                        us_old = us
                         xs = xs_new
                         us = us_new
                         changed = True
