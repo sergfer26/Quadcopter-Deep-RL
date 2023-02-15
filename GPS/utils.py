@@ -7,6 +7,7 @@ from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal as normal
+from .params import PARAMS_LQG
 # from scipy.linalg import issymmetric
 
 
@@ -108,7 +109,8 @@ class OfflineCost(FiniteDiffCost):
         self.cost = cost  # l_bounded
 
         def _cost(x, u, i):
-            C = self._C[i] + 5e-1 * np.identity(u.shape[-1])
+            C = PARAMS_LQG['cov_reg'] * \
+                np.identity(u.shape[-1]) + self._C[i]
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
@@ -267,12 +269,9 @@ class OnlineCost(FiniteDiffCost):
         c -= self.nu[i] * \
             normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
         # log dynamics distribution
-        try:
-            c -= normal.logpdf(x=x,
-                               mean=self.mean_dynamics[i],
-                               cov=cov)
-        except:
-            print(cov)
+        c -= normal.logpdf(x=x,
+                           mean=self.mean_dynamics[i],
+                           cov=cov)
         return c
 
 
