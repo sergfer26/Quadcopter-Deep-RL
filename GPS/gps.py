@@ -292,7 +292,8 @@ class GPS:
 
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
-        # path = path + 'buffer/'
+        path = path + 'buffer/'
+
         # processes = list()
         # # 1. Control fitting
         # for i in range(self.N):
