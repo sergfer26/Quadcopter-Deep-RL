@@ -34,28 +34,17 @@ cost = FiniteDiffCost(l=penalty,
                       )
 
 N = env.steps - 1
-low = env.action_space.low
-high = env.action_space.high
-agent = iLQG(dynamics, cost, N, low, high)
+agent = iLQG(dynamics, cost, N)
 expert = LinearAgent(env)
-
-
-EPISODES = 1
 
 
 steps = env.steps - 1
 x0 = np.zeros(n_x)
 
 _, us_init, _ = rollout(expert, env, state_init=x0)
-states = np.zeros((EPISODES, env.steps, len(env.state)))
-actions = np.zeros((EPISODES, env.steps - 1, env.action_space.shape[0]))
 costs = list()  # np.zeros((EPISODES, env.steps - 1))
-for ep in range(EPISODES):
-    xs, us, cost_trace = agent.fit_control(x0, us_init)
-    us_init = us
-    states[ep] = xs
-    actions[ep] = us
-    costs.append(cost_trace)
+xs, us, cost_trace = agent.fit_control(x0, us_init)
+costs.append(cost_trace)
 
 print('ya acabo el ajuste del control')
 
@@ -66,7 +55,7 @@ ax.plot(costs[-1])
 ax.set_title('Costo')
 fig.savefig(PATH + 'train_performance.png')
 
-create_animation(states, actions, env.time,
+create_animation(xs, us, env.time,
                  state_labels=STATE_NAMES,
                  action_labels=ACTION_NAMES,
                  file_name='fitted',
@@ -87,7 +76,7 @@ create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
 agent.save(PATH)
 print('los parametros del control fueron guardadados')
 
-sample_indices = np.random.randint(states.shape[0], size=3)
+sample_indices = np.random.randint(states.shape[0], size=2)
 states_samples = states[sample_indices]
 actions_samples = actions[sample_indices]
 scores_samples = scores[sample_indices]

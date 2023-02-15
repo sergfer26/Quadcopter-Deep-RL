@@ -3,7 +3,6 @@ import pathlib
 import scipy
 from GPS.utils import ContinuousDynamics
 from Linear.equations import f, W0
-from dynamics import VEL_MIN, VEL_MAX
 from env import QuadcopterEnv
 from GPS.controller import OfflineController
 from simulation import plot_rollouts, rollout, n_rollouts
@@ -45,10 +44,7 @@ cost = OfflineCost(cost=penalty,
 # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
 # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
 cost.update_control(file_path=OLD_PATH + 'ilqr_control.npz')
-
-low = env.action_space.low
-high = env.action_space.high
-agent = OfflineController(dynamics, cost, T, low, high)
+agent = OfflineController(dynamics, cost, T)
 expert = LinearAgent(env)
 
 
@@ -56,27 +52,15 @@ EPISODES = 1
 
 x0 = np.zeros(n_x)
 _, us_init, _ = rollout(expert, env, state_init=x0)
-states = np.zeros((EPISODES, env.steps, len(env.state)))
-actions = np.zeros((EPISODES, env.steps - 1, env.action_space.shape[0]))
-costs = list()
 
 agent.x0 = x0
 agent.us_init = us_init
-
-for ep in range(EPISODES):
-    # np.zeros(n_x)
-    # x0 = env.observation_space.sample()
-    xs, us, cost_trace, r = agent.optimize(**PARAMS)
-    us_init = us
-    states[ep] = xs
-    actions[ep] = us
-    costs.append(cost_trace)
-
+xs, us, cost_trace, r = agent.optimize(**PARAMS)
 print('ya acabo el ajuste del control')
 
 plt.style.use("fivethirtyeight")
 fig, ax = plt.subplots(figsize=(10, 10), dpi=200)
-ax.plot(costs[-1])
+ax.plot(cost_trace)
 # ax.plot(costs[0], color='green', marker='o', linestyle='dashed')
 ax.set_title('Costo')
 fig.savefig(PATH + 'train_performance.png')
@@ -99,7 +83,7 @@ ax.plot(vals)
 ax.set_title('Is symetric?')
 fig.savefig(PATH + 'is_symetric.png')
 
-create_animation(states, actions, env.time,
+create_animation(xs, us, env.time,
                  state_labels=STATE_NAMES,
                  action_labels=ACTION_NAMES,
                  file_name='fitted',
