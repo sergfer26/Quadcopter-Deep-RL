@@ -47,6 +47,8 @@ def train_gps(gps: GPS, K, path):
 
 def main(path):
     K = PARAMS['UPDATES']
+    rollouts = PARAMS['rollouts']
+    samples = PARAMS['samples']
     # 1. Setup
     env = QuadcopterEnv()
     dt = env.time[-1] - env.time[-2]
@@ -73,9 +75,10 @@ def main(path):
               N=PARAMS['N'],
               M=PARAMS['M']
               )
+    losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
     print(f'tiempo de ajuste de política por MPC-GPS: {tf - ti}')
-    losses, nus, etas, lambdas = train_gps(gps, K, PATH)
+    policy.save(path)
     # 3. Graphs
     plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(16, 12), dpi=250)
@@ -107,9 +110,9 @@ def main(path):
     # 4. Simulation
     states, actions, scores = n_rollouts(
         policy, other_env, rollouts, t_x=inv_transform_x)
-    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES)
-    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES)
-    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES)
+    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
+    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
     if SHOW:
         plt.show()
     else:
@@ -121,19 +124,24 @@ def main(path):
                       method='gps', extra_method='ilqr')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
-    print('Termino de simualcion...')
-    create_animation(states, actions, env.time, scores=scores,
+    print('Terminó de simualación...')
+
+    sample_indices = np.random.randint(states.shape[0], size=samples)
+    states_samples = states[sample_indices]
+    actions_samples = actions[sample_indices]
+    scores_samples = scores[sample_indices]
+
+    create_animation(states_samples, actions_samples, env.time,
+                     scores=scores_samples,
                      state_labels=STATE_NAMES,
                      action_labels=ACTION_NAMES,
                      score_labels=REWARD_NAMES,
                      path=subpath
                      )
-    policy.save(path)
     return path
 
 
 if __name__ == '__main__':
-    rollouts = PARAMS['rollouts']
     PATH = 'results_gps/' + date_as_path() + '/'
     pathlib.Path(PATH + 'buffer/').mkdir(parents=True, exist_ok=True)
     if not SHOW:
