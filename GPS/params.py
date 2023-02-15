@@ -14,7 +14,7 @@ PARAMS_OFFLINE = {
     'kl_step': 10,
     'min_eta': 1e-4,
     'max_eta': 1e3,
-    'rtol': 1e-2,
+    'rtol': 1e-1,
     'kl_maxiter': 1
 }
 
