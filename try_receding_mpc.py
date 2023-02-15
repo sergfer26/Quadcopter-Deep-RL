@@ -52,22 +52,14 @@ agent = RecedingHorizonController(x0, controller)
 # expert = LinearAgent(env)
 
 horizon = 50
-EPISODES = 1
 
 
 steps = env.steps - 1
-# x0 = np.zeros(n_x)
-# print(x0)
-# np.random.uniform(low=VEL_MIN, high=VEL_MAX, size=(steps, n_u))
-# us_init = np.random.uniform(low=VEL_MIN, high=VEL_MAX, size=(
-#     N, n_u))
-#
-# us_init = np.zeros((steps, n_u))
 _, us_init, _ = rollout(controller, env, state_init=x0)
-# us_init = np.random.uniform(low=VEL_MIN, high=VEL_MAX, size=(
-#    N, n_u))
-states = np.zeros((EPISODES, env.steps + 1, len(env.state)))
-actions = np.zeros((EPISODES, env.steps, env.action_space.shape[0]))
+states = np.zeros((env.steps + 1, len(env.state)))
+actions = np.zeros((env.steps, env.action_space.shape[0]))
+xs_old = np.empty_like(states)
+us_old = np.empty_like(actions)
 costs = list()  # np.zeros((EPISODES, env.steps - 1))
 
 
@@ -77,13 +69,6 @@ traj = agent.control(us_init, step_size=horizon,
                      subsequent_n_iterations=25)
 
 j = 0
-# for i in tqdm(range((controller.N // horizon))):
-#     xs, us = next(traj)
-#     C, K = controller._C[:horizon], controller._K[:horizon]
-#     alpha, k = controller.alpha, controller._k[:horizon]
-#     states[:, j:j + horizon + 1] = xs
-#     actions[:, j:j + horizon] = us
-#     j += horizon
 
 C = np.empty_like(controller._C)
 K = np.empty_like(controller._K)
@@ -95,20 +80,22 @@ for i in tqdm(range(controller.N // horizon)):
     K[i: i + horizon] = controller._K[:horizon]
     alpha[i: i + horizon] = controller.alpha
     k[i: i + horizon] = controller._k[:horizon]
-    states[:, j: j + horizon + 1] = xs
-    actions[:, j: j + horizon] = us
+    states[j: j + horizon + 1] = xs
+    actions[j: j + horizon] = us
+    xs_old[j: j + horizon + 1] = controller._xs[:horizon+1]
+    us_old[j: j + horizon + 1] = controller._us[:horizon+1]
     j += horizon
 
 
-file_path = PATH + 'mpc_control.npz'
-np.savez(file_path,
-         C=np.round(C, 3),
-         K=K,
-         k=k,
-         xs=states,
-         us=actions,
-         alpha=alpha
-         )
+controller._C = C
+controller._K = K
+controller._k = k
+controller.alpha = alpha
+controller._nominal_us = us
+controller._nominal_xs = xs
+controller._xs = xs_old
+controller._us = us_old
+controller.save(PATH, 'mpc_control.npz')
 
 t2 = time.time()
 
@@ -117,17 +104,17 @@ print(f'Tiempo de ejecución: {t2-t1}')
 
 print('ya acabo el ajuste del mpc')
 
-create_animation(states[:, :-1], actions[:, :-1], env.time,
+create_animation(states, actions, env.time,
                  state_labels=STATE_NAMES,
                  action_labels=ACTION_NAMES,
                  file_name='fitted',
                  path=PATH + 'sample_rollouts/')
 
 
-fig1, _ = plot_rollouts(states[:, :-1], env.time, STATE_NAMES, alpha=0.05)
+fig1, _ = plot_rollouts(states[:-1], env.time, STATE_NAMES, alpha=0.05)
 fig1.savefig(PATH + 'state_rollouts.png')
-fig2, _ = plot_rollouts(actions[:, :-1], env.time, ACTION_NAMES, alpha=0.05)
-fig2.savefig(PATH + 'action_rollouts.png')
+fig2, _ = plot_rollouts(actions[:-1], env.time, ACTION_NAMES, alpha=0.05)
+fig2.savefig(PATH + 'action_rol]louts.png')
 
 
 # fig4.savefig(PATH + 'eigvalues_C.png')
