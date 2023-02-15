@@ -405,7 +405,7 @@ class OfflineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
-        self._dkl_tol = 1e-1
+        self.check_constrain = False
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
@@ -455,7 +455,7 @@ class OfflineController(iLQG):
     def optimize(self, kl_step: float,
                  min_eta: float = 1e-4,
                  max_eta: float = 1e4,
-                 rtol: float = 1e-2, kl_maxiter=2):
+                 rtol: float = 1e-1, kl_maxiter=2):
         """Perform iLQG trajectory optimization.
         Args:
             kl_step: KL divergence threshold to previous policy
@@ -478,10 +478,10 @@ class OfflineController(iLQG):
             self.cost.eta = min_eta
         else:
             # Check if constraint cen be fulfilled at all
-            min_kl = self.step(max_eta)
-            if min_kl > kl_step:
-                raise ValueError(
-                    f"max_eta eta to low ({max_eta}), kl ({min_kl})")
+            if self.check_constrain:
+                if self.step(max_eta) > kl_step:
+                    raise ValueError(
+                        f"max_eta eta to low ({max_eta})")
 
             # Find the point where kl divergence equals the kl_step
             def constraint_violation(log_eta):
@@ -495,10 +495,10 @@ class OfflineController(iLQG):
                 constraint_violation, np.log(min_eta), np.log(max_eta),
                 rtol=rtol, maxiter=kl_maxiter, disp=False, full_output=True)
 
-            print(np.exp(log_eta))
+            print(f"eta= {np.exp(log_eta)}")
             self.cost.eta = np.exp(log_eta)
 
-        print("iLQR optimization step")
+        print("iLQR optimization step...")
         xs, us = self.fit(self.x0, self.us_init,
                           n_iterations=PARAMS_LQG['n_iterations'],
                           tol=PARAMS_LQG['tol'],
