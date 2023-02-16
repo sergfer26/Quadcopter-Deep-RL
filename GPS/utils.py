@@ -7,7 +7,7 @@ from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal as normal
-from .params import PARAMS_ONLINE, PARAMS_LQG
+from .params import PARAMS_LQG
 # from scipy.linalg import issymmetric
 
 
@@ -267,7 +267,7 @@ class OnlineCost(FiniteDiffCost):
 
     def _cost(self, x, u, i):
         policy_cov = self.policy_cov + \
-            PARAMS_ONLINE['cov_reg'] * np.identity(u.shape[-1])
+            PARAMS_LQG['cov_reg'] * np.identity(u.shape[-1])
         cov_dynamics = symmetrize(self.cov_dynamics[i])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
