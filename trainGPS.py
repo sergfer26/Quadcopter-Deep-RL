@@ -73,7 +73,10 @@ def main(path):
               inv_t_x=inv_transform_x,
               inv_t_u=inv_transform_u,
               N=PARAMS['N'],
-              M=PARAMS['M']
+              M=PARAMS['M'],
+              eta=PARAMS['eta'],
+              nu=PARAMS['nu'],
+              lamb=PARAMS['lamb']
               )
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
