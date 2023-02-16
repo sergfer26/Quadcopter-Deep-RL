@@ -28,7 +28,8 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=3, M=2, learning_rate=0.01):
+                 N=3, M=2, eta=1e-3, nu=1e-3,
+                 lamb=1e-3, learning_rate=0.01):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -48,6 +49,12 @@ class GPS:
             a_t -> u_t
         inv_t_x : `callable`
             x_t -> o_t
+        eta : `float`
+            Valor inicial de eta
+        nu : `float`
+            Valor inicial de nu.
+        lamb : `float`
+            Valor inicial de lambda
         '''
         T = env.steps - 1
         self.N = N  # Number of fitted iLQG controlllers.
@@ -67,11 +74,12 @@ class GPS:
         self.env = env
 
         # Lagrange's multipliers
-        self.lamb = np.ones((N, T, self.n_u))   # contraint weight.
-        self.alpha_lamb = 0.1                   # learning rate for lamb.
-        self.nu = 0.001 * np.ones((N, T))       # KL-div weight.
+        self.lamb = lamb * np.ones((N, T, self.n_u))   # contraint weight.
+        # learning rate for lamb.
+        self.alpha_lamb = 0.1
+        self.nu = nu * np.ones((N, T))               # KL-div weight.
         # old traj weight for iLQG.
-        self.eta = 1e-4 * np.ones(N)
+        self.eta = eta * np.ones(N)
 
         # ilQG instances.
         if not callable(cost_terminal):
