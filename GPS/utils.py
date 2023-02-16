@@ -225,7 +225,7 @@ class OnlineCost(FiniteDiffCost):
             sigma = self._cov_dynamics(xs[i], us[i], i=i, sigma=sigma)
             self.mean_dynamics[i] = mu
             cov_dynamics[i] = sigma
-        self._C = np.array([nearestPD(cov_dynamics[i]) for i in range(self.T)])
+        self._C = np.array([nearestPD(cov_dynamics[i]) for i in range(N)])
 
     def update_control(self, control):
         self.control = control
