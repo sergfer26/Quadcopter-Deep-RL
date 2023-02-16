@@ -7,45 +7,8 @@ from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal as normal
-from .params import PARAMS_LQG
+from .params import PARAMS_LQG, PARAMS_ONLINE
 # from scipy.linalg import issymmetric
-
-
-def mvn_kl_div(mu1, mu2, sigma1, sigma2):
-    '''
-    Kullback-Leiber divergence for a multivariate normal
-    distribution X1 from another mvn X2.
-    https://statproofbook.github.io/P/mvn-kl.html
-
-    Arguments
-    ---------
-    mu1 : `np.ndarray`
-        Mean of X1 as numerical array with dimension (n,).
-    mu2 _ `np.ndarray`
-        Mean of X2 as numerical array with dimension (n,).
-    sigma1: `np.ndarray`
-        Covariance matrix of X1 as numerical array with dimensions (n, n).
-    sigma2 : `np.ndarray`
-        Covariance matrix of X2 as numerical array with dimensions (n, n).
-
-    Return
-    ------
-    kl_div : `float`
-        divergence measure.
-    '''
-    n = mu1.shape[0]
-    inv_sigma2 = np.linalg.inv(sigma2)
-    div = 0.0
-    div += (mu2 - mu1).T @ inv_sigma2 @ (mu2 - mu1)
-    div += np.trace(inv_sigma2 @ sigma1)
-    div -= np.log(np.linalg.det(sigma1)/np.linalg.det(sigma2))
-    div -= n
-    return 0.5 * div
-
-
-def symmetrize(A: np.ndarray):
-    '''Numerically symetrize a theoretical symetric matrix'''
-    return (A + A.T) / 2.
 
 
 class ContinuousDynamics(FiniteDiffDynamics):
@@ -139,23 +102,23 @@ class OfflineCost(FiniteDiffCost):
         if isinstance(control, iLQR):
             self._K = control._K.copy()
             self._k = control._k.copy()
-            self._C = control._C.copy()
             self._xs = control._nominal_xs.copy()
             self._us = control._nominal_us.copy()
             self._alpha = 0.0 + control.alpha
+            C = control._C.copy()
         elif exists(file_path):
             file = np.load(file_path)
             self._K = file['K']
             self._k = file['k']
-            self._C = file['C']
             self._xs = file['xs']
             self._us = file['us']
             self._alpha = file['alpha']
+            C = file['C']
             if 'eta' in file.files:
                 self.eta = file['eta']
         else:
             warnings.warn("No path nor control was provided")
-        # self.control_updated = True
+        self._C = np.array([nearestPD(C[i]) for i in range(self.T)])
 
     def control_parameters(self):
         return dict(
@@ -246,7 +209,7 @@ class OnlineCost(FiniteDiffCost):
         f_u = self.control.dynamics.f_u(x, u, i)
         f_xu = np.hstack([f_x, f_u])
         K = self.control._K[i]
-        C = self.control._C[i]
+        C = nearestPD(self.control._C[i])
         a1 = np.hstack([sigma, sigma @ K.T])
         a2 = np.hstack([K @ sigma, C + K @ sigma @ K.T])
         sigma = f_xu @ np.vstack([a1, a2]) @ f_xu.T + self._F
@@ -256,18 +219,23 @@ class OnlineCost(FiniteDiffCost):
         mu = xs[0]
         sigma = self._F
         N = us.shape[0]
+        cov_dynamics = np.empty_like(self.cov_dynamics)
         for i in range(N):
             mu = self._mean_dynamics(xs[i], us[i], i=i, mu=mu)
             sigma = self._cov_dynamics(xs[i], us[i], i=i, sigma=sigma)
             self.mean_dynamics[i] = mu
-            self.cov_dynamics[i] = np.round(sigma, 5)
+            cov_dynamics[i] = sigma
+        self._C = np.array([nearestPD(cov_dynamics[i]) for i in range(self.T)])
 
     def update_control(self, control):
         self.control = control
 
+    def reg_cov(self, x, y):
+        return y * np.exp(-y/20 * x)
+
     def _cost(self, x, u, i):
-        policy_cov = self.policy_cov + \
-            PARAMS_LQG['cov_reg'] * np.identity(u.shape[-1])
+        policy_cov = self.policy_cov[i] + self.reg_cov(
+            i, PARAMS_ONLINE['cov_reg']) * np.identity(x.shape[-1])
         cov_dynamics = symmetrize(self.cov_dynamics[i])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
@@ -338,3 +306,93 @@ def rollout(agent, env, flag=False, state_init=None):
             break
         i += 1
     return states, actions, scores
+
+
+def mvn_kl_div(mu1, mu2, sigma1, sigma2):
+    '''
+    Kullback-Leiber divergence for a multivariate normal
+    distribution X1 from another mvn X2.
+    https://statproofbook.github.io/P/mvn-kl.html
+
+    Arguments
+    ---------
+    mu1 : `np.ndarray`
+        Mean of X1 as numerical array with dimension (n,).
+    mu2 _ `np.ndarray`
+        Mean of X2 as numerical array with dimension (n,).
+    sigma1: `np.ndarray`
+        Covariance matrix of X1 as numerical array with dimensions (n, n).
+    sigma2 : `np.ndarray`
+        Covariance matrix of X2 as numerical array with dimensions (n, n).
+
+    Return
+    ------
+    kl_div : `float`
+        divergence measure.
+    '''
+    n = mu1.shape[0]
+    inv_sigma2 = np.linalg.inv(sigma2)
+    div = 0.0
+    div += (mu2 - mu1).T @ inv_sigma2 @ (mu2 - mu1)
+    div += np.trace(inv_sigma2 @ sigma1)
+    div -= np.log(np.linalg.det(sigma1)/np.linalg.det(sigma2))
+    div -= n
+    return 0.5 * div
+
+
+def symmetrize(A: np.ndarray):
+    '''Numerically symetrize a theoretical symetric matrix'''
+    return (A + A.T) / 2.
+
+
+def nearestPD(A):
+    """Find the nearest positive-definite matrix to input
+
+    A Python/Numpy port of John D'Errico's `nearestSPD` MATLAB code [1], which
+    credits [2].
+
+    [1] https://www.mathworks.com/matlabcentral/fileexchange/42885-nearestspd
+
+    [2] N.J. Higham, "Computing a nearest symmetric positive semidefinite
+    matrix" (1988): https://doi.org/10.1016/0024-3795(88)90223-6
+    """
+
+    B = (A + A.T) / 2
+    _, s, V = np.linalg.svd(B)
+
+    H = np.dot(V.T, np.dot(np.diag(s), V))
+
+    A2 = (B + H) / 2
+
+    A3 = (A2 + A2.T) / 2
+
+    if isPD(A3):
+        return A3
+
+    spacing = np.spacing(np.linalg.norm(A))
+    # The above is different from [1]. It appears that MATLAB's `chol` Cholesky
+    # decomposition will accept matrixes with exactly 0-eigenvalue, whereas
+    # Numpy's will not. So where [1] uses `eps(mineig)` (where `eps` is Matlab
+    # for `np.spacing`), we use the above definition. CAVEAT: our `spacing`
+    # will be much larger than [1]'s `eps(mineig)`, since `mineig` is usually on
+    # the order of 1e-16, and `eps(1e-16)` is on the order of 1e-34, whereas
+    # `spacing` will, for Gaussian random matrixes of small dimension, be on
+    # othe order of 1e-16. In practice, both ways converge, as the unit test
+    # below suggests.
+    Id = np.eye(A.shape[0])
+    k = 1
+    while not isPD(A3):
+        mineig = np.min(np.real(np.linalg.eigvals(A3)))
+        A3 += Id * (-mineig * k**2 + spacing)
+        k += 1
+
+    return A3
+
+
+def isPD(B):
+    """Returns true when input is positive-definite, via Cholesky"""
+    try:
+        _ = np.linalg.cholesky(B)
+        return True
+    except np.linalg.LinAlgError:
+        return False
