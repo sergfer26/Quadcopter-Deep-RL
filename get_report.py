@@ -201,7 +201,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_UTILS, 400, 340)
 
     elif extra_method == 'ilqr':
-        add_text(pdf, ['Parámetros de', 'iLQG'], 350, 580)
+        add_text(pdf, ['Parámetros de', 'iLQG'], 350, 550)
         add_table(pdf, PARAMS_LQG, 350, 330)
 
         add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 310)
