@@ -7,14 +7,15 @@ PARAMS_LQG = {
     'tol': 1e-6,
     'n_iterations': 100,
     'is_stochastic': True,
-    'cov_reg': 3e-1
+    'cov_reg': .15
 }
 PARAMS_OFFLINE = {
-    'kl_step': 10,
+    'kl_step': 6,
     'min_eta': 1e-4,
-    'max_eta': 1e3,
+    'max_eta': 1e4,
     'rtol': 1e-1,
-    'kl_maxiter': 1
+    'kl_maxiter': 1,
+    'cov_reg': .2
 }
 
 PARAMS_ONLINE = {
