@@ -1,6 +1,5 @@
 import numpy as np
 import pathlib
-import scipy
 from GPS.utils import ContinuousDynamics
 from Linear.equations import f, W0
 from env import QuadcopterEnv
@@ -47,9 +46,6 @@ cost.update_control(file_path=OLD_PATH + 'ilqr_control.npz')
 agent = OfflineController(dynamics, cost, T)
 expert = LinearAgent(env)
 
-
-EPISODES = 1
-
 x0 = np.zeros(n_x)
 _, us_init, _ = rollout(expert, env, state_init=x0)
 
@@ -66,22 +62,26 @@ ax.set_title('Costo')
 fig.savefig(PATH + 'train_performance.png')
 # plt.show()
 
-# Eigen Values
-eigvals = np.empty_like(agent._nominal_us)
-for i in range(agent.N):
-    eigvals[i] = np.linalg.eigvals(agent._C[i])
+# Análisis de los eigen valores de la matriz de control
+eigvals = np.linalg.eigvals(agent._C)
 eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
 fig4, axes = plot_rollouts(eigvals, env.time, eig_names, alpha=0.5)
 for j, ax in zip(range(n_u), axes.flatten()):
     ax.hlines(y=0.0, xmin=0, xmax=env.time[-1],
-              linewidth=1, color='r', linestyles='dashed')
+              linewidth=0.1, color='r', linestyles='dashed')
+fig4.savefig(PATH + 'eigvals.png')
 
-# Symetry of covariance matrix
-vals = [scipy.linalg.issymmetric(agent._C[i]) for i in range(agent.N)]
-fig, ax = plt.subplots(figsize=(5, 5), dpi=150)
-ax.plot(vals)
-ax.set_title('Is symetric?')
-fig.savefig(PATH + 'is_symetric.png')
+mask = np.apply_along_axis(np.greater, -1, eigvals, np.zeros(n_u))
+if mask.all():
+    print('Todas las matrices C son positivas definidas')
+else:
+    indices = np.apply_along_axis(lambda x: x.any(), -1, ~mask)
+    print(f'{indices.sum()} no son positivas definidas')
+    np.savez(
+        PATH + 'invalid_C.npz',
+        C=agent._C[indices]
+    )
+
 
 create_animation(xs, us, env.time,
                  state_labels=STATE_NAMES,
@@ -113,6 +113,7 @@ create_report(PATH, 'Ajuste iLQG Offline \n' +
               OLD_PATH, method=None, extra_method='ilqr')
 agent.save(PATH)
 print('los parametros del control fueron guardadados')
+print(f'frecuencia de trayectorias estables: {sum(idx) / 100}')
 
 sample_indices = np.random.randint(states.shape[0], size=3)
 states_samples = states[sample_indices]
@@ -126,5 +127,3 @@ create_animation(states_samples, actions_samples, env.time,
                  score_labels=REWARD_NAMES,
                  file_name='flight',
                  path=PATH + 'sample_rollouts/')
-
-print(f'frecuencia de trayectorias estables: {sum(idx) / 100}')
