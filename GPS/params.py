@@ -14,11 +14,11 @@ PARAMS_OFFLINE = {
     'min_eta': 1e-4,
     'max_eta': 1e4,
     'rtol': 1e-1,
-    'kl_maxiter': 1,
-    'cov_reg': .2
+    'kl_maxiter': 1
 }
 
 PARAMS_ONLINE = {
     'step_size': 50,
-    'F': 1e-2
+    'F': 1e-2,
+    'cov_reg': .2
 }
