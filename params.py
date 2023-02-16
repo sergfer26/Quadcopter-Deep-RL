@@ -7,7 +7,8 @@ PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
                      'EPISODES': 1000, 'n': 5, 'SHOW': True}
 
 PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 6, 'M': 4,
-                    'SHOW': False, 'rollouts': 100, 'samples': 5}
+                    'SHOW': False, 'rollouts': 100, 'samples': 5,
+                    'eta': 1e-4, 'nu': 1e-3, 'lamb': 1e-3}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
               '$x$': '2', '$y$': '2', '$z$': '2',
