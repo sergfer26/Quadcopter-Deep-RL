@@ -43,7 +43,7 @@ cost = FiniteDiffCost(l=penalty,
 N = env.steps - 1
 low = env.action_space.low
 high = env.action_space.high
-offline_control = iLQG(dynamics, cost, N, low, high)
+offline_control = iLQG(dynamics, cost, N)
 # 'results_offline/23_02_01_13_30/'
 offline_control.load('results_offline/23_02_09_17_21/', 'ilqr_control.npz')
 
