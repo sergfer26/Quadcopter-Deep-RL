@@ -407,7 +407,8 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     else:
         # 'results_offline/23_02_01_13_30/'
         # 'results_offline/23_02_15_09_14/' -> para 2 seg
-        control.load('results_offline/23_02_09_17_21/')
+        # 'results_offline/23_02_16_13_50/'
+        control.load('results_offline/23_02_16_13_50/')
     # También actualiza eta
     cost.update_control(control)
 
