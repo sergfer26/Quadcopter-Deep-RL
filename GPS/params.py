@@ -19,5 +19,5 @@ PARAMS_OFFLINE = {
 
 PARAMS_ONLINE = {
     'step_size': 50,
-    'F': 1e-1
+    'F': 1e-2
 }
