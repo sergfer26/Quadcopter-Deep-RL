@@ -43,9 +43,15 @@ def mvn_kl_div(mu1, mu2, sigma1, sigma2):
     return 0.5 * div
 
 
+def symmetrize(A: np.ndarray):
+    '''Numerically symetrize a theoretical symetric matrix'''
+    return (A + A.T) / 2.
+
+
 class ContinuousDynamics(FiniteDiffDynamics):
 
-    def __init__(self, f, n_x, n_u, dt=0.1, x_eps=None, u_eps=None, u0=None, method='lsoda'):
+    def __init__(self, f, n_x, n_u,
+                 dt=0.1, x_eps=None, u_eps=None, u0=None, method='lsoda'):
         # def f_d(x, u, i): return x + f(x, u)*dt
         if not isinstance(u0, np.ndarray):
             u0 = np.zeros(n_u)
@@ -262,8 +268,7 @@ class OnlineCost(FiniteDiffCost):
     def _cost(self, x, u, i):
         policy_cov = self.policy_cov + \
             PARAMS_ONLINE['cov_reg'] * np.identity(u.shape[-1])
-        cov_dynamics = self.cov_dynamics[i] + \
-            PARAMS_LQG['cov_reg'] * np.identity(x.shape[-1])
+        cov_dynamics = symmetrize(self.cov_dynamics[i])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
         c = 0.0
@@ -285,7 +290,7 @@ def rollout(agent, env, flag=False, state_init=None):
     Argumentos
     ----------
     agent : `(DDPG.DDPGAgent, Linear.Agent, GPS.iLQRAgent)`
-        Instancia que representa al agente que toma acciones 
+        Instancia que representa al agente que toma acciones
         en la simulación.
     env : `gym.Env`
         Entorno de simualción de gym.
@@ -299,7 +304,7 @@ def rollout(agent, env, flag=False, state_init=None):
     states : `np.ndarray`
         Trayectoria de estados en la simulación con dimensión (env.steps, n_x).
     acciones : `np.ndarray`
-        Trayectoria de acciones en la simulación con dimensión 
+        Trayectoria de acciones en la simulación con dimensión
         (env.steps -1, n_u).
     scores : `np.ndarray`
         Trayectoria de puntajes (incluye reward) en la simulación con
