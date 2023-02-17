@@ -8,10 +8,10 @@ from copy import deepcopy
 from os.path import exists
 from functools import partial
 from .utils import OnlineCost, OfflineCost
-from ilqr import RecedingHorizonController
-from GPS.utils import ContinuousDynamics, rollout
+# from ilqr import RecedingHorizonController
+from GPS.utils import ContinuousDynamics
 from .params import PARAMS_OFFLINE, PARAMS_ONLINE
-from .controller import OnlineController, OfflineController
+from .controller import OnlineController, OfflineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 
 KL_STEP = PARAMS_OFFLINE['kl_step']
@@ -452,7 +452,8 @@ def _fit_child(policy, sigma, t_x, inv_t_u, x0, T, nu, lamb,
     cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x, t_u=inv_t_u)
     cost.cov_policy = sigma
     mpc_control = OnlineController(dynamics, cost, T)
-    agent = RecedingHorizonController(x0, mpc_control)
+    # agent = RecedingHorizonController(x0, mpc_control)
+    agent = OnlineMPC(x0, mpc_control)
     control.is_stochastic = False
     us_init = control.rollout(x0)[1]
     horizon = PARAMS_ONLINE['step_size']
