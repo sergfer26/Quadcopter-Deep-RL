@@ -324,7 +324,7 @@ class GPS:
                                      path,
                                      self.t_x,
                                      self.inv_t_u,
-                                     self.policy_sigma
+                                     self.policy._sigma
                                      )
                                )
                 processes.append(p)
