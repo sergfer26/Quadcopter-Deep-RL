@@ -234,78 +234,20 @@ class OnlineCost(FiniteDiffCost):
         return y * np.exp(-y/20 * x)
 
     def _cost(self, x, u, i):
-        policy_cov = self.policy_cov[i] + self.reg_cov(
+        cov_dynamics = self.cov_dynamics[i] + self.reg_cov(
             i, PARAMS_ONLINE['cov_reg']) * np.identity(x.shape[-1])
-        cov_dynamics = symmetrize(self.cov_dynamics[i])
         # if not issymmetric(cov) or (np.linalg.eigvals(cov) < 0).any():
         #     breakpoint()
         c = 0.0
         c -= u.T@self.lamb[i]
         # log policy distribution
         c -= self.nu[i] * \
-            normal.logpdf(x=u, mean=self.policy_mean(x), cov=policy_cov)
+            normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
         # log dynamics distribution
         c -= normal.logpdf(x=x,
                            mean=self.mean_dynamics[i],
                            cov=cov_dynamics)
         return c
-
-
-def rollout(agent, env, flag=False, state_init=None):
-    '''
-    Simulación de interacción entorno-agente
-
-    Argumentos
-    ----------
-    agent : `(DDPG.DDPGAgent, Linear.Agent, GPS.iLQRAgent)`
-        Instancia que representa al agente que toma acciones
-        en la simulación.
-    env : `gym.Env`
-        Entorno de simualción de gym.
-    flag : bool
-        ...
-    state_init : `np.ndarray`
-        Arreglo que representa el estado inicial de la simulación.
-
-    Retornos
-    --------
-    states : `np.ndarray`
-        Trayectoria de estados en la simulación con dimensión (env.steps, n_x).
-    acciones : `np.ndarray`
-        Trayectoria de acciones en la simulación con dimensión
-        (env.steps -1, n_u).
-    scores : `np.ndarray`
-        Trayectoria de puntajes (incluye reward) en la simulación con
-        dimensión (env.steps -1, ?).
-    '''
-    # t = env.time
-    env.flag = flag
-    state = env.reset()
-    if hasattr(agent, 'reset') and callable(getattr(agent, 'reset')):
-        agent.reset()
-    if isinstance(state_init, np.ndarray):
-        env.state = state_init
-        state = state_init
-    states = np.zeros((env.steps, env.observation_space.shape[0]))
-    actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
-    scores = np.zeros((env.steps - 1, 2))  # r_t, Cr_t
-    states[0, :] = state
-    episode_reward = 0
-    i = 0
-    while True:
-        action = agent.get_action(state)
-        new_state, reward, done, info = env.step(action)
-        episode_reward += reward
-        states[i + 1, :] = state
-        if isinstance(info, dict) and ('real_action' in info.keys()):
-            action = info['real_action']  # env.action(action)
-        actions[i, :] = action
-        scores[i, :] = np.array([reward, episode_reward])
-        state = new_state
-        if done:
-            break
-        i += 1
-    return states, actions, scores
 
 
 def mvn_kl_div(mu1, mu2, sigma1, sigma2):
