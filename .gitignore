@@ -31,4 +31,5 @@ GPS/sample_rollouts/
 results_mpc/
 results_gps/
 results_offline/
+results_online
 
