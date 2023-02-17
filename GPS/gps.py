@@ -29,7 +29,8 @@ class GPS:
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-3,
-                 lamb=1e-3, learning_rate=0.01):
+                 lamb=1e-3, alpha_lamb=1e-1,
+                 learning_rate=0.01):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -76,7 +77,7 @@ class GPS:
         # Lagrange's multipliers
         self.lamb = lamb * np.ones((N, T, self.n_u))   # contraint weight.
         # learning rate for lamb.
-        self.alpha_lamb = 0.1
+        self.alpha_lamb = alpha_lamb
         self.nu = nu * np.ones((N, T))               # KL-div weight.
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
@@ -90,9 +91,9 @@ class GPS:
                                 l_terminal=cost_terminal,
                                 n_x=self.n_x,
                                 n_u=self.n_u,
-                                eta=1e-4,
-                                lamb=np.ones(self.n_u),
-                                nu=np.ones(T),
+                                eta=eta,
+                                lamb=lamb * np.ones(self.n_u),
+                                nu=nu * np.ones(T),
                                 T=T)  # ,
         # u_bound=u_bound)
 
