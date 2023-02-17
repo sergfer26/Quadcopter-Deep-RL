@@ -302,16 +302,19 @@ class GPS:
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
+
+        # 1. Control fitting
         if self.N > 1:
             processes = list()
-            # 1. Control fitting
             for i in range(self.N):
+                x0 = [self.env.observation_space.sample()
+                      for i in range(self.M)]
                 cost_kwargs = deepcopy(self.cost_kwargs)
                 cost_kwargs['lamb'] = self.lamb[i]
                 cost_kwargs['nu'] = self.nu[i]
                 cost_kwargs['eta'] = self.eta[i]
                 p = mp.Process(target=fit_ilqg,
-                               args=(self.policy.env,
+                               args=(x0,
                                      self.policy,
                                      cost_kwargs,
                                      self.dynamics_kwargs,
@@ -320,7 +323,6 @@ class GPS:
                                      self.M,
                                      path,
                                      self.t_x,
-                                     self.inv_t_x,
                                      self.inv_t_u,
                                      self.policy_sigma
                                      )
@@ -334,7 +336,8 @@ class GPS:
             cost_kwargs = deepcopy(self.cost_kwargs)
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
-            args = (self.policy.env,
+            x0 = self.env.observation_space.sample()
+            args = (x0,
                     self.policy,
                     cost_kwargs,
                     self.dynamics_kwargs,
@@ -343,7 +346,7 @@ class GPS:
                     self.M,
                     path,
                     self.t_x,
-                    self.inv_t_x,
+                    self.inv_t_u,
                     self.policy._sigma
                     )
             fit_ilqg(*args)
@@ -379,8 +382,8 @@ class GPS:
         return loss, div
 
 
-def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
-             path='', t_x=None, inv_t_x=None, inv_t_u=None, policy_sigma=None):
+def fit_ilqg(x0, policy, cost_kwargs, dynamics_kwargs, i, T, M,
+             path='', t_x=None, inv_t_u=None, policy_sigma=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -397,7 +400,7 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
-    cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x)
+    cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x, t_u=inv_t_u)
     cost.cov_policy = policy_sigma
     control = OfflineController(dynamics, cost, T)
 
@@ -414,18 +417,12 @@ def fit_ilqg(policy_env, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     # También actualiza eta
     cost.update_control(control)
 
-    xs, us_init, _ = rollout(
-        policy, policy_env, state_init=np.zeros(policy.state_dim))
-    if callable(inv_t_x):
-        xs = np.apply_along_axis(inv_t_x, -1, xs)  # o_t -> x_t
+    xs, us = control.rollout(np.zeros(dynamics_kwargs['n_x']))
 
     # control.fit_control(xs[0], us_init)
-    control.x0, control.us_init = xs[0], us_init
+    control.x0, control.us_init = xs[0], us
     control.optimize(KL_STEP, cost.eta)
     control.save(path=path, file_name=f'control_{i}.npz')
-    x0 = np.array([policy_env.observation_space.sample() for _ in range(M)])
-    if callable(inv_t_x):
-        x0 = np.apply_along_axis(inv_t_x, -1, x0).tolist()
     nu = cost_kwargs['nu']
     lamb = cost_kwargs['lamb']
     if M > 1:
