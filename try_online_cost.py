@@ -5,7 +5,7 @@ from GPS.utils import ContinuousDynamics, FiniteDiffCost, OnlineCost
 from Linear.equations import f, W0
 from env import QuadcopterEnv
 from GPS.controller import iLQG, OnlineController, OnlineMPC
-from simulation import plot_rollouts, rollout
+from simulation import plot_rollouts
 from animation import create_animation
 from params import STATE_NAMES, ACTION_NAMES
 from utils import date_as_path
