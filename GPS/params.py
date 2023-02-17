@@ -19,6 +19,6 @@ PARAMS_OFFLINE = {
 
 PARAMS_ONLINE = {
     'step_size': 50,
-    'F': 1e-2,
+    'F': 1e-4,
     'cov_reg': .2
 }
