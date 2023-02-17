@@ -525,3 +525,88 @@ class OnlineController(iLQG):
         # update the cost parameters
         self.cost._dist_dynamics(xs, us)
         return super().fit(x0, us_init, n_iterations, tol, on_iteration)
+
+
+class OnlineMPC(object):
+
+    """Receding horizon controller for Model Predictive Control."""
+
+    def __init__(self, x0, controller: OnlineController):
+        """Constructs a RecedingHorizonController.
+
+        Args:
+            x0: Initial state [state_size].
+            controller: Controller to fit with.
+        """
+        self._x = x0
+        self._controller = controller
+        self._random = np.random.RandomState()
+
+    def seed(self, seed):
+        self._random.seed(seed)
+
+    def set_state(self, x):
+        """Sets the current state of the controller.
+
+        Args:
+            x: Current state [state_size].
+        """
+        self._x = x
+
+    def control(self,
+                us_init,
+                step_size=1,
+                initial_n_iterations=100,
+                subsequent_n_iterations=1,
+                *args,
+                **kwargs):
+        """Yields the optimal controls to run at every step as a receding
+        horizon problem.
+
+        Note: The first iteration will be slow, but the successive ones will be
+        significantly faster.
+
+        Note: This will automatically move the current controller's state to
+        what the dynamics model believes will be the next state after applying
+        the entire control path computed. Should you want to correct this state
+        between iterations, simply use the `set_state()` method.
+
+        Note: If your cost or dynamics are time dependent, then you might need
+        to shift their internal state accordingly.
+
+        Args:
+            us_init: Initial control path [N, action_size].
+            step_size: Number of steps between each controller fit. Default: 1.
+                i.e. re-fit at every time step. You might need to increase this
+                depending on how powerful your machine is in order to run this
+                in real-time.
+            initial_n_iterations: Initial max number of iterations to fit.
+                Default: 100.
+            subsequent_n_iterations: Subsequent max number of iterations to
+                fit. Default: 1.
+            *args, **kwargs: Additional positional and key-word arguments to
+                pass to `controller.fit()`.
+
+        Yields:
+            Tuple of
+                xs: optimal state path [step_size+1, state_size].
+                us: optimal control path [step_size, action_size].
+        """
+        n_iterations = initial_n_iterations
+        while True:
+            xs, us = self._controller.fit(self._x,
+                                          us_init,
+                                          n_iterations=n_iterations,
+                                          *args,
+                                          **kwargs)
+            self._x = xs[step_size]
+            yield xs[:step_size + 1], us[:step_size]
+
+            # Set up next action path seed by simply moving along the current
+            # optimal path and appending random unoptimal values at the end.
+            us_start = us[step_size:]
+            # self._random.uniform(-1, 1, (step_size, action_size))
+            _, us_end = self._controller.cost.control.rollout(self._x)
+            us_end = us_end[-step_size:]
+            us_init = np.vstack([us_start, us_end])
+            n_iterations = subsequent_n_iterations
