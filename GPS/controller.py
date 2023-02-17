@@ -4,7 +4,7 @@ from scipy.stats import multivariate_normal
 from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
-from .utils import mvn_kl_div, OnlineCost, OfflineCost
+from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
 
 
 class iLQG(iLQR):
@@ -325,7 +325,7 @@ class iLQG(iLQR):
             # Eq (6).
             k[i] = -np.linalg.solve(Q_uu, Q_u)
             K[i] = -np.linalg.solve(Q_uu, Q_ux)
-            C[i] = np.linalg.inv(Q_uu)
+            C[i] = nearestPD(np.linalg.inv(Q_uu))
             # Eq (11b).
             V_x = Q_x + K[i].T.dot(Q_uu).dot(k[i])
             V_x += K[i].T.dot(Q_u) + Q_ux.T.dot(k[i])
