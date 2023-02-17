@@ -428,7 +428,8 @@ def fit_ilqg(x0, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     if M > 1:
         with mp.Pool(processes=M) as pool:
             pool.map(partial(_fit_child, policy, policy_sigma, t_x, inv_t_u,
-                             x0, T, nu, lamb, dynamics_kwargs, path, i), range(M))
+                             x0, T, nu, lamb, dynamics_kwargs,
+                             path, i), range(M))
             pool.close()
             pool.join()
     else:
@@ -479,7 +480,7 @@ def _fit_child(policy, sigma, t_x, inv_t_u, x0, T, nu, lamb,
         states[r: r + horizon + 1] = xs
         actions[r: r + horizon] = us
         xs_old[r: r + horizon + 1] = mpc_control._xs[:horizon+1]
-        us_old[r: r + horizon + 1] = mpc_control._us[:horizon+1]
+        us_old[r: r + horizon] = mpc_control._us[:horizon]
         r += horizon
 
     mpc_control._C = C
@@ -493,13 +494,3 @@ def _fit_child(policy, sigma, t_x, inv_t_u, x0, T, nu, lamb,
     mpc_control.save(path, f'mpc_control_{i}_{j}.npz')
 
     # Ajuste MPC
-
-# def _fit_child(env, T, path, i, j):
-#
-#     file_name = f'control_{i}.npz'
-#     control = DummyControl(T, path, file_name)
-#     xs, us, _ = rollout(control, env)
-#     np.savez(path + f'traj_{i}_{j}.npz',
-#              xs=xs,
-#              us=us
-#              )
