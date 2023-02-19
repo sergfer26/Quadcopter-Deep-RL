@@ -325,7 +325,7 @@ class iLQG(iLQR):
             # Eq (6).
             k[i] = -np.linalg.solve(Q_uu, Q_u)
             K[i] = -np.linalg.solve(Q_uu, Q_ux)
-            C[i] = nearestPD(np.linalg.inv(Q_uu))
+            C[i] = np.linalg.inv(nearestPD(Q_uu))
             # Eq (11b).
             V_x = Q_x + K[i].T.dot(Q_uu).dot(k[i])
             V_x += K[i].T.dot(Q_u) + Q_ux.T.dot(k[i])
