@@ -387,7 +387,7 @@ class iLQG(iLQR):
         npzfile = np.load(file_path)
         self._k = npzfile['k']
         self._K = npzfile['K']
-        self._C = np.round(npzfile['C'], 5)
+        self._C = npzfile['C']
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
