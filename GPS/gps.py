@@ -262,8 +262,8 @@ class GPS:
         nominal_xs = np.empty((self.N, self.T + 1, self.n_x))
         nominal_us = np.empty((self.N, self.T, self.n_u))
         alphas = np.empty(self.N)
-        xs = np.empty_like(nominal_xs)
-        us = np.empty_like(nominal_us)
+        xs = np.empty((self.N, self.M, self.T + 1, self.n_x))
+        us = np.empty((self.N, self.M, self.T, self.n_u))
         for i in range(self.N):
             file = np.load(path + f'control_{i}.npz')
             K[i] = file['K']
