@@ -6,7 +6,7 @@ PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 251, 'omega0_per': 0.60,
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
                      'EPISODES': 1000, 'n': 5, 'SHOW': True}
 
-PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 6, 'M': 4,
+PARAMS_TRAIN_GPS = {'UPDATES': 2, 'N': 1, 'M': 50,
                     'SHOW': False, 'rollouts': 100, 'samples': 5,
                     'eta': 1e-4, 'nu': 1e-3, 'lamb': 1e-3}
 
