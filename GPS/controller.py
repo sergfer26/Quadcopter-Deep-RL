@@ -4,7 +4,7 @@ from scipy.stats import multivariate_normal
 from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
-from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
+from .utils import mvn_kl_div, OnlineCost, OfflineCost
 
 
 class iLQG(iLQR):
