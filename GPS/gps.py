@@ -437,7 +437,7 @@ def fit_ilqg(x0, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         states[r] = xs
         actions[r] = us
 
-    np.savez(path + f'rollots_{i}.npz',
+    np.savez(path + f'rollouts_{i}.npz',
              xs=states,
              us=actions
              )
