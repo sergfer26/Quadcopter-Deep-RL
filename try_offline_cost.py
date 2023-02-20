@@ -135,6 +135,7 @@ def main(updates, path, old_path):
                      score_labels=REWARD_NAMES,
                      file_name='flight',
                      path=path + 'sample_rollouts/')
+    return PATH
 
 
 if __name__ == '__main__':
@@ -143,5 +144,5 @@ if __name__ == '__main__':
     OLD_PATH = 'results_ilqr/23_02_16_23_21/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 2
+    updates = 1
     send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
