@@ -12,7 +12,7 @@ PARAMS_LQG = {
 PARAMS_OFFLINE = {
     'kl_step': 6,
     'min_eta': 1e-4,
-    'max_eta': 1e4,
+    'max_eta': 1e3,
     'rtol': 1e-1,
     'kl_maxiter': 1
 }
