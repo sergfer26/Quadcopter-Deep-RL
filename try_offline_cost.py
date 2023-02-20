@@ -65,8 +65,8 @@ def main(updates, path, old_path):
 
     plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(14, 12), dpi=250)
-    gs = fig.add_gridspec(nrows=2, ncols=3)
-    ax1, ax2 = fig.add_subplot(gs[0, :2]), fig.add_subplot(gs[1, :2])
+    gs = fig.add_gridspec(nrows=4, ncols=3)
+    ax1, ax2 = fig.add_subplot(gs[0:2, :2]), fig.add_subplot(gs[2:, :2])
     ax3 = fig.add_subplot(gs[:, 2])
 
     # 3.1 Loss' plot
@@ -76,9 +76,6 @@ def main(updates, path, old_path):
     eigvals = np.linalg.eigvals(agent._C)
     eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     plot_rollouts(eigvals, env.time, eig_names, alpha=0.5, ax=ax3)
-    for _, ax in zip(range(n_u), ax3.flatten()):
-        ax.hlines(y=0.0, xmin=0, xmax=env.time[-1],
-                  linewidth=0.1, color='r', linestyles='dashed')
 
     ax1.plot(cost_trace)
     ax1.set_title('Costo')
