@@ -78,8 +78,7 @@ class OfflineCost(FiniteDiffCost):
         self.cost = cost  # l_bounded
 
         def _cost(x, u, i):
-            C = PARAMS_LQG['cov_reg'] * \
-                np.identity(u.shape[-1]) + self._C[i]
+            C = self._C[i]
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
@@ -118,7 +117,8 @@ class OfflineCost(FiniteDiffCost):
                 self.eta = file['eta']
         else:
             warnings.warn("No path nor control was provided")
-        self._C = np.array([nearestPD(C[i]) for i in range(self.T)])
+        self._C = np.array([nearestPD(C[i] + PARAMS_LQG['cov_reg'] *
+                                      np.identity(self._us.shape[-1])) for i in range(self.T)])
 
     def control_parameters(self):
         return dict(
@@ -291,12 +291,14 @@ def nearestPD(A):
     """Find the nearest positive-definite matrix to input
 
     A Python/Numpy port of John D'Errico's `nearestSPD` MATLAB code [1], which
-    credits [2].
+    credits [2]. Found on [3].
 
     [1] https://www.mathworks.com/matlabcentral/fileexchange/42885-nearestspd
 
     [2] N.J. Higham, "Computing a nearest symmetric positive semidefinite
     matrix" (1988): https://doi.org/10.1016/0024-3795(88)90223-6
+
+    [3] https://stackoverflow.com/questions/43238173/python-convert-matrix-to-positive-semi-definite
     """
 
     B = (A + A.T) / 2

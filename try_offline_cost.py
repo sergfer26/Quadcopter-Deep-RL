@@ -122,7 +122,6 @@ def main(updates, path, old_path):
                   old_path, method=None, extra_method='ilqr')
     agent.save(PATH)
     print('los parametros del control fueron guardadados')
-    print(f'frecuencia de trayectorias estables: {sum(idx) / 100}')
 
     sample_indices = np.random.randint(states.shape[0], size=3)
     states_samples = states[sample_indices]
