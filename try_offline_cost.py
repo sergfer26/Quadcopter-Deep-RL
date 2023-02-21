@@ -52,22 +52,23 @@ def main(updates, path, old_path):
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
+    kl_div = PARAMS['kl_step']
     for _ in range(updates):
-        xs, us, cost_trace, r = agent.optimize(
-            PARAMS['kl_step'], min_eta=min_eta)
+        xs, us, cost_trace, r, kl_div = agent.optimize(
+            kl_div, min_eta=min_eta)
         min_eta = r.root
         etas.append(min_eta)
         _, us_init = agent.rollout(x0)
         agent.us_init = us_init
         cost.update_control(agent)
 
-    print(f'ya acabo el ajuste del control, eta={min_eta}')
+    print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
     plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(14, 12), dpi=250)
-    gs = fig.add_gridspec(nrows=4, ncols=3)
+    gs = fig.add_gridspec(nrows=4, ncols=4)
     ax1, ax2 = fig.add_subplot(gs[0:2, :2]), fig.add_subplot(gs[2:, :2])
-    ax3 = fig.add_subplot(gs[:, 2])
+    ax3 = fig.add_subplot(gs[:, 2:])
 
     # 3.1 Loss' plot
     plot_performance(etas, xlabel='iteraciones',
@@ -120,7 +121,7 @@ def main(updates, path, old_path):
 
     create_report(path, 'Ajuste iLQG Offline \n' +
                   old_path, method=None, extra_method='ilqr')
-    agent.save(PATH)
+    agent.save(path)
     print('los parametros del control fueron guardadados')
 
     sample_indices = np.random.randint(states.shape[0], size=3)
@@ -144,5 +145,6 @@ if __name__ == '__main__':
     OLD_PATH = 'results_ilqr/23_02_16_23_21/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 1
-    send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
+    updates = 2
+    # send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
+    main(updates, PATH, OLD_PATH)
