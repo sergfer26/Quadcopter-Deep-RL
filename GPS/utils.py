@@ -78,7 +78,8 @@ class OfflineCost(FiniteDiffCost):
         self.cost = cost  # l_bounded
 
         def _cost(x, u, i):
-            C = self._C[i]
+            C = self._C[i] + PARAMS_LQG['cov_reg'] * \
+                np.identity(self._us.shape[-1])
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
@@ -117,8 +118,7 @@ class OfflineCost(FiniteDiffCost):
                 self.eta = file['eta']
         else:
             warnings.warn("No path nor control was provided")
-        self._C = np.array([nearestPD(C[i] + PARAMS_LQG['cov_reg'] *
-                                      np.identity(self._us.shape[-1])) for i in range(self.T)])
+        self._C = np.array([nearestPD(C[i]) for i in range(self.T)])
 
     def control_parameters(self):
         return dict(
