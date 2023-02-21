@@ -504,7 +504,14 @@ class OfflineController(iLQG):
                           tol=PARAMS_LQG['tol'],
                           on_iteration=self.on_iteration)
         cost_trace = self._step_cost(xs, us)
-        return xs, us, cost_trace, r
+        params = self.cost.control_parameters()
+        params['is_stochastic'] = False
+        us_old = self._control(**params)[1]
+        N = us.shape[0]
+        C_old = params['C']
+        kl_div = sum([mvn_kl_div(us[j], us_old[j], self._C[j], C_old[j])
+                      for j in range(N)])
+        return xs, us, cost_trace, r, kl_div
 
 
 class OnlineController(iLQG):
