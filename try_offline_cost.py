@@ -52,10 +52,9 @@ def main(updates, path, old_path):
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
-    kl_div = PARAMS['kl_step']
     for _ in range(updates):
         xs, us, cost_trace, r, kl_div = agent.optimize(
-            kl_div, min_eta=min_eta)
+            PARAMS['kl_step'], min_eta=min_eta)
         min_eta = r.root
         etas.append(min_eta)
         _, us_init = agent.rollout(x0)
@@ -72,7 +71,7 @@ def main(updates, path, old_path):
 
     # 3.1 Loss' plot
     plot_performance(etas, xlabel='iteraciones',
-                     ylabel='$\eta$', ax=ax2)
+                     ylabel='$\eta$', ax=ax2, labels=['$\eta$'])
     # Análisis de los eigen valores de la matriz de control
     eigvals = np.linalg.eigvals(agent._C)
     eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
