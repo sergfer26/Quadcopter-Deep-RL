@@ -14,6 +14,7 @@ from dynamics import transform_x, transform_u
 from dynamics import inv_transform_u, inv_transform_x
 from dynamics import penalty, terminal_penalty
 from params import PARAMS_TRAIN_GPS as PARAMS
+from GPS.params import PARAMS_OFFLINE
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from simulation import plot_rollouts, n_rollouts
 from animation import create_animation
@@ -21,6 +22,7 @@ from get_report import create_report
 
 
 SHOW = PARAMS['SHOW']
+KL_STEP = PARAMS_OFFLINE['kl_step']
 
 if not SHOW:
     from functools import partialmethod
@@ -76,12 +78,13 @@ def main(path):
               M=PARAMS['M'],
               eta=PARAMS['eta'],
               nu=PARAMS['nu'],
-              lamb=PARAMS['lamb']
+              lamb=PARAMS['lamb'],
+              kl_step=KL_STEP
               )
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
-    print(f'tiempo de ajuste de política por MPC-GPS: {tf - ti}')
-    policy.save(path)
+    print(f'tiempo de ajuste de política por GPS: {tf - ti}')
+    policy.save(path)C
     # 3. Graphs
     plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(16, 12), dpi=250)
