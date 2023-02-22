@@ -84,7 +84,7 @@ def main(path):
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
-    policy.save(path)C
+    policy.save(path)
     # 3. Graphs
     plt.style.use("fivethirtyeight")
     fig = plt.figure(figsize=(16, 12), dpi=250)
