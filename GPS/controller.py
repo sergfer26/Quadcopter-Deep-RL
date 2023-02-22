@@ -136,7 +136,7 @@ class iLQG(iLQR):
             self._K[t] @ (state - self._nominal_xs[t])
         cov = self._C[t] + PARAMS_LQG['cov_reg'] * \
             np.identity(self.num_actions)
-        return multivariate_normal.pdf(x=action, mean=g_xs, cov=cov)
+        return multivariate_normal.pdf(x=action, mean=g_xs, cov=cov, allow_singular=True)
 
     def _step_cost(self, xs, us):
         J = map(lambda args: self.cost.l(*args),
@@ -325,7 +325,7 @@ class iLQG(iLQR):
             # Eq (6).
             k[i] = -np.linalg.solve(Q_uu, Q_u)
             K[i] = -np.linalg.solve(Q_uu, Q_ux)
-            C[i] = np.linalg.inv(nearestPD(Q_uu))
+            C[i] = np.linalg.inv(Q_uu)
             # Eq (11b).
             V_x = Q_x + K[i].T.dot(Q_uu).dot(k[i])
             V_x += K[i].T.dot(Q_u) + Q_ux.T.dot(k[i])
