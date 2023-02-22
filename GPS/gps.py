@@ -14,7 +14,6 @@ from .params import PARAMS_OFFLINE, PARAMS_ONLINE
 from .controller import OnlineController, OfflineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 
-KL_STEP = PARAMS_OFFLINE['kl_step']
 
 device = 'cpu'
 if torch.cuda.is_available():
@@ -30,7 +29,7 @@ class GPS:
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-3,
                  lamb=1e-3, alpha_lamb=1e-1,
-                 learning_rate=0.01):
+                 learning_rate=0.01, kl_step=20):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -81,6 +80,7 @@ class GPS:
         self.nu = nu * np.ones((N, T))               # KL-div weight.
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
+        self.kl_step = kl_step
 
         # ilQG instances.
         if not callable(cost_terminal):
@@ -342,6 +342,7 @@ class GPS:
             cost_kwargs['nu'] = self.nu[i]
             x0 = self.env.observation_space.sample()
             args = (x0,
+                    self.kl_step,
                     self.policy,
                     cost_kwargs,
                     self.dynamics_kwargs,
@@ -387,7 +388,7 @@ class GPS:
         return loss, div
 
 
-def fit_ilqg(x0, policy, cost_kwargs, dynamics_kwargs, i, T, M,
+def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              path='', t_x=None, inv_t_u=None, policy_sigma=None):
     '''
     i : int
@@ -427,7 +428,7 @@ def fit_ilqg(x0, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = xs[0], us
-    control.optimize(KL_STEP, cost.eta)
+    control.optimize(kl_step, cost.eta)
     control.save(path=path, file_name=f'control_{i}.npz')
 
     states = np.empty((M, T + 1, dynamics_kwargs['n_x']))
