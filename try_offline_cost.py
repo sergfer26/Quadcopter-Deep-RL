@@ -52,11 +52,13 @@ def main(updates, path, old_path):
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
+    div = []
     for _ in range(updates):
         xs, us, cost_trace, r, kl_div = agent.optimize(
             PARAMS['kl_step'], min_eta=min_eta)
         min_eta = r.root
         etas.append(min_eta)
+        div.append(kl_div)
         _, us_init = agent.rollout(x0)
         agent.us_init = us_init
         cost.update_control(agent)
@@ -64,14 +66,21 @@ def main(updates, path, old_path):
     print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
     plt.style.use("fivethirtyeight")
-    fig = plt.figure(figsize=(14, 12), dpi=250)
-    gs = fig.add_gridspec(nrows=4, ncols=4)
-    ax1, ax2 = fig.add_subplot(gs[0:2, :2]), fig.add_subplot(gs[2:, :2])
-    ax3 = fig.add_subplot(gs[:, 2:])
+    fig = plt.figure(figsize=(12, 12), dpi=250)
+    gs = fig.add_gridspec(nrows=12, ncols=4)
+    ax1, ax2 = fig.add_subplot(gs[0:4, :2]), fig.add_subplot(gs[4:8, :2])
+    ax4 = fig.add_subplot(gs[8:, :2])
+    ax31 = fig.add_subplot(gs[0:3, 2:])
+    ax32 = fig.add_subplot(gs[3:6, 2:])
+    ax33 = fig.add_subplot(gs[6:9, 2:])
+    ax34 = fig.add_subplot(gs[9:, 2:])
+    ax3 = np.array([ax31, ax32, ax33, ax34])
 
     # 3.1 Loss' plot
     plot_performance(etas, xlabel='iteraciones',
                      ylabel='$\eta$', ax=ax2, labels=['$\eta$'])
+    plot_performance(etas, xlabel='iteraciones',
+                     ylabel='divergencia', ax=ax4, labels=['$KL(p||\hat p)$'])
     # Análisis de los eigen valores de la matriz de control
     eigvals = np.linalg.eigvals(agent._C)
     eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
