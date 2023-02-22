@@ -10,9 +10,9 @@ PARAMS_LQG = {
     'cov_reg': .15
 }
 PARAMS_OFFLINE = {
-    'kl_step': 6,
+    'kl_step': 15,
     'min_eta': 1e-4,
-    'max_eta': 1e3,
+    'max_eta': 1e4,
     'rtol': 1e-1,
     'kl_maxiter': 1
 }
