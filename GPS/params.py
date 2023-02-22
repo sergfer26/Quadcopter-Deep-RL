@@ -6,7 +6,7 @@ PARAMS_LQG = {
     'delta_0': 2.0,
     'tol': 1e-6,
     'n_iterations': 100,
-    'is_stochastic': True,
+    'is_stochastic': False,
     'cov_reg': .3
 }
 PARAMS_OFFLINE = {
