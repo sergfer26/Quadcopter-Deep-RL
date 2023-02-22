@@ -26,7 +26,7 @@ def main(updates, path, old_path):
 
     dt = env.time[-1] - env.time[-2]
     dynamics = ContinuousDynamics(
-        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
+        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
 
     T = env.steps - 1
 

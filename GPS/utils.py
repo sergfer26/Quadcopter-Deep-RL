@@ -14,20 +14,33 @@ from .params import PARAMS_LQG, PARAMS_ONLINE
 class ContinuousDynamics(FiniteDiffDynamics):
 
     def __init__(self, f, n_x, n_u,
-                 dt=0.1, x_eps=None, u_eps=None, u0=None, method='lsoda'):
+                 dt=0.1, x_eps=None, u_eps=None, u0=None):
         # def f_d(x, u, i): return x + f(x, u)*dt
         if not isinstance(u0, np.ndarray):
             u0 = np.zeros(n_u)
 
-        if method == 'euler':
-            def f_d(x, u, i):
-                w1, w2, w3, w4 = u + u0
-                return x + f(x, i*dt, w1, w2, w3, w4)*dt
-        elif method == 'lsoda':
-            def f_d(x, u, i):
-                w1, w2, w3, w4 = u + u0
-                t = [i * dt, (i+1)*dt]
-                return odeint(f, x, t, args=(w1, w2, w3, w4))[1]
+        def f_d(x, u, i):
+            w1, w2, w3, w4 = u + u0
+            t = [i * dt, (i+1)*dt]
+            return odeint(f, x, t, args=(w1, w2, w3, w4))[1]
+        super().__init__(f_d, n_x, n_u, x_eps, u_eps)
+
+
+class StochasticDynamics(FiniteDiffDynamics):
+
+    def __init__(self, f, n_x, n_u,
+                 dt=0.1, x_eps=None, u_eps=None, u0=None, sigma=1e-3):
+        # def f_d(x, u, i): return x + f(x, u)*dt
+        if not isinstance(u0, np.ndarray):
+            u0 = np.zeros(n_u)
+        if not isinstance(sigma, np.ndarray):
+            sigma = sigma * np.identity(n_x)
+
+        def f_d(x, u, i):
+            w1, w2, w3, w4 = u + u0
+            t = [i * dt, (i+1)*dt]
+            out = odeint(f, x, t, args=(w1, w2, w3, w4))[1]
+            return normal.rvs(out, sigma, 1)
         super().__init__(f_d, n_x, n_u, x_eps, u_eps)
 
 

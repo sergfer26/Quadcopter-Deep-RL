@@ -37,7 +37,7 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     n_x = env.observation_space.shape[0]
     steps = env.steps - 1
     dynamics = ContinuousDynamics(
-        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
+        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(penalty, terminal_penalty,
@@ -73,7 +73,7 @@ def _fit_child(x0, dt, T, horizon, path, i, j):
     n_u = W0.shape[-1]
     n_x = x0.shape[-1]
     dynamics = ContinuousDynamics(
-        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
+        f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
     control = OfflineController(dynamics, None, T)
     control.load(path, file_name=f'control_{i}.npz')
 
