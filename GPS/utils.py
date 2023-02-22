@@ -6,7 +6,7 @@ from ilqr.controller import iLQR
 from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
-from scipy.stats import multivariate_normal as normal
+from scipy.stats import multivariate_normal
 from .params import PARAMS_LQG, PARAMS_ONLINE
 # from scipy.linalg import issymmetric
 
@@ -40,7 +40,7 @@ class StochasticDynamics(FiniteDiffDynamics):
             w1, w2, w3, w4 = u + u0
             t = [i * dt, (i+1)*dt]
             out = odeint(f, x, t, args=(w1, w2, w3, w4))[1]
-            return normal.rvs(out, sigma, 1)
+            return multivariate_normal.rvs(out, sigma, 1)
         super().__init__(f_d, n_x, n_u, x_eps, u_eps)
 
 
@@ -96,12 +96,12 @@ class OfflineCost(FiniteDiffCost):
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
-                normal.logpdf(x=u, mean=self.policy_mean(x),
-                              cov=self.policy_cov)
+                multivariate_normal.logpdf(x=u, mean=self.policy_mean(x),
+                                           cov=self.policy_cov, allow_singular=True)
             c /= (self.eta + self.nu[i])
             mean_control = self._control(x, i)
-            c -= self.eta * normal.logpdf(x=u, mean=mean_control,
-                                          cov=C) / (self.eta + self.nu[i])
+            c -= self.eta * multivariate_normal.logpdf(x=u, mean=mean_control,
+                                                       cov=C, allow_singular=True) / (self.eta + self.nu[i])
             return c
 
         super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
@@ -255,11 +255,14 @@ class OnlineCost(FiniteDiffCost):
         c -= u.T@self.lamb[i]
         # log policy distribution
         c -= self.nu[i] * \
-            normal.logpdf(x=u, mean=self.policy_mean(x), cov=self.policy_cov)
+            multivariate_normal.logpdf(
+                x=u, mean=self.policy_mean(x), cov=self.policy_cov,
+                allow_singular=True)
         # log dynamics distribution
-        c -= normal.logpdf(x=x,
-                           mean=self.mean_dynamics[i],
-                           cov=cov_dynamics)
+        c -= multivariate_normal.logpdf(x=x,
+                                        mean=self.mean_dynamics[i],
+                                        cov=cov_dynamics,
+                                        allow_singular=True)
         return c
 
 
