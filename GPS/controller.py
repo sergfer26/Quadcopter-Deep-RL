@@ -405,6 +405,7 @@ class OfflineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
+        self.check_constrain = False
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
