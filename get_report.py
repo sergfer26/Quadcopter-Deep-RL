@@ -189,8 +189,8 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
 
     elif method == 'gps':
-        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 750)
-        add_table(pdf, PARAMS_TRAIN_GPS, 350, 600)
+        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 780)
+        add_table(pdf, PARAMS_TRAIN_GPS, 350, 550)
     elif method is None:
         pass
     else:
