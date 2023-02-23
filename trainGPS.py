@@ -105,10 +105,9 @@ def main(path):
         ax.plot(dic[key])
         ax.set_title(key)
     # 3.3 lambdas
-    index = np.linspace(1, K, K)
     labels = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
-    plot_rollouts(lambdas, index, labels, ax=ax)
+    plot_rollouts(lambdas, env.time, labels, ax=ax)
     if SHOW:
         plt.show()
     else:
@@ -126,7 +125,7 @@ def main(path):
         fig2.savefig(path + 'action_rollouts.png')
         fig3.savefig(path + 'score_rollouts.png')
     if not SHOW:
-        create_report(path, title='Entrenamiento MPC-GPS',
+        create_report(path, title='Entrenamiento GPS',
                       method='gps', extra_method='ilqr')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
