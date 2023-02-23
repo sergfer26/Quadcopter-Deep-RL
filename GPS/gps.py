@@ -27,7 +27,7 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=3, M=2, eta=1e-3, nu=1e-3,
+                 N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
                  learning_rate=0.01, kl_step=20):
         '''
