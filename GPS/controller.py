@@ -405,7 +405,6 @@ class OfflineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
-        self.check_constrain = False
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
@@ -434,9 +433,10 @@ class OfflineController(iLQG):
             self.cost.eta = npzfile['eta']
 
     def step(self, eta: float):
-        us = self._nominal_us
+        us = self.us_init
         N = us.shape[0]
         self.cost.eta = eta
+
         (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
          F_uu) = self._forward_rollout(self.x0, us)
 
@@ -472,7 +472,6 @@ class OfflineController(iLQG):
                     (in order they were visited)
         """
         # Check if constraind is fulfilled at maximum deviation
-        r = None
         if self.step(min_eta) <= kl_step:
             # return self.step(min_eta)
             self.cost.eta = min_eta
@@ -491,9 +490,9 @@ class OfflineController(iLQG):
             # Perform search in log-space, as this requires much fewer
             # iterations
             print("Brent's method begins...")
-            log_eta, r = brentq(
+            log_eta = brentq(
                 constraint_violation, np.log(min_eta), np.log(max_eta),
-                rtol=rtol, maxiter=kl_maxiter, disp=False, full_output=True)
+                rtol=rtol, maxiter=kl_maxiter, disp=False, full_output=True)[0]
 
             print(f"eta= {np.exp(log_eta)}")
             self.cost.eta = np.exp(log_eta)
@@ -507,11 +506,13 @@ class OfflineController(iLQG):
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
         us_old = self._control(**params)[1]
+        us_new = self._control(xs, us, self._k, self._K,
+                               self._C, self.alpha, False)
         N = us.shape[0]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us[j], us_old[j], self._C[j], C_old[j])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], self._C[j], C_old[j])
                       for j in range(N)])
-        return xs, us, cost_trace, r, kl_div
+        return xs, us, cost_trace, kl_div
 
 
 class OnlineController(iLQG):
