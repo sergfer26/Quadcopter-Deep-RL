@@ -45,23 +45,22 @@ def main(updates, path, old_path):
     expert = LinearAgent(env)
 
     x0 = np.zeros(n_x)
-    _, us_init, _ = rollout(expert, env, state_init=x0)
 
     agent.x0 = x0
-    agent.us_init = us_init
+    agent.us_init = rollout(expert, env, state_init=x0)[1]
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
     div = []
-    for _ in range(updates):
-        xs, us, cost_trace, r, kl_div = agent.optimize(
+    for i in range(updates):
+        xs, us, cost_trace, kl_div = agent.optimize(
             PARAMS['kl_step'], min_eta=min_eta)
-        min_eta = r.root
+        agent.us_init = agent.rollout(x0)[1]
+        min_eta = cost.eta  # r.root
         etas.append(min_eta)
         div.append(kl_div)
-        _, us_init = agent.rollout(x0)
-        agent.us_init = us_init
         cost.update_control(agent)
+        agent.save(path, file_name=f'control_{i}.npz')
 
     print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
@@ -79,7 +78,7 @@ def main(updates, path, old_path):
     # 3.1 Loss' plot
     plot_performance(etas, xlabel='iteraciones',
                      ylabel='$\eta$', ax=ax2, labels=['$\eta$'])
-    plot_performance(etas, xlabel='iteraciones',
+    plot_performance(div, xlabel='iteraciones',
                      ylabel='divergencia', ax=ax4, labels=['$KL(p||\hat p)$'])
     # Análisis de los eigen valores de la matriz de control
     eigvals = np.linalg.eigvals(agent._C)
@@ -129,8 +128,6 @@ def main(updates, path, old_path):
 
     create_report(path, 'Ajuste iLQG Offline \n' +
                   old_path, method=None, extra_method='ilqr')
-    agent.save(path)
-    print('los parametros del control fueron guardadados')
 
     sample_indices = np.random.randint(states.shape[0], size=3)
     states_samples = states[sample_indices]
