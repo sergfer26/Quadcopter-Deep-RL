@@ -61,7 +61,7 @@ def main(path):
     # policy.load_state_dict(torch.load(
     #     'results_ddpg/12_9_113/actor', map_location='cpu'))
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
-                           dt=dt, u0=W0, method='lsoda')
+                           dt=dt, u0=W0)
     # 2. Training
     ti = time.time()
 
