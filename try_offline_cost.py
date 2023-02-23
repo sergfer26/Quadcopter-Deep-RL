@@ -16,6 +16,7 @@ from dynamics import penalty, terminal_penalty
 from GPS.utils import OfflineCost
 from GPS.params import PARAMS_OFFLINE as PARAMS
 from utils import plot_performance
+import warnings
 
 
 def main(updates, path, old_path):
@@ -53,14 +54,18 @@ def main(updates, path, old_path):
     etas = [min_eta]
     div = []
     for i in range(updates):
-        xs, us, cost_trace, kl_div = agent.optimize(
-            PARAMS['kl_step'], min_eta=min_eta)
-        agent.us_init = agent.rollout(x0)[1]
-        min_eta = cost.eta  # r.root
-        etas.append(min_eta)
-        div.append(kl_div)
-        cost.update_control(agent)
-        agent.save(path, file_name=f'control_{i}.npz')
+        try:
+            xs, us, cost_trace, kl_div = agent.optimize(
+                PARAMS['kl_step'], min_eta=min_eta)
+            agent.us_init = agent.rollout(x0)[1]
+            min_eta = cost.eta  # r.root
+            etas.append(min_eta)
+            div.append(kl_div)
+            cost.update_control(agent)
+            agent.save(path, file_name=f'control_{i}.npz')
+        except ValueError as e:
+            warnings.warn(str(e))
+            print(f'fallo en la iteración {i}')
 
     print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
