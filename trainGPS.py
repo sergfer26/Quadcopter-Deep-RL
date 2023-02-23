@@ -106,7 +106,7 @@ def main(path):
         ax.set_title(key)
     # 3.3 lambdas
     index = np.linspace(1, K, K)
-    labels = [f'$\lambda_{i}$' for i in range(1, n_x+1)]
+    labels = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
     plot_rollouts(lambdas, index, labels, ax=ax)
     if SHOW:
