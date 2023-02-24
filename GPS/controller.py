@@ -439,7 +439,6 @@ class OfflineController(iLQG):
         self.cost.eta = eta
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
-        self.alpha = params['alpha']
 
         (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
          F_uu) = self._forward_rollout(self.x0, us)
