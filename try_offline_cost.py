@@ -68,6 +68,7 @@ def main(updates, path, old_path):
             logging.exception("An exception was thrown!")
             agent.save(path, file_name=f'failed_{i}.npz')
             print(f'fallo en la iteración {i}')
+            break
 
     print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
