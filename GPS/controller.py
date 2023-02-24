@@ -450,7 +450,8 @@ class OfflineController(iLQG):
         us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], nearestPD(C[j]), C_old[j])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], nearestPD(C[j]),
+                                 C_old[j])
                       for j in range(N)])
         return kl_div
 
@@ -509,10 +510,11 @@ class OfflineController(iLQG):
         params['is_stochastic'] = False
         us_old = self._control(**params)[1]
         us_new = self._control(xs, us, self._k, self._K,
-                               nearestPD(self._C), self.alpha, False)[1]
+                               self._C, self.alpha, False)[1]
         N = us.shape[0]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], self._C[j], C_old[j])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j],
+                                 nearestPD(self._C[j]), C_old[j])
                       for j in range(N)])
         return xs, us, cost_trace, kl_div
 
