@@ -4,7 +4,7 @@ import send_email
 from GPS.utils import ContinuousDynamics
 from Linear.equations import f, W0
 from env import QuadcopterEnv
-from GPS.controller import OfflineController
+from GPS.controller import OfflineController, iLQG
 from simulation import plot_rollouts, rollout, n_rollouts
 from matplotlib import pyplot as plt
 from Linear.agent import LinearAgent
@@ -43,12 +43,11 @@ def main(updates, path, old_path):
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
     cost.update_control(file_path=old_path + 'ilqr_control.npz')
     agent = OfflineController(dynamics, cost, T)
-    expert = LinearAgent(env)
+    expert = iLQG(dynamics, cost, T); expert.load(old_path)
 
-    x0 = np.zeros(n_x)
+    agent.x0 = env.observation_space.sample(); print(f'x0={agent.x0}') #np.zeros(n_x)
 
-    agent.x0 = x0
-    agent.us_init = rollout(expert, env, state_init=x0)[1]
+    agent.us_init = rollout(expert, env, state_init=agent.x0)[1]
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
