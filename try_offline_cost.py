@@ -43,9 +43,11 @@ def main(updates, path, old_path):
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
     cost.update_control(file_path=old_path + 'ilqr_control.npz')
     agent = OfflineController(dynamics, cost, T)
-    expert = iLQG(dynamics, cost, T); expert.load(old_path)
+    expert = iLQG(dynamics, cost, T)
+    expert.load(old_path)
 
-    agent.x0 = env.observation_space.sample(); print(f'x0={agent.x0}') #np.zeros(n_x)
+    agent.x0 = env.observation_space.sample()
+    print(f'x0={agent.x0}')  # np.zeros(n_x)
 
     agent.us_init = rollout(expert, env, state_init=agent.x0)[1]
     min_eta = cost.eta
@@ -56,7 +58,7 @@ def main(updates, path, old_path):
         try:
             xs, us, cost_trace, kl_div = agent.optimize(
                 PARAMS['kl_step'], min_eta=min_eta)
-            agent.us_init = agent.rollout(x0)[1]
+            agent.us_init = agent.rollout(agent.x0)[1]
             min_eta = cost.eta  # r.root
             etas.append(min_eta)
             div.append(kl_div)
