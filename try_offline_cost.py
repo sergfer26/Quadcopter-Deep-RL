@@ -16,7 +16,7 @@ from dynamics import penalty, terminal_penalty
 from GPS.utils import OfflineCost
 from GPS.params import PARAMS_OFFLINE as PARAMS
 from utils import plot_performance
-import warnings
+import logging
 
 
 def main(updates, path, old_path):
@@ -64,8 +64,8 @@ def main(updates, path, old_path):
             div.append(kl_div)
             cost.update_control(agent)
             agent.save(path, file_name=f'control_{i}.npz')
-        except ValueError as e:
-            warnings.warn(str(e))
+        except BaseException:
+            logging.exception("An exception was thrown!")
             print(f'fallo en la iteración {i}')
 
     print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
