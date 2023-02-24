@@ -437,6 +437,9 @@ class OfflineController(iLQG):
         us = self.us_init
         N = us.shape[0]
         self.cost.eta = eta
+        params = self.cost.control_parameters()
+        params['is_stochastic'] = False
+        self.alpha = params['alpha']
 
         (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
          F_uu) = self._forward_rollout(self.x0, us)
@@ -445,8 +448,6 @@ class OfflineController(iLQG):
                                       F_xx, F_ux, F_uu)
 
         us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
-        params = self.cost.control_parameters()
-        params['is_stochastic'] = False
         us_old = self._control(**params)[1]
         C_old = params['C']
         kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C[j], C_old[j])
