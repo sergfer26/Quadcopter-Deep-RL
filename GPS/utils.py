@@ -26,31 +26,13 @@ class ContinuousDynamics(FiniteDiffDynamics):
         super().__init__(f_d, n_x, n_u, x_eps, u_eps)
 
 
-class StochasticDynamics(FiniteDiffDynamics):
-
-    def __init__(self, f, n_x, n_u,
-                 dt=0.1, x_eps=None, u_eps=None, u0=None, sigma=1e-3):
-        # def f_d(x, u, i): return x + f(x, u)*dt
-        if not isinstance(u0, np.ndarray):
-            u0 = np.zeros(n_u)
-        if not isinstance(sigma, np.ndarray):
-            sigma = sigma * np.identity(n_x)
-
-        def f_d(x, u, i):
-            w1, w2, w3, w4 = u + u0
-            t = [i * dt, (i+1)*dt]
-            out = odeint(f, x, t, args=(w1, w2, w3, w4))[1]
-            return multivariate_normal.rvs(out, sigma, 1)
-        super().__init__(f_d, n_x, n_u, x_eps, u_eps)
-
-
 class OfflineCost(FiniteDiffCost):
 
     def __init__(self, cost, l_terminal, n_x, n_u,
                  x_eps=None, u_eps=None,
                  eta=0.1, nu=None, lamb=None,
-                 T=10, policy_mean=None, policy_cov=None
-                 ):
+                 T=10, policy_mean=None, policy_cov=None,
+                 known_dynamics=True):
         '''Constructs an Offline cost for Guided policy search.
 
         Args:
@@ -89,6 +71,7 @@ class OfflineCost(FiniteDiffCost):
             n_u) if not callable(policy_mean) else policy_mean
 
         self.cost = cost  # l_bounded
+        self.known_dynamics = known_dynamics
 
         def _cost(x, u, i):
             C = self._C[i] + PARAMS_LQG['cov_reg'] * \
@@ -97,11 +80,13 @@ class OfflineCost(FiniteDiffCost):
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
                 multivariate_normal.logpdf(x=u, mean=self.policy_mean(x),
-                                           cov=self.policy_cov, allow_singular=True)
-            c /= (self.eta + self.nu[i])
-            mean_control = self._control(x, i)
-            c -= self.eta * multivariate_normal.logpdf(x=u, mean=mean_control,
-                                                       cov=C, allow_singular=True) / (self.eta + self.nu[i])
+                                           cov=self.policy_cov)
+            if self.known_dynamics:
+                c /= (self.eta + self.nu[i])
+                c -= self.eta * multivariate_normal.logpdf(x=u,
+                                                           mean=self._control(
+                                                               x, i),
+                                                           cov=C) / (self.eta + self.nu[i])
             return c
 
         super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
