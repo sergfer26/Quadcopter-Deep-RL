@@ -428,7 +428,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     # También actualiza eta
     cost.update_control(control)
 
-    xs, us = cost.control.rollout(np.zeros(dynamics_kwargs['n_x']))
+    xs, us = control.rollout(np.zeros(dynamics_kwargs['n_x']))
 
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = xs[0], us
