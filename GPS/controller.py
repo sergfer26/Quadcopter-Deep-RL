@@ -401,11 +401,13 @@ class OfflineController(iLQG):
                  max_reg=PARAMS_LQG['max_reg'],
                  reg=PARAMS_LQG['reg'],
                  delta_0=PARAMS_LQG['delta_0'],
-                 is_stochastic=PARAMS_LQG['is_stochastic']):
+                 is_stochastic=PARAMS_LQG['is_stochastic'],
+                 known_dynamics=True):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
         self.check_constrain = False
+        self.known_dynamics = known_dynamics
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
@@ -449,10 +451,16 @@ class OfflineController(iLQG):
         # us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us[j], us_old[j], nearestPD(C[j]),
-                                 C_old[j])
+        kl_div = sum([mvn_kl_div(us[j], us_old[j], C[j], C_old[j])
                       for j in range(N)])
         return kl_div
+
+    def _backward_pass(self, F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
+                       F_xx=None, F_ux=None, F_uu=None):
+        k, K, C = super()._backward_pass(F_x, F_u, L_x, L_u,
+                                         L_xx, L_ux, L_uu, F_xx, F_ux, F_uu)
+        C = np.array([nearestPD(C[j]) for j in range(C.shape[0])])
+        return k, K, C
 
     def optimize(self, kl_step: float,
                  min_eta: float = 1e-4,
@@ -473,31 +481,32 @@ class OfflineController(iLQG):
                     a list of `ILQRStepResult` if `full_history` is enabled
                     (in order they were visited)
         """
-        # Check if constraind is fulfilled at maximum deviation
-        if self.step(min_eta) <= kl_step:
-            # return self.step(min_eta)
-            self.cost.eta = min_eta
-        else:
-            # Check if constraint cen be fulfilled at all
-            if self.check_constrain:
-                if self.step(max_eta) > kl_step:
-                    raise ValueError(
-                        f"max_eta eta to low ({max_eta})")
+        if self.known_dynamics:
+            # Check if constraind is fulfilled at maximum deviation
+            if self.step(min_eta) <= kl_step:
+                # return self.step(min_eta)
+                self.cost.eta = min_eta
+            else:
+                # Check if constraint cen be fulfilled at all
+                if self.check_constrain:
+                    if self.step(max_eta) > kl_step:
+                        raise ValueError(
+                            f"max_eta eta to low ({max_eta})")
 
-            # Find the point where kl divergence equals the kl_step
-            def constraint_violation(log_eta):
-                return self.step(np.exp(log_eta)) - kl_step
+                # Find the point where kl divergence equals the kl_step
+                def constraint_violation(log_eta):
+                    return self.step(np.exp(log_eta)) - kl_step
 
-            # Search root of the constraint violation
-            # Perform search in log-space, as this requires much fewer
-            # iterations
-            print("Brent's method begins...")
-            log_eta = brentq(
-                constraint_violation, np.log(min_eta), np.log(max_eta),
-                rtol=rtol, maxiter=kl_maxiter, disp=False, full_output=True)[0]
+                # Search root of the constraint violation
+                # Perform search in log-space, as this requires much fewer
+                # iterations
+                print("Brent's method begins...")
+                log_eta = brentq(
+                    constraint_violation, np.log(min_eta), np.log(max_eta),
+                    rtol=rtol, maxiter=kl_maxiter, disp=False)
 
-            print(f"eta= {np.exp(log_eta)}")
-            self.cost.eta = np.exp(log_eta)
+                print(f"eta= {np.exp(log_eta)}")
+                self.cost.eta = np.exp(log_eta)
 
         print("iLQR optimization step...")
         xs, us = self.fit(self.x0, self.us_init,
@@ -512,8 +521,7 @@ class OfflineController(iLQG):
                                self._C, self.alpha, False)[1]
         N = us.shape[0]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j],
-                                 nearestPD(self._C[j]), C_old[j])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], self._C[j], C_old[j])
                       for j in range(N)])
         return xs, us, cost_trace, kl_div
 
