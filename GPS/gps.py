@@ -13,6 +13,7 @@ from GPS.utils import ContinuousDynamics
 from .params import PARAMS_OFFLINE, PARAMS_ONLINE
 from .controller import OnlineController, OfflineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
+from .utils import nearestPD
 
 
 device = 'cpu'
@@ -29,7 +30,8 @@ class GPS:
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
-                 learning_rate=0.01, kl_step=20):
+                 learning_rate=0.01, kl_step=20,
+                 known_dynamics=True):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -94,7 +96,8 @@ class GPS:
                                 eta=eta,
                                 lamb=lamb * np.ones(self.n_u),
                                 nu=nu * np.ones(T),
-                                T=T)  # ,
+                                T=T,
+                                known_dynamics=known_dynamics)  # ,
         # u_bound=u_bound)
 
         self.policy = policy
@@ -157,7 +160,7 @@ class GPS:
         elif len(C.shape) == 4:
             axis = (0, 1)
         Q = np.linalg.inv(C)
-        return np.linalg.inv(np.mean(Q, axis=axis))
+        return nearestPD(np.linalg.inv(np.mean(Q, axis=axis)))
 
     def policy_loss(self, states, actions, C, sigma):
         '''
@@ -408,7 +411,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     cost = OfflineCost(**cost_kwargs)
     cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x, t_u=inv_t_u)
     cost.cov_policy = policy_sigma
-    control = OfflineController(dynamics, cost, T)
+    control = OfflineController(dynamics, cost, T,
+                                known_dynamics=cost_kwargs['known_dynamics'])
 
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
@@ -424,7 +428,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     # También actualiza eta
     cost.update_control(control)
 
-    xs, us = control.rollout(np.zeros(dynamics_kwargs['n_x']))
+    xs, us = cost.control.rollout(np.zeros(dynamics_kwargs['n_x']))
 
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = xs[0], us
