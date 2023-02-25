@@ -446,10 +446,10 @@ class OfflineController(iLQG):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
+        # us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], nearestPD(C[j]),
+        kl_div = sum([mvn_kl_div(us[j], us_old[j], nearestPD(C[j]),
                                  C_old[j])
                       for j in range(N)])
         return kl_div
