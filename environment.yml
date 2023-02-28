@@ -135,4 +135,5 @@ dependencies:
     - ilqr==0.2.0
     - mycolorpy==1.5.1
     - theano==1.0.5
+    - git+https://github.com/anassinator/ilqr
 #prefix: /opt/homebrew/Caskroom/miniforge/base/envs/quad_env
