@@ -1,6 +1,6 @@
 import numpy as np
 import pathlib
-from GPS.utils import ContinuousDynamics, FiniteDiffCost, StochasticDynamics
+from GPS.utils import ContinuousDynamics, FiniteDiffCost
 from Linear.equations import f, W0
 from env import QuadcopterEnv
 from GPS.controller import iLQG
@@ -24,7 +24,7 @@ n_x = len(env.observation_space.sample())
 
 # env.noise_on = False
 dt = env.time[-1] - env.time[-2]
-dynamics = StochasticDynamics(
+dynamics = ContinuousDynamics(
     f, n_x=n_x, n_u=n_u, u0=W0)  # ContinuousDynamics
 
 cost = FiniteDiffCost(l=penalty,
