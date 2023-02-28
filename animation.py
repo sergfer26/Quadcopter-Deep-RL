@@ -182,7 +182,10 @@ def _quadcopter_frame(states, goal_pos=None, state_bounds=None, ax=None):
         ax = plt.axes(projection='3d')
     if isinstance(goal_pos, np.ndarray) | isinstance(goal_pos, list):
         ax.plot(goal_pos[0], goal_pos[1], goal_pos[2], 'r.')
-    ax.plot(x, y, z, alpha=0.5, linestyle='-.')
+    try:
+        ax.plot(x, y, z, alpha=0.5, linestyle='-.')
+    except:
+        breakpoint()
     R = angles2rotation(
         np.array([psi[-1], theta[-1], phi[-1]]).flatten(), flatten=False)
     p, q = square(np.array([x[-1], y[-1], z[-1]]).flatten(), R=R)
