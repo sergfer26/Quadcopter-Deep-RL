@@ -35,7 +35,7 @@ def main(updates, path, old_path):
                        n_x=n_x,
                        n_u=n_u,
                        nu=PARAMS['nu'] * np.ones(T),
-                       eta=PARAMS['eta'],
+                       eta=PARAMS['min_eta'],
                        lamb=PARAMS['lamb'] * np.ones((T, n_u)),
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
