@@ -1,22 +1,21 @@
+import logging
 import numpy as np
 import pathlib
 import send_email
 from GPS.utils import ContinuousDynamics
-from Linear.equations import f, W0
+from Linear.equations import f, W0, omega_0
 from env import QuadcopterEnv
 from GPS.controller import OfflineController, iLQG
 from simulation import plot_rollouts, rollout, n_rollouts
 from matplotlib import pyplot as plt
-from Linear.agent import LinearAgent
 from animation import create_animation
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from get_report import create_report
 from utils import date_as_path
-from dynamics import penalty, terminal_penalty
+from dynamics import penalty, terminal_penalty, transform_x, inv_transform_u
 from GPS.utils import OfflineCost
 from GPS.params import PARAMS_OFFLINE as PARAMS
 from utils import plot_performance
-import logging
 
 
 def main(updates, path, old_path):
@@ -35,13 +34,16 @@ def main(updates, path, old_path):
                        l_terminal=terminal_penalty,
                        n_x=n_x,
                        n_u=n_u,
-                       nu=np.zeros(T),
+                       nu=1e-3 * np.ones(T),
                        eta=1e-4,
-                       lamb=np.zeros((T, n_u)),
+                       lamb=1e-3 * np.ones((T, n_u)),
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
     cost.update_control(file_path=old_path + 'ilqr_control.npz')
+    cost.update_policy(file_path='models/policy.pt',
+                       t_x=transform_x, inv_t_u=inv_transform_u,
+                       cov=omega_0 * np.identity(n_u))
     agent = OfflineController(dynamics, cost, T)
     expert = iLQG(dynamics, cost, T)
     expert.load(old_path)
@@ -158,6 +160,6 @@ if __name__ == '__main__':
     OLD_PATH = 'results_ilqr/23_02_16_23_21/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 5
+    updates = 1
     send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
     # main(updates, PATH, OLD_PATH)
