@@ -6,12 +6,11 @@ import multiprocessing as mp
 from torch import optim
 from copy import deepcopy
 from os.path import exists
-from functools import partial
-from .utils import OnlineCost, OfflineCost
+# from functools import partial
+from .utils import OfflineCost  # , OnlineCost
 # from ilqr import RecedingHorizonController
 from GPS.utils import ContinuousDynamics
-from .params import PARAMS_OFFLINE, PARAMS_ONLINE, PARAMS_LQG
-from .controller import OnlineController, OfflineController, OnlineMPC
+from .controller import OfflineController  # , OnlineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD
 
@@ -425,9 +424,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         # 'results_offline/23_02_01_13_30/'
         # 'results_offline/23_02_15_09_14/' -> para 2 seg
         # 'results_offline/23_02_16_13_50/'
-        control.load('results_offline/23_02_16_13_50/')
+        control.load('results_ilqr/23_02_16_23_21/')
         # control.load('results_offline/23_02_15_09_14/')
-    # También actualiza eta
+    # También puede actualizar eta
     cost.update_control(control)
 
     xs, us = control.rollout(np.zeros(dynamics_kwargs['n_x']))
