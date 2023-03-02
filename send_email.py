@@ -155,8 +155,10 @@ def report_sender(func, args=[], reciever='sfernandezm97@ciencias.unam.mx'):
         #    file.write(printed_on_terminal)
 
         # Termina análisis y manda resultados
+        path2pdf = path + \
+            'reporte.pdf' if os.path.exists(path+'reporte.pdf') else None
         send_email(reciever=reciever, subject='Terminó entrenamiento '+path,
-                   message=printed_on_terminal, path2pdf=path+'reporte.pdf')
+                   message=printed_on_terminal, path2pdf=path2pdf)
 
     except:
         type_error = str(sys.exc_info()[0]).split()[1].strip("'<>")
