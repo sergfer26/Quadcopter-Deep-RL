@@ -1,12 +1,12 @@
-import pathlib
 import time
-import numpy as np
+import pathlib
 import send_email
+import numpy as np
 from tqdm import tqdm
-from utils import date_as_path
-from utils import plot_performance
 import matplotlib.pyplot as plt
 from Linear.equations import f, W0
+from utils import date_as_path
+from utils import plot_performance
 from GPS import GPS, Policy
 from env import QuadcopterEnv
 from DDPG.utils import AgentEnv
@@ -76,9 +76,9 @@ def main(path):
               inv_t_u=inv_transform_u,
               N=PARAMS['N'],
               M=PARAMS['M'],
-              eta=PARAMS['eta'],
-              nu=PARAMS['nu'],
-              lamb=PARAMS['lamb'],
+              eta=PARAMS_OFFLINE['min_eta'],
+              nu=PARAMS_OFFLINE['nu'],
+              lamb=PARAMS_OFFLINE['lamb'],
               kl_step=KL_STEP,
               known_dynamics=PARAMS['known_dynamics']
               )
