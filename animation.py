@@ -1,19 +1,17 @@
-import numpy as np
+import os
 import imageio
+import numpy as np
+import matplotlib as mpl
+from Linear import LinearAgent
 from Linear.equations import angles2rotation
-from Linear.agent import LinearAgent
-from GPS.controller import iLQG
 from simulation import n_rollouts
 from env import QuadcopterEnv
-from numpy import cos, sin
+# from numpy import cos, sin
 from matplotlib import pyplot as plt
-import os
-from DDPG.utils import AgentEnv
-from DDPG.ddpg import DDPGagent
-from dynamics import transform_x, inv_transform_x
 from simulation import plot_rollouts
 from params import STATE_NAMES, ACTION_NAMES
 
+mpl.use('TkAgg')
 PATH = 'test/'
 
 
@@ -154,7 +152,9 @@ def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
         _quadcopter_frame(states[:i+1], goal, state_bounds, ax=ax_3d)
         x, y, z = states[i, 3:6]
         ax_3d.set_title('$t=$ {:.2f}'.format(
-            time[i]) + '\n $x=$ {:.2f}, $y=$ {:.2f}, $z=$ {:.2f}'.format(x, y, z), fontsize=15)
+            time[i]) +
+            '\n $x=$ {:.2f}, $y=$ {:.2f}, $z=$ {:.2f}'.format(x, y, z),
+            fontsize=15)
         if isinstance(scores, np.ndarray):
             ax_scores = fig.add_subplot(gs[-2:, 0])
             ax_scores.axis([0, 10, 0, 2 * scores_dim])
@@ -182,7 +182,6 @@ def _quadcopter_frame(states, goal_pos=None, state_bounds=None, ax=None):
         ax = plt.axes(projection='3d')
     if isinstance(goal_pos, np.ndarray) | isinstance(goal_pos, list):
         ax.plot(goal_pos[0], goal_pos[1], goal_pos[2], 'r.')
-    breakpoint()
     ax.plot(x, y, z, alpha=0.5, linestyle='-.')
     R = angles2rotation(
         np.array([psi[-1], theta[-1], phi[-1]]).flatten(), flatten=False)
