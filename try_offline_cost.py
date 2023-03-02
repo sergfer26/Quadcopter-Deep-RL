@@ -34,9 +34,9 @@ def main(updates, path, old_path):
                        l_terminal=terminal_penalty,
                        n_x=n_x,
                        n_u=n_u,
-                       nu=1e-3 * np.ones(T),
-                       eta=1e-4,
-                       lamb=1e-3 * np.ones((T, n_u)),
+                       nu=PARAMS['nu'] * np.ones(T),
+                       eta=PARAMS['eta'],
+                       lamb=PARAMS['lamb'] * np.ones((T, n_u)),
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
