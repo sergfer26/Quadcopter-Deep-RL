@@ -424,8 +424,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         # 'results_offline/23_02_01_13_30/'
         # 'results_offline/23_02_15_09_14/' -> para 2 seg
         # 'results_offline/23_02_16_13_50/'
-        control.load('results_ilqr/23_02_16_23_21/')
+        # control.load('results_ilqr/23_02_16_23_21/')
         # control.load('results_offline/23_02_15_09_14/')
+        control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)
 
