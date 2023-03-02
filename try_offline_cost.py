@@ -77,7 +77,7 @@ def main(updates, path, old_path):
             print(f'fallo en la iteración {i}')
             break
 
-    if not failed:
+    if not failed or i > 0:
         print(
             f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
