@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from simulation import plot_rollouts
 from params import STATE_NAMES, ACTION_NAMES
 
-mpl.use('TkAgg')
+
 PATH = 'test/'
 
 
