@@ -411,8 +411,10 @@ class OfflineController(iLQG):
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
+        C = np.array([nearestPD(self._C[i]) for i in range(self._C.shape[0])])
+        C += PARAMS_LQG['cov_reg'] * np.identity(self._C.shape[-1])
         np.savez(file_path,
-                 C=self._C,
+                 C=C,
                  K=self._K,
                  k=self._k,
                  xs=self._nominal_xs,
@@ -448,10 +450,12 @@ class OfflineController(iLQG):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        # us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
+        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us[j], us_old[j], C[j], C_old[j])
+        C_new = np.array([nearestPD(C[i]) for i in range(N)])
+        C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
                       for j in range(N)])
         return kl_div
 
@@ -521,7 +525,9 @@ class OfflineController(iLQG):
                                self._C, self.alpha, False)[1]
         N = us.shape[0]
         C_old = params['C']
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], self._C[j], C_old[j])
+        C_new = np.array([nearestPD(self._C[i]) for i in range(N)])
+        C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
                       for j in range(N)])
         return xs, us, cost_trace, kl_div
 
@@ -538,7 +544,7 @@ class OnlineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
 
-    def fit(self, x0, us_init, n_iterations=100, tol=0.000001,
+    def fit(self, x0, us_init, n_iterations=100, tol=1e-6,
             on_iteration=None):
         xs, us = self.cost.control.rollout(x0)
         # update the cost parameters
