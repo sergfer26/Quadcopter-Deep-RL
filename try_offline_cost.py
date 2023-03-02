@@ -160,6 +160,6 @@ if __name__ == '__main__':
     OLD_PATH = 'results_ilqr/23_02_16_23_21/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 1
+    updates = 5
     send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
     # main(updates, PATH, OLD_PATH)
