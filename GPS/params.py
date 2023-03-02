@@ -1,7 +1,4 @@
 PARAMS_LQG = {
-    'min_reg': 0.001,
-    'max_reg': 1e4,
-    'reg': 20,
     'alphas': '0.5**np.arange(8)',  # '1.1**(-np.arange(10)**2)',
     'delta_0': 2.0,
     'tol': 1e-6,
@@ -10,9 +7,11 @@ PARAMS_LQG = {
     'cov_reg': .3
 }
 PARAMS_OFFLINE = {
-    'kl_step': 10,
-    'min_eta': 1e-4,
-    'max_eta': 1e4,
+    'lamb': 1e-3,
+    'nu': 1e-1,
+    'kl_step': 20,
+    'min_eta': 1,
+    'max_eta': 1e5,
     'rtol': 1e-1,
     'kl_maxiter': 1
 }
