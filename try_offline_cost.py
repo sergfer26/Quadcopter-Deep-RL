@@ -1,4 +1,4 @@
-import logging
+import traceback
 import numpy as np
 import pathlib
 import send_email
@@ -47,6 +47,8 @@ def main(updates, path, old_path):
     agent = OfflineController(dynamics, cost, T)
     expert = iLQG(dynamics, cost, T)
     expert.load(old_path)
+    agent.alpha = expert.alpha
+    agent.check_constrain = True
 
     agent.x0 = env.observation_space.sample()
     print(f'x0={agent.x0}')  # np.zeros(n_x)
@@ -56,101 +58,106 @@ def main(updates, path, old_path):
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
     div = []
+    fails = 0
     for i in range(updates):
         try:
             xs, us, cost_trace, kl_div = agent.optimize(
                 PARAMS['kl_step'], min_eta=min_eta)
             agent.us_init = agent.rollout(agent.x0)[1]
-            min_eta = cost.eta  # r.root
+            min_eta = cost.eta
+            agent.check_constrain = False
             etas.append(min_eta)
             div.append(kl_div)
             cost.update_control(agent)
             agent.save(path, file_name=f'control_{i}.npz')
-        except BaseException:
-            logging.exception("An exception was thrown!")
+        except Exception:
+            fails += 1
+            print(traceback.format_exc())
             agent.save(path, file_name=f'failed_{i}.npz')
             print(f'fallo en la iteración {i}')
             break
 
-    print(f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
+    if fails == updates:
+        print(
+            f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
-    plt.style.use("fivethirtyeight")
-    fig = plt.figure(figsize=(12, 12), dpi=250)
-    gs = fig.add_gridspec(nrows=12, ncols=4)
-    ax1, ax2 = fig.add_subplot(gs[0:4, :2]), fig.add_subplot(gs[4:8, :2])
-    ax4 = fig.add_subplot(gs[8:, :2])
-    ax31 = fig.add_subplot(gs[0:3, 2:])
-    ax32 = fig.add_subplot(gs[3:6, 2:])
-    ax33 = fig.add_subplot(gs[6:9, 2:])
-    ax34 = fig.add_subplot(gs[9:, 2:])
-    ax3 = np.array([ax31, ax32, ax33, ax34])
+        plt.style.use("fivethirtyeight")
+        fig = plt.figure(figsize=(12, 12), dpi=250)
+        gs = fig.add_gridspec(nrows=12, ncols=4)
+        ax1, ax2 = fig.add_subplot(gs[0:4, :2]), fig.add_subplot(gs[4:8, :2])
+        ax4 = fig.add_subplot(gs[8:, :2])
+        ax31 = fig.add_subplot(gs[0:3, 2:])
+        ax32 = fig.add_subplot(gs[3:6, 2:])
+        ax33 = fig.add_subplot(gs[6:9, 2:])
+        ax34 = fig.add_subplot(gs[9:, 2:])
+        ax3 = np.array([ax31, ax32, ax33, ax34])
 
-    # 3.1 Loss' plot
-    plot_performance(etas, xlabel='iteraciones',
-                     ylabel='$\eta$', ax=ax2, labels=['$\eta$'])
-    plot_performance(div, xlabel='iteraciones',
-                     ylabel='divergencia', ax=ax4, labels=['$KL(p||\hat p)$'])
-    # Análisis de los eigen valores de la matriz de control
-    eigvals = np.linalg.eigvals(agent._C)
-    eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
-    plot_rollouts(eigvals, env.time, eig_names, alpha=0.5, ax=ax3)
+        # 3.1 Loss' plot
+        plot_performance(etas, xlabel='iteraciones',
+                         ylabel='$\eta$', ax=ax2, labels=['$\eta$'])
+        plot_performance(div, xlabel='iteraciones',
+                         ylabel='divergencia', ax=ax4, labels=['$KL(p||\hat p)$'])
+        # Análisis de los eigen valores de la matriz de control
+        eigvals = np.linalg.eigvals(agent._C)
+        eig_names = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
+        plot_rollouts(eigvals, env.time, eig_names, alpha=0.5, ax=ax3)
 
-    ax1.plot(cost_trace)
-    ax1.set_title('Costo')
-    fig.savefig(path + 'train_performance.png')
+        ax1.plot(cost_trace)
+        ax1.set_title('Costo')
+        fig.savefig(path + 'train_performance.png')
 
-    mask = np.apply_along_axis(np.greater, -1, eigvals, np.zeros(n_u))
-    if mask.all():
-        print('Todas las matrices C son positivas definidas')
-    else:
-        indices = np.apply_along_axis(lambda x: x.any(), -1, ~mask)
-        print(f'{indices.sum()} no son positivas definidas')
-        np.savez(
-            PATH + 'invalid_C.npz',
-            C=agent._C[indices]
-        )
+        mask = np.apply_along_axis(np.greater, -1, eigvals, np.zeros(n_u))
+        if mask.all():
+            print('Todas las matrices C son positivas definidas')
+        else:
+            indices = np.apply_along_axis(lambda x: x.any(), -1, ~mask)
+            print(f'{indices.sum()} no son positivas definidas')
+            np.savez(
+                PATH + 'invalid_C.npz',
+                C=agent._C[indices]
+            )
 
-    create_animation(xs, us, env.time,
-                     state_labels=STATE_NAMES,
-                     action_labels=ACTION_NAMES,
-                     file_name='fitted',
-                     path=path + 'sample_rollouts/')
+        create_animation(xs, us, env.time,
+                         state_labels=STATE_NAMES,
+                         action_labels=ACTION_NAMES,
+                         file_name='fitted',
+                         path=path + 'sample_rollouts/')
 
-    agent.reset()
-    states_, actions_, scores_ = n_rollouts(
-        agent, env, n=100)
+        agent.reset()
+        states_, actions_, scores_ = n_rollouts(
+            agent, env, n=100)
 
-    up = 10 * np.ones(n_x)
-    down = -10 * np.ones(n_x)
-    idx = np.apply_along_axis(lambda x: (
-        np.less(x, up) & np.greater(x, down)).all(), 1, states_[:, -1])
+        up = 10 * np.ones(n_x)
+        down = -10 * np.ones(n_x)
+        idx = np.apply_along_axis(lambda x: (
+            np.less(x, up) & np.greater(x, down)).all(), 1, states_[:, -1])
 
-    states = states_[idx]
-    actions = actions_[idx]
-    scores = scores_[idx]
+        states = states_[idx]
+        actions = actions_[idx]
+        scores = scores_[idx]
 
-    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
-    fig1.savefig(path + 'state_rollouts.png')
-    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
-    fig2.savefig(path + 'action_rollouts.png')
-    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
-    fig3.savefig(path + 'score_rollouts.png')
+        fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
+        fig1.savefig(path + 'state_rollouts.png')
+        fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
+        fig2.savefig(path + 'action_rollouts.png')
+        fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
+        fig3.savefig(path + 'score_rollouts.png')
 
-    create_report(path, 'Ajuste iLQG Offline \n' +
-                  old_path, method=None, extra_method='ilqr')
+        create_report(path, 'Ajuste iLQG Offline \n' +
+                      old_path, method=None, extra_method='ilqr')
 
-    sample_indices = np.random.randint(states.shape[0], size=3)
-    states_samples = states[sample_indices]
-    actions_samples = actions[sample_indices]
-    scores_samples = scores[sample_indices]
+        sample_indices = np.random.randint(states.shape[0], size=3)
+        states_samples = states[sample_indices]
+        actions_samples = actions[sample_indices]
+        scores_samples = scores[sample_indices]
 
-    create_animation(states_samples, actions_samples, env.time,
-                     scores=scores_samples,
-                     state_labels=STATE_NAMES,
-                     action_labels=ACTION_NAMES,
-                     score_labels=REWARD_NAMES,
-                     file_name='flight',
-                     path=path + 'sample_rollouts/')
+        create_animation(states_samples, actions_samples, env.time,
+                         scores=scores_samples,
+                         state_labels=STATE_NAMES,
+                         action_labels=ACTION_NAMES,
+                         score_labels=REWARD_NAMES,
+                         file_name='flight',
+                         path=path + 'sample_rollouts/')
     return PATH
 
 
