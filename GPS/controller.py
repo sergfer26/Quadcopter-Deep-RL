@@ -539,10 +539,10 @@ class OnlineController(iLQG):
 
     def __init__(self, dynamics, cost: OnlineCost,
                  steps: int,
-                 min_reg=PARAMS_LQG['min_reg'],
-                 max_reg=PARAMS_LQG['max_reg'],
-                 reg=PARAMS_LQG['reg'],
-                 delta_0=PARAMS_LQG['delta_0'],
+                 min_reg=1e-3,
+                 max_reg=1e4,
+                 reg=20,
+                 delta_0=2.0,
                  is_stochastic=PARAMS_LQG['is_stochastic']):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
