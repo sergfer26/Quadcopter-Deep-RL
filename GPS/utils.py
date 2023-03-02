@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+import torch
 from os.path import exists
 from ilqr.controller import iLQR
 
@@ -8,7 +9,12 @@ from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal
 from .params import PARAMS_LQG, PARAMS_ONLINE
+from .policy import Policy
 # from scipy.linalg import issymmetric
+
+device = 'cpu'
+if torch.cuda.is_available():
+    device = 'cuda'
 
 
 class ContinuousDynamics(FiniteDiffDynamics):
@@ -74,8 +80,7 @@ class OfflineCost(FiniteDiffCost):
         self.known_dynamics = known_dynamics
 
         def _cost(x, u, i):
-            C = self._C[i] + PARAMS_LQG['cov_reg'] * \
-                np.identity(self._us.shape[-1])
+            C = self._C[i]
             c = 0.0
             c += self.cost(x, u, i) - u.T@self.lamb[i]
             c -= self.nu[i] * \
@@ -116,7 +121,33 @@ class OfflineCost(FiniteDiffCost):
                 self.eta = file['eta']
         else:
             warnings.warn("No path nor control was provided")
-        self._C = np.array([nearestPD(C[i]) for i in range(self.T)])
+        self._C = np.array([nearestPD(C[i])
+                           for i in range(self.T)])
+        self._C += PARAMS_LQG['cov_reg'] * np.identity(C.shape[-1])
+
+    def update_policy(self, policy: Policy = None, file_path: str = None,
+                      t_x=None, inv_t_u=None, cov: np.ndarray = None):
+        if not isinstance(policy, Policy):
+            policy = torch.load(file_path)
+            policy.eval()
+
+            def policy_mean(x):
+                if callable(t_x):
+                    x = t_x(x)
+                x = torch.FloatTensor(x)
+                out = policy(x.to(device)).detach().cpu().numpy()
+                if callable(inv_t_u):
+                    out = inv_t_u(out)
+                return out
+        else:
+            policy.eval()
+
+            def policy_mean(x):
+                return policy.to_numpy(x, t_x=t_x, t_u=inv_t_u)
+
+        self.policy_mean = policy_mean
+        if isinstance(cov, np.ndarray):
+            self.policy_cov = cov
 
     def control_parameters(self):
         return dict(
