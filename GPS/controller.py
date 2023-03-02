@@ -12,10 +12,10 @@ class iLQG(iLQR):
     # env: gym.Env, dynamics: Dynamics, cost: Cost):
     def __init__(self, dynamics,
                  cost, steps: int,
-                 min_reg=PARAMS_LQG['min_reg'],
-                 max_reg=PARAMS_LQG['max_reg'],
-                 reg=PARAMS_LQG['reg'],
-                 delta_0=PARAMS_LQG['delta_0'],
+                 min_reg=1e-3,
+                 max_reg=1e4,
+                 reg=20,
+                 delta_0=2.0,
                  is_stochastic=PARAMS_LQG['is_stochastic']
                  ):
         '''
@@ -399,10 +399,10 @@ class OfflineController(iLQG):
 
     def __init__(self, dynamics,
                  cost: OfflineCost, steps: int,
-                 min_reg=PARAMS_LQG['min_reg'],
-                 max_reg=PARAMS_LQG['max_reg'],
-                 reg=PARAMS_LQG['reg'],
-                 delta_0=PARAMS_LQG['delta_0'],
+                 min_reg=1e-3,
+                 max_reg=1e4,
+                 reg=20,
+                 delta_0=2.0,
                  is_stochastic=PARAMS_LQG['is_stochastic'],
                  known_dynamics=True):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
@@ -547,7 +547,7 @@ class OnlineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
 
-    def fit(self, x0, us_init, n_iterations=100, tol=1e-6,
+    def fit(self, x0, us_init, n_iterations=100, tol=1e-1,
             on_iteration=None):
         xs, us = self.cost.control.rollout(x0)
         # update the cost parameters
