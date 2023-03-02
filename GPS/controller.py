@@ -336,7 +336,7 @@ class iLQG(iLQR):
         return k, K, C
 
     def _control(self, xs, us, k, K, C, alpha=1.0,
-                 is_stochastic=True):
+                 is_stochastic=True, x0=None):
         """Applies the controls for a given trajectory.
 
         Args:
@@ -354,14 +354,16 @@ class iLQG(iLQR):
         xs_new = np.zeros_like(xs)
         us_new = np.zeros_like(us)
         N = us.shape[0]
-        xs_new[0] = xs[0].copy()
+        if isinstance(x0, np.ndarray):
+            xs_new[0] = x0
+        else:
+            xs_new[0] = xs[0].copy()
 
         for i in range(N):
             # Eq (12).
             us_new[i] = us[i] + alpha * k[i] + K[i].dot(xs_new[i] - xs[i])
             if is_stochastic:
-                cov = C[i]  # + PARAMS_LQG['cov_reg'] * \
-                # np.identity(self.num_actions)
+                cov = C[i]
                 us_new[i] = multivariate_normal.rvs(us_new[i], cov, 1)
 
             # Eq (8c).
@@ -443,6 +445,7 @@ class OfflineController(iLQG):
         self.cost.eta = eta
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
+        params['x0'] = self.x0
 
         (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
          F_uu) = self._forward_rollout(self.x0, us)
