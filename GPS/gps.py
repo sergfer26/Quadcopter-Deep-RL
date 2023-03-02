@@ -10,7 +10,7 @@ from functools import partial
 from .utils import OnlineCost, OfflineCost
 # from ilqr import RecedingHorizonController
 from GPS.utils import ContinuousDynamics
-from .params import PARAMS_OFFLINE, PARAMS_ONLINE
+from .params import PARAMS_OFFLINE, PARAMS_ONLINE, PARAMS_LQG
 from .controller import OnlineController, OfflineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD
@@ -160,7 +160,9 @@ class GPS:
         elif len(C.shape) == 4:
             axis = (0, 1)
         Q = np.linalg.inv(C)
-        return nearestPD(np.linalg.inv(np.mean(Q, axis=axis)))
+        C_new = nearestPD(np.linalg.inv(np.mean(Q, axis=axis)))
+        # C_new += PARAMS_LQG['cov_reg'] * np.identity(C.shape[-1])
+        return C_new
 
     def policy_loss(self, states, actions, C, sigma):
         '''
@@ -409,8 +411,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
-    cost.mean_policy = lambda x: policy.to_numpy(x, t_x=t_x, t_u=inv_t_u)
-    cost.cov_policy = policy_sigma
+    cost.update_policy(policy=policy, t_x=t_x,
+                       inv_t_u=inv_t_u, cov=policy_sigma)
     control = OfflineController(dynamics, cost, T,
                                 known_dynamics=cost_kwargs['known_dynamics'])
 
