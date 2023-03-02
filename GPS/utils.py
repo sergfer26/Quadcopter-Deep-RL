@@ -86,12 +86,11 @@ class OfflineCost(FiniteDiffCost):
             c -= self.nu[i] * \
                 multivariate_normal.logpdf(x=u, mean=self.policy_mean(x),
                                            cov=self.policy_cov)
-            if self.known_dynamics:
-                c /= (self.eta + self.nu[i])
-                c -= self.eta * multivariate_normal.logpdf(x=u,
-                                                           mean=self._control(
-                                                               x, i),
-                                                           cov=C) / (self.eta + self.nu[i])
+            c /= (self.eta + self.nu[i])
+            c -= self.eta * multivariate_normal.logpdf(x=u,
+                                                       mean=self._control(
+                                                           x, i),
+                                                       cov=C) / (self.eta + self.nu[i])
             return c
 
         super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
