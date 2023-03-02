@@ -58,7 +58,7 @@ def main(updates, path, old_path):
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
     div = []
-    fails = 0
+    failed = False
     for i in range(updates):
         try:
             xs, us, cost_trace, kl_div = agent.optimize(
@@ -71,13 +71,13 @@ def main(updates, path, old_path):
             cost.update_control(agent)
             agent.save(path, file_name=f'control_{i}.npz')
         except Exception:
-            fails += 1
+            failed = True
             print(traceback.format_exc())
             agent.save(path, file_name=f'failed_{i}.npz')
             print(f'fallo en la iteración {i}')
             break
 
-    if fails != updates:
+    if not failed:
         print(
             f'ya acabo el ajuste del control, eta={min_eta}, kl_div={kl_div}')
 
