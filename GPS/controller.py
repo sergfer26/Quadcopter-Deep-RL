@@ -453,7 +453,8 @@ class OfflineController(iLQG):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        us_new = self._control(xs, us, k, K, C, self.alpha, False)[1]
+        us_new = self._control(
+            xs, us, k, K, C, params['alpha'], False, x0=self.x0)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
         C_new = np.array([nearestPD(C[i]) for i in range(N)])
