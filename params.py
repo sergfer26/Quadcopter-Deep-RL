@@ -1,6 +1,6 @@
 
 PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 251, 'omega0_per': 0.60,
-              'K1': .25, 'K11': .01, 'K2': .1, 'K21': .01, 'K3': .005}
+              'K1': .25, 'K11': .01, 'K2': .1, 'K21': .01, 'K3': 0}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
