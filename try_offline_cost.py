@@ -40,7 +40,6 @@ def main(updates, path, old_path):
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
-    cost.update_control(file_path=old_path + 'ilqr_control.npz')
     cost.update_policy(file_path='models/policy.pt',
                        t_x=transform_x, inv_t_u=inv_transform_u,
                        cov=omega_0 * np.identity(n_u))
@@ -53,7 +52,9 @@ def main(updates, path, old_path):
     agent.x0 = env.observation_space.sample()
     print(f'x0={agent.x0}')  # np.zeros(n_x)
 
-    agent.us_init = rollout(expert, env, state_init=agent.x0)[1]
+    us_init = rollout(expert, env, state_init=agent.x0)[1]
+    agent.us_init = expert.fit_control(agent.x0, us_init)[1]
+    cost.update_control(control=expert)
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
@@ -167,6 +168,6 @@ if __name__ == '__main__':
     OLD_PATH = 'results_ilqr/23_02_16_23_21/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 5
+    updates = 2
     send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
     # main(updates, PATH, OLD_PATH)
