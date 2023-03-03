@@ -16,6 +16,7 @@ from dynamics import penalty, terminal_penalty, transform_x, inv_transform_u
 from GPS.utils import OfflineCost
 from GPS.params import PARAMS_OFFLINE as PARAMS
 from utils import plot_performance
+from ilqr.cost import FiniteDiffCost
 
 
 def main(updates, path, old_path):
@@ -40,11 +41,16 @@ def main(updates, path, old_path):
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
     # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
+    other_cost = FiniteDiffCost(l=penalty,
+                                l_terminal=terminal_penalty,
+                                state_size=n_x,
+                                action_size=n_u
+                                )
     cost.update_policy(file_path='models/policy.pt',
                        t_x=transform_x, inv_t_u=inv_transform_u,
                        cov=omega_0 * np.identity(n_u))
     agent = OfflineController(dynamics, cost, T)
-    expert = iLQG(dynamics, cost, T)
+    expert = iLQG(dynamics, other_cost, T)
     expert.load(old_path)
     agent.alpha = expert.alpha
     agent.check_constrain = True
