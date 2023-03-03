@@ -58,20 +58,21 @@ def main(updates, path, old_path):
     agent.x0 = env.observation_space.sample()
     print(f'x0={agent.x0}')  # np.zeros(n_x)
 
-    us_init = rollout(expert, env, state_init=agent.x0)[1]
-    agent.us_init = expert.fit_control(agent.x0, us_init)[1]
+    agent.us_init = rollout(expert, env, state_init=agent.x0)[1]
     cost.update_control(control=expert)
     min_eta = cost.eta
     print(f'valor inicial de eta={min_eta}')
     etas = [min_eta]
     div = []
     failed = False
+    kl_step = PARAMS['kl_step']
     for i in range(updates):
         try:
             xs, us, cost_trace, kl_div = agent.optimize(
-                PARAMS['kl_step'], min_eta=min_eta)
+                kl_step, min_eta=min_eta)
             agent.us_init = agent.rollout(agent.x0)[1]
             min_eta = cost.eta
+            kl_step = kl_step * (1 - PARAMS['per_kl'])
             agent.check_constrain = False
             etas.append(min_eta)
             div.append(kl_div)
@@ -175,5 +176,5 @@ if __name__ == '__main__':
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
     updates = 2
-    send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
-    # main(updates, PATH, OLD_PATH)
+    # send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
+    main(updates, PATH, OLD_PATH)
