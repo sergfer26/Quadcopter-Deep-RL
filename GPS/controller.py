@@ -497,9 +497,10 @@ class OfflineController(iLQG):
             else:
                 # Check if constraint cen be fulfilled at all
                 if self.check_constrain:
-                    if self.step(max_eta) > kl_step:
+                    kl_div = self.step(max_eta)
+                    if kl_div > kl_step:
                         raise ValueError(
-                            f"max_eta eta to low ({max_eta})")
+                            f"max_eta eta to low: ({max_eta}), kl_div: {kl_div}")
 
                 # Find the point where kl divergence equals the kl_step
                 def constraint_violation(log_eta):
