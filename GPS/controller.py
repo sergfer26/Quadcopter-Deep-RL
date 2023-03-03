@@ -446,20 +446,19 @@ class OfflineController(iLQG):
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
         params['x0'] = self.x0
-
         (xs, F_x, F_u, L, L_x, L_u, L_xx, L_ux, L_uu, F_xx, F_ux,
          F_uu) = self._forward_rollout(self.x0, us)
 
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        us_new = self._control(
-            xs, us, k, K, C, params['alpha'], False, x0=self.x0)[1]
+        # us_new = self._control(
+        #     params['xs'], params['us'], k, K, C, params['alpha'], False, x0=self.x0)[1]
         us_old = self._control(**params)[1]
         C_old = params['C']
         C_new = np.array([nearestPD(C[i]) for i in range(N)])
         C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
+        kl_div = sum([mvn_kl_div(us[j], us_old[j], C_new[j], C_old[j])
                       for j in range(N)])
         return kl_div
 
