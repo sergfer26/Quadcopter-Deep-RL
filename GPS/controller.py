@@ -216,7 +216,7 @@ class iLQG(iLQR):
                 # Backtracking line search.
                 for alpha in alphas:
                     xs_new, us_new = self._control(xs, us, k, K, C, alpha,
-                                                   is_stochastic=False)
+                                                   is_stochastic=self.is_stochastic)
                     J_new = self._trajectory_cost(xs_new, us_new)
                     if J_new < J_opt:
                         if np.abs((J_opt - J_new) / J_opt) < tol:
@@ -336,7 +336,7 @@ class iLQG(iLQR):
         return k, K, C
 
     def _control(self, xs, us, k, K, C, alpha=1.0,
-                 is_stochastic=True, x0=None):
+                 is_stochastic=False, x0=None):
         """Applies the controls for a given trajectory.
 
         Args:
