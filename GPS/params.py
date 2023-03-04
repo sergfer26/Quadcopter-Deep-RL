@@ -3,8 +3,8 @@ PARAMS_LQG = {
     'delta_0': 2.0,
     'tol': 1e-6,
     'n_iterations': 100,
-    'is_stochastic': False,
-    'cov_reg': 3e-1
+    'is_stochastic': True,
+    'cov_reg': 1e-2
 }
 PARAMS_OFFLINE = {
     'lamb': 1e-6,
@@ -12,7 +12,7 @@ PARAMS_OFFLINE = {
     'kl_step': 200,
     'per_kl': .1,
     'adaptive_kl': True,
-    'min_eta': '1',
+    'min_eta': '1e-4',
     'max_eta': '1e8',
     'rtol': 1e-1,
     'kl_maxiter': 1
