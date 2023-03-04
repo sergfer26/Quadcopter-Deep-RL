@@ -76,7 +76,7 @@ def main(path):
               inv_t_u=inv_transform_u,
               N=PARAMS['N'],
               M=PARAMS['M'],
-              eta=PARAMS_OFFLINE['min_eta'],
+              eta=eval(PARAMS_OFFLINE['min_eta']),
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
               kl_step=KL_STEP,
