@@ -2,7 +2,7 @@ import torch
 import pathlib
 import numpy as np
 import multiprocessing as mp
-
+from scipy.stats import multivariate_normal
 from torch import optim
 from copy import deepcopy
 from os.path import exists
@@ -29,8 +29,8 @@ class GPS:
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
-                 learning_rate=0.01, kl_step=20,
-                 known_dynamics=True):
+                 learning_rate=0.01, kl_step=200,
+                 per_kl=.1, known_dynamics=False):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -82,6 +82,7 @@ class GPS:
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
         self.kl_step = kl_step
+        self.per_kl = per_kl
 
         # ilQG instances.
         if not callable(cost_terminal):
@@ -315,8 +316,7 @@ class GPS:
         if self.N > 1:
             processes = list()
             for i in range(self.N):
-                x0 = [self.env.observation_space.sample()
-                      for i in range(self.M)]
+                x0 = self.env.observation_space.sample()
                 cost_kwargs = deepcopy(self.cost_kwargs)
                 cost_kwargs['lamb'] = self.lamb[i]
                 cost_kwargs['nu'] = self.nu[i]
@@ -389,6 +389,8 @@ class GPS:
         self.nu = self._update_nu(mean_div)
         loss = loss.detach().cpu().item()
 
+        # 4. Update kl_step
+        self.kl_step = self.kl_step * (1 - self.per_kl)
         return loss, div
 
 
@@ -404,6 +406,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     M : int
         Indice de trayectoria producida por MPC.
     '''
+    n_x = dynamics_kwargs['n_x']
+    n_u = dynamics_kwargs['n_u']
     if not isinstance(policy_sigma, np.ndarray):
         policy_sigma = np.identity(dynamics_kwargs['n_u'])
     dynamics = ContinuousDynamics(**dynamics_kwargs)
@@ -429,18 +433,21 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)
-
-    xs, us = control.rollout(np.zeros(dynamics_kwargs['n_x']))
-
+    is_stochastic = control.is_stochastic
+    control.is_stochastic = False
+    xs, us = control.rollout(x0)
+    control.is_stochastic = is_stochastic
     # control.fit_control(xs[0], us_init)
-    control.x0, control.us_init = xs[0], us
+    control.x0, control.us_init = x0, us
     control.optimize(kl_step, cost.eta)
     control.save(path=path, file_name=f'control_{i}.npz')
 
-    states = np.empty((M, T + 1, dynamics_kwargs['n_x']))
-    actions = np.empty((M, T, dynamics_kwargs['n_u']))
-    for x, r in zip(x0, range(M)):
-        xs, us = control.rollout(x)
+    states = np.empty((M, T + 1, n_x))
+    actions = np.empty((M, T, n_u))
+    control.is_stochastic = True
+    x0_samples = multivariate_normal.rvs(mean=x0, cov=np.identity(n_x), size=M)
+    for r in range(M):
+        xs, us = control.rollout(x0_samples[r])
         states[r] = xs
         actions[r] = us
 
