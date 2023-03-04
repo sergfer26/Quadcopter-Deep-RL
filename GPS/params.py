@@ -12,7 +12,7 @@ PARAMS_OFFLINE = {
     'kl_step': 200,
     'per_kl': .1,
     'adaptive_kl': True,
-    'min_eta': '1e-4',
+    'min_eta': '1e-1',
     'max_eta': '1e8',
     'rtol': 1e-1,
     'kl_maxiter': 1
