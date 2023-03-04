@@ -19,7 +19,12 @@ from utils import plot_performance
 from ilqr.cost import FiniteDiffCost
 
 
-def main(updates, path, old_path):
+def main(updates, path, old_path,
+         adaptive_kl=False,
+         per_kl=0.1,
+         kl_init=200,
+         max_eta=1e8
+         ):
 
     env = QuadcopterEnv(u0=W0)
     n_u = len(env.action_space.sample())
@@ -36,7 +41,7 @@ def main(updates, path, old_path):
                        n_x=n_x,
                        n_u=n_u,
                        nu=PARAMS['nu'] * np.ones(T),
-                       eta=PARAMS['min_eta'],
+                       eta=eval(PARAMS['min_eta']),
                        lamb=PARAMS['lamb'] * np.ones((T, n_u)),
                        T=T)
     # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
@@ -64,15 +69,14 @@ def main(updates, path, old_path):
     etas = [cost.eta]
     div = []
     failed = False
-    kl_step = PARAMS['kl_step']
+    kl_step = kl_init
     for i in range(updates):
         try:
             min_eta = cost.eta
             xs, us, cost_trace, kl_div = agent.optimize(
-                kl_step, min_eta=min_eta)
+                kl_step, min_eta=min_eta, max_eta=max_eta)
             agent.us_init = agent.rollout(agent.x0)[1]
-            kl_step = kl_step * \
-                (1 - PARAMS['per_kl']) if not PARAMS['adaptive_kl'] else kl_div
+            kl_step = kl_div if adaptive_kl else kl_step * (1 - per_kl)
             agent.check_constrain = False
             etas.append(min_eta)
             div.append(kl_div)
@@ -176,5 +180,10 @@ if __name__ == '__main__':
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
     updates = 5
-    send_email.report_sender(main, args=[updates, PATH, OLD_PATH])
+    adaptive_kl = PARAMS['adaptive_kl']
+    per_kl = PARAMS['per_kl']
+    kl_step = PARAMS['kl_step']
+    max_eta = eval(PARAMS['max_eta'])
+    send_email.report_sender(main, args=[updates, PATH, OLD_PATH, adaptive_kl,
+                                         per_kl, kl_step, max_eta])
     # main(updates, PATH, OLD_PATH)
