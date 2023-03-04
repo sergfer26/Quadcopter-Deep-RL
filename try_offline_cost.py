@@ -58,21 +58,21 @@ def main(updates, path, old_path):
     agent.x0 = env.observation_space.sample()
     print(f'x0={agent.x0}')  # np.zeros(n_x)
 
-    agent.us_init = rollout(expert, env, state_init=agent.x0)[1]
+    agent.us_init = expert.rollout(agent.x0)[1]
     cost.update_control(control=expert)
-    min_eta = cost.eta
-    print(f'valor inicial de eta={min_eta}')
-    etas = [min_eta]
+    print(f'valor inicial de eta={cost.min_eta}')
+    etas = [cost.min_eta]
     div = []
     failed = False
     kl_step = PARAMS['kl_step']
     for i in range(updates):
         try:
+            min_eta = cost.eta
             xs, us, cost_trace, kl_div = agent.optimize(
                 kl_step, min_eta=min_eta)
             agent.us_init = agent.rollout(agent.x0)[1]
-            min_eta = cost.eta
-            kl_step = kl_step * (1 - PARAMS['per_kl'])
+            kl_step = kl_step * \
+                (1 - PARAMS['per_kl']) if not PARAMS['adaptive_kl'] else kl_div
             agent.check_constrain = False
             etas.append(min_eta)
             div.append(kl_div)
