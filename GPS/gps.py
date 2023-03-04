@@ -9,6 +9,7 @@ from os.path import exists
 # from functools import partial
 from .utils import OfflineCost  # , OnlineCost
 # from ilqr import RecedingHorizonController
+from .params import PARAMS_LQG
 from GPS.utils import ContinuousDynamics
 from .controller import OfflineController  # , OnlineController, OnlineMPC
 from torch.distributions.multivariate_normal import _batch_mahalanobis
@@ -273,7 +274,7 @@ class GPS:
             file = np.load(path + f'control_{i}.npz')
             K[i] = file['K']
             k[i] = file['k']
-            C[i] = file['C']
+            C[i] = file['C'] + PARAMS_LQG['cov_reg'] * np.identity(self.n_u)
             nominal_xs[i] = file['xs']
             nominal_us[i] = file['us']
             rollouts = np.load(path + f'rollouts_{i}.npz')
