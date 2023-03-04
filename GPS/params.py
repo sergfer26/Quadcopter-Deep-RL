@@ -11,6 +11,7 @@ PARAMS_OFFLINE = {
     'nu': 1e-6,
     'kl_step': 200,
     'per_kl': .1,
+    'adaptive_kl': True,
     'min_eta': 1,
     'max_eta': 1e5,
     'rtol': 1e-1,
