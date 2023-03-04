@@ -6,7 +6,7 @@ from GPS.utils import ContinuousDynamics
 from Linear.equations import f, W0, omega_0
 from env import QuadcopterEnv
 from GPS.controller import OfflineController, iLQG
-from simulation import plot_rollouts, rollout, n_rollouts
+from simulation import plot_rollouts, n_rollouts
 from matplotlib import pyplot as plt
 from animation import create_animation
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
@@ -55,7 +55,7 @@ def main(updates, path, old_path,
                        t_x=transform_x, inv_t_u=inv_transform_u,
                        cov=omega_0 * np.identity(n_u))
     agent = OfflineController(dynamics, cost, T)
-    expert = iLQG(dynamics, other_cost, T)
+    expert = iLQG(dynamics, other_cost, T, is_stochastic=False)
     expert.load(old_path)
     agent.alpha = expert.alpha
     agent.check_constrain = True
