@@ -60,8 +60,8 @@ def main(updates, path, old_path):
 
     agent.us_init = expert.rollout(agent.x0)[1]
     cost.update_control(control=expert)
-    print(f'valor inicial de eta={cost.min_eta}')
-    etas = [cost.min_eta]
+    print(f'valor inicial de eta={cost.eta}')
+    etas = [cost.eta]
     div = []
     failed = False
     kl_step = PARAMS['kl_step']
