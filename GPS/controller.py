@@ -432,7 +432,7 @@ class OfflineController(iLQG):
         npzfile = np.load(file_path)
         self._k = npzfile['k']
         self._K = npzfile['K']
-        self._C = np.round(npzfile['C'], 5)
+        self._C = npzfile['C']
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
@@ -530,7 +530,8 @@ class OfflineController(iLQG):
                                self._C, self.alpha, False)[1]
         N = us.shape[0]
         C_old = params['C']
-        C_new = np.array([nearestPD(self._C[i]) for i in range(N)])
+        self._C = np.array([nearestPD(self._C[i]) for i in range(N)])
+        C_new = self._C
         C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
         kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
                       for j in range(N)])
