@@ -136,6 +136,7 @@ def main(updates, path, old_path,
                          path=path + 'sample_rollouts/')
 
         agent.reset()
+        agent.is_stochastic = True
         states_, actions_, scores_ = n_rollouts(
             agent, env, n=100)
 
