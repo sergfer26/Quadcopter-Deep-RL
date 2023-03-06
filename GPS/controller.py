@@ -414,7 +414,7 @@ class OfflineController(iLQG):
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
         C = np.array([nearestPD(self._C[i]) for i in range(self._C.shape[0])])
-        C += PARAMS_LQG['cov_reg'] * np.identity(self._C.shape[-1])
+        # C += PARAMS_LQG['cov_reg'] * np.identity(self._C.shape[-1])
         np.savez(file_path,
                  C=C,
                  K=self._K,
