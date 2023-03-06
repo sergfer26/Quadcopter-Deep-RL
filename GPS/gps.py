@@ -192,12 +192,26 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
+        # Check if is symetric positive definite:
+        eigvals = np.linalg.eigvals(C)
+        eigvals_sigma = np.linalg.eigvals(sigma)
+        raise_error = False
+        if not np.apply_along_axis(np.greater, -1, eigvals, np.zeros(self.n_u)).all():
+            raise_error = True
+            error = 'C has negative eigen values'
+        if not np.apply_along_axis(np.greater, -1, eigvals_sigma, np.zeros(self.n_u)).all():
+            raise_error = True
+            error = 'sigma has negative eigen values: \n {sigma}'
+
+        if raise_error:
+            raise ValueError(error)
+
         if len(states.shape) == 4:
             arg1 = 'NMT,NT-> NMT'
             arg2 = 'NMTu,NTu-> NMT'
         elif len(states.shape) == 3:
             arg1 = 'NT,NT-> NT'
-            arg2 = 'NMTu,NTu-> NMT'
+            arg2 = 'NTu,NTu-> NT'
         else:
             print('states de dimensión {states.shape} no es compatible')
         states = torch.FloatTensor(states).to(device)
@@ -365,6 +379,14 @@ class GPS:
         # 1.2 Loading fitted parameters
         K, k, C, nominal_xs, nominal_us, xs, us, alphas = self._load_fitted_lqg(
             path)
+        if np.isnan(K).any():
+            raise ValueError('K has NaNs')
+        if np.isnan(k).any():
+            raise ValueError('k has NaNs')
+        if np.isnan(C).any():
+            raise ValueError('C has NaNs')
+        if np.isnan(self.eta).any():
+            raise ValueError('eta has NaNs')
         # 1.3 Loading simulations
         # 2. Policy fitting
         us_mean = self.mean_control(xs, nominal_xs, nominal_us, K, k, alphas)
