@@ -387,6 +387,14 @@ class GPS:
             raise ValueError('C has NaNs')
         if np.isnan(self.eta).any():
             raise ValueError('eta has NaNs')
+        if np.isnan(nominal_us).any():
+            raise ValueError('nominal us has NaNs')
+        if np.isnan(nominal_xs).any():
+            raise ValueError('nominal xs has NaNs')
+        if np.isnan(xs).any():
+            raise ValueError('xs has NaNs')
+        if np.isnan(us).any():
+            raise ValueError('us has NaNs')
         # 1.3 Loading simulations
         # 2. Policy fitting
         us_mean = self.mean_control(xs, nominal_xs, nominal_us, K, k, alphas)
