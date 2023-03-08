@@ -22,7 +22,6 @@ from get_report import create_report
 
 
 SHOW = PARAMS['SHOW']
-KL_STEP = PARAMS_OFFLINE['kl_step']
 
 if not SHOW:
     from functools import partialmethod
@@ -51,6 +50,7 @@ def main(path):
     K = PARAMS['UPDATES']
     rollouts = PARAMS['rollouts']
     samples = PARAMS['samples']
+    KL_STEP = PARAMS_OFFLINE['kl_step']
     # 1. Setup
     env = QuadcopterEnv()
     dt = env.time[-1] - env.time[-2]
@@ -102,7 +102,7 @@ def main(path):
                      ylabel='$L_{\\theta}(\\theta, p)$',
                      title='Entrenamiento', ax=ax1)
     # 3.2 eta's and nu's evolution
-    dic = {'$eta$': etas, '$nu$': nus}
+    dic = {'$\eta$': etas, '$\\nu$': nus}
     for ax, key in zip([ax2, ax3], dic.keys()):
         ax.plot(dic[key])
         ax.set_title(key)
