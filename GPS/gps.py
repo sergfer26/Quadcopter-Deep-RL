@@ -151,7 +151,7 @@ class GPS:
         #     arg_x = 'Tux,Tx -> Tu'
         #     arg_k = 'T,Tu ->Tu'
         us_mean = np.einsum('NTux, NMTx -> NMTu', K, xs - nominal_xs)
-        us_mean += nominal_us
+        us_mean += np.expand_dims(nominal_us, axis=1)
         us_mean += np.expand_dims(np.einsum('N, NTu-> NTu', alpha, k), axis=1)
         return us_mean
 
