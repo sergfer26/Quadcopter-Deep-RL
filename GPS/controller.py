@@ -4,7 +4,7 @@ from scipy.stats import multivariate_normal
 from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
-from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
+from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD, isPD
 
 
 class iLQG(iLQR):
@@ -404,7 +404,7 @@ class OfflineController(iLQG):
                  reg=20,
                  delta_0=2.0,
                  is_stochastic=PARAMS_LQG['is_stochastic'],
-                 known_dynamics=True):
+                 known_dynamics=False):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
@@ -466,7 +466,15 @@ class OfflineController(iLQG):
                        F_xx=None, F_ux=None, F_uu=None):
         k, K, C = super()._backward_pass(F_x, F_u, L_x, L_u,
                                          L_xx, L_ux, L_uu, F_xx, F_ux, F_uu)
-        C = np.array([nearestPD(C[j]) for j in range(C.shape[0])])
+        for j in range(C.shape[0]):
+            if not isPD(C[j]):
+                try:
+                    C[j] = nearestPD(C[j])
+                except np.linalg.LinAlgError as e:
+                    # Quu was not positive-definite and this diverged.
+                    # Try again with a higher regularization term.
+                    warnings.warn(str(e))
+                    print(C[j])
         return k, K, C
 
     def optimize(self, kl_step: float,
@@ -488,7 +496,7 @@ class OfflineController(iLQG):
                     a list of `ILQRStepResult` if `full_history` is enabled
                     (in order they were visited)
         """
-        if self.known_dynamics:
+        if not self.known_dynamics:
             # Check if constraind is fulfilled at maximum deviation
             if self.step(min_eta) <= kl_step:
                 # return self.step(min_eta)
