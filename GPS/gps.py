@@ -338,6 +338,7 @@ class GPS:
                 cost_kwargs['eta'] = self.eta[i]
                 p = mp.Process(target=fit_ilqg,
                                args=(x0,
+                                     self.kl_step,
                                      self.policy,
                                      cost_kwargs,
                                      self.dynamics_kwargs,
