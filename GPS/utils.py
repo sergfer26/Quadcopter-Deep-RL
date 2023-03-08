@@ -82,7 +82,7 @@ class OfflineCost(FiniteDiffCost):
         def _cost(x, u, i):
             C = self._C[i]
             c = 0.0
-            c += self.cost(x, u, i) - u.T@self.lamb[i]
+            c += self.cost(x, u, i) + u.T@self.lamb[i]
             c -= self.nu[i] * \
                 multivariate_normal.logpdf(x=u, mean=self.policy_mean(x),
                                            cov=self.policy_cov)
