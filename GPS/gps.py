@@ -301,7 +301,7 @@ class GPS:
             xs[i] = rollouts['xs']
             us[i] = rollouts['us']
             alphas[i] = file['alpha']
-        nominal_xs = nominal_xs[:, :, :-1]
+        nominal_xs = nominal_xs[:, :-1]
         xs = xs[:, :, :-1]
         return K, k, C, nominal_xs, nominal_us, xs, us, alphas
 
