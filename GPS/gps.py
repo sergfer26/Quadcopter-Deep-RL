@@ -31,7 +31,8 @@ class GPS:
                  N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
                  learning_rate=0.01, kl_step=200,
-                 per_kl=.1, known_dynamics=False):
+                 per_kl=.1, known_dynamics=False,
+                 mask=None):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -105,6 +106,8 @@ class GPS:
         self.policy_sigma = np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
+
+        self.mask = mask
 
         # Multiprocessing instances.
         self.manager = mp.Manager()
@@ -214,6 +217,9 @@ class GPS:
             arg2 = 'NTu,NTu-> NT'
         else:
             print('states de dimensión {states.shape} no es compatible')
+
+        if len(C.shape) == 4:
+            C = np.expand_dims(C, axis=1)
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         C = torch.FloatTensor(C).to(device)
@@ -295,7 +301,7 @@ class GPS:
             xs[i] = rollouts['xs']
             us[i] = rollouts['us']
             alphas[i] = file['alpha']
-        nominal_xs = xs[:, :, :-1]
+        nominal_xs = nominal_xs[:, :, :-1]
         xs = xs[:, :, :-1]
         return K, k, C, nominal_xs, nominal_us, xs, us, alphas
 
@@ -348,7 +354,8 @@ class GPS:
                                      path,
                                      self.t_x,
                                      self.inv_t_u,
-                                     self.policy._sigma
+                                     self.policy._sigma,
+                                     self.mask
                                      )
                                )
                 processes.append(p)
@@ -372,14 +379,15 @@ class GPS:
                     path,
                     self.t_x,
                     self.inv_t_u,
-                    self.policy._sigma
+                    self.policy._sigma,
+                    self.mask
                     )
             fit_ilqg(*args)
         # 1.1 update eta
         self.eta = self._update_eta(path)
         # 1.2 Loading fitted parameters
-        K, k, C, nominal_xs, nominal_us, xs, us, alphas = self._load_fitted_lqg(
-            path)
+        (K, k, C, nominal_xs, nominal_us,
+         xs, us, alphas) = self._load_fitted_lqg(path)
         if np.isnan(K).any():
             raise ValueError('K has NaNs')
         if np.isnan(k).any():
@@ -427,7 +435,7 @@ class GPS:
 
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
-             path='', t_x=None, inv_t_u=None, policy_sigma=None):
+             path='', t_x=None, inv_t_u=None, policy_sigma=None, mask=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -478,6 +486,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     actions = np.empty((M, T, n_u))
     control.is_stochastic = True
     x0_samples = multivariate_normal.rvs(mean=x0, cov=np.identity(n_x), size=M)
+    if isinstance(mask, np.ndarray):
+        x0_samples[:, mask] = x0[mask]
     for r in range(M):
         xs, us = control.rollout(x0_samples[r])
         states[r] = xs
