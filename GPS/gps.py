@@ -153,10 +153,12 @@ class GPS:
         # elif len(xs.shape) == 2:  # (T, x)
         #     arg_x = 'Tux,Tx -> Tu'
         #     arg_k = 'T,Tu ->Tu'
+        nominal_xs = np.expand_dims(nominal_xs, axis=1)
         us_mean = np.einsum('NTux, NMTx -> NMTu', K, xs - nominal_xs)
         us_mean += np.expand_dims(nominal_us, axis=1)
         us_mean += np.expand_dims(np.einsum('N, NTu-> NTu', alpha, k), axis=1)
         return us_mean
+# (N, M, T, n_x) - (N, T, n_x)
 
     def cov_policy(self, C):
         if len(C.shape) == 5:
