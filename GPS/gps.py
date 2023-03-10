@@ -31,8 +31,7 @@ class GPS:
                  N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
                  learning_rate=0.01, kl_step=200,
-                 per_kl=.1, known_dynamics=False,
-                 mask=None):
+                 per_kl=.1, known_dynamics=False):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -106,8 +105,6 @@ class GPS:
         self.policy_sigma = np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
-
-        self.mask = mask
 
         # Multiprocessing instances.
         self.manager = mp.Manager()
@@ -340,6 +337,8 @@ class GPS:
             processes = list()
             for i in range(self.N):
                 x0 = self.env.observation_space.sample()
+                x0_samples = np.array(
+                    [self.env.observation_space.sample() for _ in range(self.M)])
                 cost_kwargs = deepcopy(self.cost_kwargs)
                 cost_kwargs['lamb'] = self.lamb[i]
                 cost_kwargs['nu'] = self.nu[i]
@@ -357,7 +356,7 @@ class GPS:
                                      self.t_x,
                                      self.inv_t_u,
                                      self.policy._sigma,
-                                     self.mask
+                                     x0_samples
                                      )
                                )
                 processes.append(p)
@@ -370,6 +369,8 @@ class GPS:
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
             x0 = self.env.observation_space.sample()
+            x0_samples = np.array(
+                [self.env.observation_space.sample() for _ in range(self.M)])
             args = (x0,
                     self.kl_step,
                     self.policy,
@@ -382,7 +383,7 @@ class GPS:
                     self.t_x,
                     self.inv_t_u,
                     self.policy._sigma,
-                    self.mask
+                    x0_samples
                     )
             fit_ilqg(*args)
         # 1.1 update eta
@@ -437,7 +438,7 @@ class GPS:
 
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
-             path='', t_x=None, inv_t_u=None, policy_sigma=None, mask=None):
+             path='', t_x=None, inv_t_u=None, policy_sigma=None, x0_samples=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -487,10 +488,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     states = np.empty((M, T + 1, n_x))
     actions = np.empty((M, T, n_u))
     control.is_stochastic = True
-    x0_samples = multivariate_normal.rvs(
-        mean=x0, cov=0.1 * np.identity(n_x), size=M)
-    if isinstance(mask, np.ndarray):
-        x0_samples[:, mask] = x0[mask]
+    if not isinstance(x0_samples, np.ndarray):
+        x0_samples = multivariate_normal.rvs(
+            mean=x0, cov=0.01 * np.identity(n_x), size=M)
     for r in range(M):
         xs, us = control.rollout(x0_samples[r])
         states[r] = xs
