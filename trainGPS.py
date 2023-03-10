@@ -81,9 +81,7 @@ def main(path):
               lamb=PARAMS_OFFLINE['lamb'],
               kl_step=KL_STEP,
               per_kl=PARAMS_OFFLINE['kl_step'],
-              known_dynamics=PARAMS['known_dynamics'],
-              mask=np.array([True, True, True, False, False, False,
-                            True, True, True, False, False, False])
+              known_dynamics=PARAMS['known_dynamics']
               )
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
