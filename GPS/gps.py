@@ -487,7 +487,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     states = np.empty((M, T + 1, n_x))
     actions = np.empty((M, T, n_u))
     control.is_stochastic = True
-    x0_samples = multivariate_normal.rvs(mean=x0, cov=np.identity(n_x), size=M)
+    x0_samples = multivariate_normal.rvs(
+        mean=x0, cov=0.1 * np.identity(n_x), size=M)
     if isinstance(mask, np.ndarray):
         x0_samples[:, mask] = x0[mask]
     for r in range(M):
