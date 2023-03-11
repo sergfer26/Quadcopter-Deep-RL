@@ -7,7 +7,8 @@ from ilqr.controller import iLQR
 from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
-from scipy.stats import multivariate_normal
+from scipy.stats import multivariate_normal,
+from scipy.spatial.distance import mahalanobis
 from .params import PARAMS_LQG, PARAMS_ONLINE
 from .policy import Policy
 # from scipy.linalg import issymmetric
@@ -38,7 +39,8 @@ class OfflineCost(FiniteDiffCost):
                  x_eps=None, u_eps=None,
                  eta=0.1, nu=None, lamb=None,
                  T=10, policy_mean=None, policy_cov=None,
-                 known_dynamics=True):
+                 known_dynamics=True,
+                 u0=None):
         '''Constructs an Offline cost for Guided policy search.
 
         Args:
@@ -54,7 +56,7 @@ class OfflineCost(FiniteDiffCost):
                 Default: np.sqrt(np.finfo(float).eps).
             eta : Langrange's multiplier, old policy weight.
                 Default: 0.1.
-            nu : Langrange's multiplier, neural network weight.
+            nu : Langrange's multiplier for neural network.
                 Default: 0.001.
             lambd : Langrange's multiplier, contraint weight.
                 Default: None (np.array).
@@ -78,22 +80,19 @@ class OfflineCost(FiniteDiffCost):
 
         self.cost = cost  # l_bounded
         self.known_dynamics = known_dynamics
+        self.u0 = np.zeros(n_u) if u0 is None else u0
+        super().__init__(self._cost, l_terminal, n_x, n_u, x_eps, u_eps)
 
-        def _cost(x, u, i):
-            C = self._C[i]
-            c = 0.0
-            c += self.cost(x, u, i) + u.T@self.lamb[i]
-            c -= self.nu[i] * \
-                multivariate_normal.logpdf(x=u, mean=self.policy_mean(x),
-                                           cov=self.policy_cov)
-            c /= (self.eta + self.nu[i])
-            c -= self.eta * multivariate_normal.logpdf(x=u,
-                                                       mean=self._control(
-                                                           x, i),
-                                                       cov=C) / (self.eta + self.nu[i])
-            return c
-
-        super().__init__(_cost, l_terminal, n_x, n_u, x_eps, u_eps)
+    def _cost(self, x, u, i):
+        C = self._C[i]
+        c = 0.0
+        c += self.cost(x, u, i) + (self.u0 + u).T@self.lamb[i]
+        c -= self.nu[i] * logpdf(x=u, mean=self.policy_mean(x),
+                                 cov=self.policy_cov)
+        c /= (self.eta + self.nu[i])
+        c -= self.eta * logpdf(x=u, mean=self._control(x, i),
+                               cov=C) / (self.eta + self.nu[i])
+        return c
 
     def _control(self, x, i):
         us = self._us[i]
@@ -279,6 +278,11 @@ class OnlineCost(FiniteDiffCost):
                                         cov=cov_dynamics,
                                         allow_singular=True)
         return c
+
+
+def logpdf(x, mean, cov):
+    inv_cov = np.linalg.inv(cov)
+    return (-1/2) * mahalanobis(x, mean, inv_cov)
 
 
 def mvn_kl_div(mu1, mu2, sigma1, sigma2):

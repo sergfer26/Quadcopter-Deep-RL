@@ -31,7 +31,8 @@ class GPS:
                  N=3, M=2, eta=1e-3, nu=1e-2,
                  lamb=1e-3, alpha_lamb=1e-1,
                  learning_rate=0.01, kl_step=200,
-                 per_kl=.1, known_dynamics=False):
+                 per_kl=.1, known_dynamics=False,
+                 u0=None):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -90,6 +91,7 @@ class GPS:
             def cost_terminal(x, i): return cost(x, np.zeros(self.n_u), i)
 
         self.dynamics_kwargs = dynamics_kwargs
+        u0 = np.zeros(self._u) if u0 is None else u0
         self.cost_kwargs = dict(cost=cost,
                                 l_terminal=cost_terminal,
                                 n_x=self.n_x,
@@ -98,7 +100,8 @@ class GPS:
                                 lamb=lamb * np.ones(self.n_u),
                                 nu=nu * np.ones(T),
                                 T=T,
-                                known_dynamics=known_dynamics)  # ,
+                                known_dynamics=known_dynamics,
+                                u0=u0)  # ,
         # u_bound=u_bound)
 
         self.policy = policy
