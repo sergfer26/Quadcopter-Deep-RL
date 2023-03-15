@@ -7,7 +7,7 @@ from ilqr.controller import iLQR
 from scipy.integrate import odeint
 from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
-from scipy.stats import multivariate_normal,
+from scipy.stats import multivariate_normal
 from scipy.spatial.distance import mahalanobis
 from .params import PARAMS_LQG, PARAMS_ONLINE
 from .policy import Policy
@@ -86,7 +86,7 @@ class OfflineCost(FiniteDiffCost):
     def _cost(self, x, u, i):
         C = self._C[i]
         c = 0.0
-        c += self.cost(x, u, i) + (self.u0 + u).T@self.lamb[i]
+        c += self.cost(x, u, i) - (self.u0 + u).T@self.lamb[i]
         c -= self.nu[i] * logpdf(x=u, mean=self.policy_mean(x),
                                  cov=self.policy_cov)
         c /= (self.eta + self.nu[i])
@@ -281,8 +281,11 @@ class OnlineCost(FiniteDiffCost):
 
 
 def logpdf(x, mean, cov):
+    '''
+    https://blogs.sas.com/content/iml/2020/07/15/multivariate-normal-log-likelihood.html
+    '''
     inv_cov = np.linalg.inv(cov)
-    return (-1/2) * mahalanobis(x, mean, inv_cov)
+    return (-1/2) * mahalanobis(x, mean, inv_cov) ** 2
 
 
 def mvn_kl_div(mu1, mu2, sigma1, sigma2):
