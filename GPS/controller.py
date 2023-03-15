@@ -501,8 +501,8 @@ class OfflineController(iLQG):
             else:
                 # Check if constraint cen be fulfilled at all
                 if self.check_constrain:
+                    print("max_eta")
                     kl_div = self.step(max_eta)
-                    print(f"kl_div: {kl_div}")
                     if kl_div > kl_step:
                         raise ValueError(
                             f"max_eta eta to low ({max_eta})")
