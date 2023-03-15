@@ -20,11 +20,11 @@ K = 0.001219  # 2.980 * 1e-6  # kt
 omega_0 = np.sqrt((G * M)/(4 * K))
 W0 = np.array([1, 1, 1, 1]).reshape((4,)) * omega_0
 
-K1 = PARAMS_ENV['K1']
-K11 = PARAMS_ENV['K11']
-K2 = PARAMS_ENV['K2']
-K21 = PARAMS_ENV['K21']
-K3 = PARAMS_ENV['K3']
+K1 = eval(PARAMS_ENV['K1'])
+K11 = eval(PARAMS_ENV['K11'])
+K2 = eval(PARAMS_ENV['K2'])
+K21 = eval(PARAMS_ENV['K21'])
+K3 = eval(PARAMS_ENV['K3'])
 
 omega0_per = .60
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
