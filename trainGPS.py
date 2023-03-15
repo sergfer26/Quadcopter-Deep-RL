@@ -32,7 +32,7 @@ if not SHOW:
 def train_gps(gps: GPS, K, path):
     losses = np.empty(K)
     nus = np.empty((K, gps.T))
-    etas = np.empty((K, gps.T))
+    etas = np.empty(K)
     lambdas = np.empty((K, gps.T, gps.n_u))
     # Inicializa x0s
     gps.init_samples()
@@ -44,9 +44,12 @@ def train_gps(gps: GPS, K, path):
             nus[k] = np.mean(gps.nu, axis=0)
             etas[k] = np.mean(gps.eta, axis=0)
             lambdas[k] = np.mean(gps.lamb, axis=0)
+            lamb_1, lamb_2, lamb_3, lamb_4 = np.mean(lambdas[k], axis=0)
             pbar.set_postfix(loss='{:.2f}'.format(loss),
-                             kl_div='{:.2f}'.format(gps.kl_step))
-            #  eta='{:.2f}'.format(etas[k].item()),
+                             kl_step='{:.2f}'.format(gps.kl_step),
+                             lamb_1=lamb_1, lamb_2=lamb_2,
+                             lamb_3=lamb_3, lamb_4=lamb_4,
+                             eta='{:.2f}'.format(etas[k]))
             pbar.update(1)
     return losses, nus, etas, lambdas
 
