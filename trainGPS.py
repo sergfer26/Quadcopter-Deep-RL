@@ -1,4 +1,5 @@
 import time
+import torch
 import pathlib
 import send_email
 import numpy as np
@@ -33,6 +34,8 @@ def train_gps(gps: GPS, K, path):
     nus = np.empty((K, gps.T))
     etas = np.empty((K, gps.T))
     lambdas = np.empty((K, gps.T, gps.n_u))
+    # Inicializa x0s
+    gps.init_samples()
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
@@ -41,7 +44,9 @@ def train_gps(gps: GPS, K, path):
             nus[k] = np.mean(gps.nu, axis=0)
             etas[k] = np.mean(gps.eta, axis=0)
             lambdas[k] = np.mean(gps.lamb, axis=0)
-            pbar.set_postfix(loss='{:.2f}'.format(loss))
+            pbar.set_postfix(loss='{:.2f}'.format(loss),
+                             kl_div='{:.2f}'.format(gps.kl_step))
+            #  eta='{:.2f}'.format(etas[k].item()),
             pbar.update(1)
     return losses, nus, etas, lambdas
 
@@ -58,8 +63,8 @@ def main(path):
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
     policy = Policy(other_env, [64, 64])
-    # policy.load_state_dict(torch.load(
-    #     'results_ddpg/12_9_113/actor', map_location='cpu'))
+    policy.load_state_dict(torch.load(
+        'results_ddpg/12_9_113/actor', map_location='cpu'))
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
     # 2. Training
@@ -82,7 +87,8 @@ def main(path):
               kl_step=KL_STEP,
               per_kl=PARAMS_OFFLINE['kl_step'],
               known_dynamics=PARAMS['known_dynamics'],
-              u0=W0
+              u0=W0,
+              init_sigma=W0[0]
               )
     losses, nus, etas, lambdas = train_gps(gps, K, PATH)
     tf = time.time()
@@ -111,25 +117,18 @@ def main(path):
     labels = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
     plot_rollouts(lambdas, env.time, labels, ax=ax)
-    if SHOW:
-        plt.show()
-    else:
-        fig.savefig(path + 'train_performance.png')
+    fig.savefig(path + 'train_performance.png')
     # 4. Simulation
     states, actions, scores = n_rollouts(
         policy, other_env, rollouts, t_x=inv_transform_x)
     fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
-    if SHOW:
-        plt.show()
-    else:
-        fig1.savefig(path + 'state_rollouts.png')
-        fig2.savefig(path + 'action_rollouts.png')
-        fig3.savefig(path + 'score_rollouts.png')
-    if not SHOW:
-        create_report(path, title='Entrenamiento GPS',
-                      method='gps', extra_method='ilqr')
+    fig1.savefig(path + 'state_rollouts.png')
+    fig2.savefig(path + 'action_rollouts.png')
+    fig3.savefig(path + 'score_rollouts.png')
+    create_report(path, title='Entrenamiento GPS',
+                  method='gps', extra_method='ilqr')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
     print('Terminó de simualación...')
