@@ -25,7 +25,7 @@ n_x = len(env.observation_space.sample())
 # env.noise_on = False
 dt = env.time[-1] - env.time[-2]
 dynamics = ContinuousDynamics(
-    f, n_x=n_x, n_u=n_u, u0=W0)  # ContinuousDynamics
+    f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)  # ContinuousDynamics
 
 cost = FiniteDiffCost(l=penalty,
                       l_terminal=terminal_penalty,
@@ -41,13 +41,15 @@ expert = LinearAgent(env)
 steps = env.steps - 1
 x0 = np.zeros(n_x)
 
-_, us_init, _ = rollout(expert, env, state_init=x0)
+us_init = rollout(expert, env, state_init=x0)[1]
+# us_init = np.apply_along_axis(
+#     constrain, -1, us_init, env.action_space.low, env.action_space.high)
 costs = list()  # np.zeros((EPISODES, env.steps - 1))
 xs, us, cost_trace = agent.fit_control(x0, us_init)
-costs.append(cost_trace)
-
 print('ya acabo el ajuste del control')
-
+costs.append(cost_trace)
+agent.save(PATH)
+print('los parametros del control fueron guardadados')
 
 plt.style.use("fivethirtyeight")
 fig, ax = plt.subplots(figsize=(10, 10), dpi=200)
@@ -72,15 +74,13 @@ fig2.savefig(PATH + 'action_rollouts.png')
 fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
 fig3.savefig(PATH + 'score_rollouts.png')
 
+
 create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
-agent.save(PATH)
-print('los parametros del control fueron guardadados')
 
 sample_indices = np.random.randint(states.shape[0], size=2)
 states_samples = states[sample_indices]
 actions_samples = actions[sample_indices]
 scores_samples = scores[sample_indices]
-
 create_animation(states_samples, actions_samples, env.time,
                  scores=scores_samples,
                  state_labels=STATE_NAMES,
