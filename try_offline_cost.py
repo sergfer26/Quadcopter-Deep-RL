@@ -13,8 +13,9 @@ from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from get_report import create_report
 from utils import date_as_path
 from dynamics import penalty, terminal_penalty, transform_x, inv_transform_u
-from GPS.utils import OfflineCost
+from GPS.utils import OfflineCost, nearestPD, mvn_kl_div
 from GPS.params import PARAMS_OFFLINE as PARAMS
+from GPS.params import PARAMS_LQG
 from utils import plot_performance
 from ilqr.cost import FiniteDiffCost
 
@@ -44,8 +45,6 @@ def main(updates, path, old_path,
                        eta=eval(PARAMS['min_eta']),
                        lamb=PARAMS['lamb'] * np.ones((T, n_u)),
                        T=T)
-    # 'results_ilqr/23_01_07_13_56/ilqr_control.npz'
-    # 'results_ilqr/22_12_31_20_09/ilqr_control.npz'
     other_cost = FiniteDiffCost(l=penalty,
                                 l_terminal=terminal_penalty,
                                 state_size=n_x,
@@ -60,7 +59,7 @@ def main(updates, path, old_path,
     agent.alpha = expert.alpha
     agent.check_constrain = True
 
-    agent.x0 = env.observation_space.sample()
+    agent.x0 = env.observation_space.sample()  # np.load(old_path)['xs'][0]
     print(f'x0={agent.x0}')  # np.zeros(n_x)
 
     agent.us_init = expert.rollout(agent.x0)[1]
@@ -70,6 +69,27 @@ def main(updates, path, old_path,
     div = []
     failed = False
     kl_step = kl_init
+    # begins prefitting...
+    print('begins prefitting...')
+    xs, us, _ = agent.fit_control(agent.x0, us_init=agent.us_init)
+    params = agent.cost.control_parameters()
+    params['is_stochastic'] = False
+    params['x0'] = agent.x0
+    us_old = agent._control(**params)[1]
+    us_new = agent._control(xs, us, agent._k, agent._K,
+                            agent._C, agent.alpha, False,
+                            x0=agent.x0)[1]
+    N = us.shape[0]
+    C_old = params['C']
+    agent._C = np.array([nearestPD(agent._C[i]) for i in range(N)])
+    C_new = agent._C
+    C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
+    kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
+                  for j in range(N)])
+    print(f'- init kl_div={kl_div}')
+
+    agent.cost.update_control(control=agent)
+    print('begins fitting...')
     for i in range(updates):
         try:
             min_eta = cost.eta
@@ -78,10 +98,12 @@ def main(updates, path, old_path,
             agent.us_init = agent.rollout(agent.x0)[1]
             kl_step = kl_div if adaptive_kl else kl_step * (1 - per_kl)
             agent.check_constrain = False
-            etas.append(min_eta)
+            etas.append(cost.eta)
             div.append(kl_div)
             cost.update_control(agent)
             agent.save(path, file_name=f'control_{i}.npz')
+            print(
+                f'- up= {i}, kl_div= {kl_div}, kl_step= {kl_step}, eta= {cost.eta}')
         except Exception:
             failed = True
             print(traceback.format_exc())
@@ -171,20 +193,23 @@ def main(updates, path, old_path,
                          score_labels=REWARD_NAMES,
                          file_name='flight',
                          path=path + 'sample_rollouts/')
+
     return PATH
 
 
 if __name__ == '__main__':
     # 'results_ilqr/23_02_08_22_01/'  # 'results_ilqr/23_02_09_12_50/'
     # OLD_PATH = 'results_offline/23_02_16_13_50/'
-    OLD_PATH = 'results_ilqr/23_02_16_23_21/'
+    # 'results_ilqr/23_02_16_23_21/'
+    OLD_PATH = 'results_ilqr/23_03_15_09_54/'
     PATH = 'results_offline/' + date_as_path() + '/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
-    updates = 5
+    updates = 2
     adaptive_kl = PARAMS['adaptive_kl']
     per_kl = PARAMS['per_kl']
     kl_step = PARAMS['kl_step']
     max_eta = eval(PARAMS['max_eta'])
-    send_email.report_sender(main, args=[updates, PATH, OLD_PATH, adaptive_kl,
-                                         per_kl, kl_step, max_eta])
-    # main(updates, PATH, OLD_PATH)
+    # send_email.report_sender(main, args=[updates, samples, PATH, OLD_PATH, adaptive_kl,
+    #                                      per_kl, kl_step, max_eta])
+    main(updates, PATH, OLD_PATH,
+         adaptive_kl, per_kl, kl_step, max_eta)
