@@ -441,7 +441,7 @@ class GPS:
         loss = loss.detach().cpu().item()
 
         # 4. Update kl_step
-        self.kl_step = self.kl_step * (1 - self.per_kl)
+        # self.kl_step = self.kl_step * (1 - self.per_kl)
         return loss, div
 
 
