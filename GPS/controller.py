@@ -112,8 +112,8 @@ class iLQG(iLQR):
         action = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
             self._K[self.i] @ (state - self._nominal_xs[self.i])
         if self.is_stochastic:
-            C = self._C[self.i]  # + PARAMS_LQG['cov_reg'] * \
-            # np.identity(self.num_actions)
+            C = nearestPD(
+                self._C[self.i]) + PARAMS_LQG['cov_reg'] * np.identity(self.num_actions)
             action = multivariate_normal.rvs(action, C, 1)
         if update_time_step:
             self.i += 1
@@ -189,8 +189,6 @@ class iLQG(iLQR):
         alpha = 1.0
 
         us = us_init.copy()
-        xs_old = np.zeros_like(self._nominal_xs)
-        us_old = np.zeros_like(self._nominal_us)
         # N = us.shape[0]
         k = self._k
         K = self._K
@@ -216,15 +214,13 @@ class iLQG(iLQR):
                 # Backtracking line search.
                 for alpha in alphas:
                     xs_new, us_new = self._control(
-                        xs, us, k, K, C, alpha, is_stochastic=False)
+                        xs, us, k, K, C, alpha, is_stochastic=self.is_stochastic)
                     J_new = self._trajectory_cost(xs_new, us_new)
                     if J_new < J_opt:
                         if np.abs((J_opt - J_new) / J_opt) < tol:
                             converged = True
 
                         J_opt = J_new
-                        xs_old = xs
-                        us_old = us
                         xs = xs_new
                         us = us_new
                         changed = True
@@ -264,8 +260,6 @@ class iLQG(iLQR):
         self._k = k
         self._K = K
         self._C = C
-        self._xs = xs_old
-        self._us = us_old
         self._nominal_xs = xs
         self._nominal_us = us
         self.alpha = alpha
@@ -363,7 +357,8 @@ class iLQG(iLQR):
             # Eq (12).
             us_new[i] = us[i] + alpha * k[i] + K[i].dot(xs_new[i] - xs[i])
             if is_stochastic:
-                cov = C[i]
+                cov = nearestPD(C[i]) + PARAMS_LQG['cov_reg'] * \
+                    np.identity(self.num_actions)
                 us_new[i] = multivariate_normal.rvs(us_new[i], cov, 1)
 
             # Eq (8c).
@@ -408,7 +403,7 @@ class OfflineController(iLQG):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
-        self.check_constrain = False
+        self.check_constrain = True
         self.known_dynamics = known_dynamics
 
     def save(self, path, file_name='ilqr_control.npz'):
@@ -452,30 +447,32 @@ class OfflineController(iLQG):
         k, K, C = self._backward_pass(F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
                                       F_xx, F_ux, F_uu)
 
-        # us_new = self._control(
-        #     params['xs'], params['us'], k, K, C, params['alpha'], False, x0=self.x0)[1]
+        us_new = self._control(
+            xs, us, k, K, C, params['alpha'], False, x0=self.x0)[1]
+        params['x0'] = self.x0
         us_old = self._control(**params)[1]
         C_old = params['C']
         C_new = np.array([nearestPD(C[i]) for i in range(N)])
         C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
-        kl_div = sum([mvn_kl_div(us[j], us_old[j], C_new[j], C_old[j])
+        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
                       for j in range(N)])
+        print(f'- eta= {eta}, kl_div= {kl_div}')
         return kl_div
 
-    def _backward_pass(self, F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
-                       F_xx=None, F_ux=None, F_uu=None):
-        k, K, C = super()._backward_pass(F_x, F_u, L_x, L_u,
-                                         L_xx, L_ux, L_uu, F_xx, F_ux, F_uu)
-        for j in range(C.shape[0]):
-            if not isPD(C[j]):
-                try:
-                    C[j] = nearestPD(C[j])
-                except np.linalg.LinAlgError as e:
-                    # Quu was not positive-definite and this diverged.
-                    # Try again with a higher regularization term.
-                    warnings.warn(str(e))
-                    print(C[j])
-        return k, K, C
+    # def _backward_pass(self, F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
+    #                    F_xx=None, F_ux=None, F_uu=None):
+    #     k, K, C = super()._backward_pass(F_x, F_u, L_x, L_u,
+    #                                      L_xx, L_ux, L_uu, F_xx, F_ux, F_uu)
+    #     for j in range(C.shape[0]):
+    #         if not isPD(C[j]):
+    #             try:
+    #                 C[j] = nearestPD(C[j])
+    #             except np.linalg.LinAlgError as e:
+    #                 # Quu was not positive-definite and this diverged.
+    #                 # Try again with a higher regularization term.
+    #                 warnings.warn(str(e))
+    #                 print(C[j])
+    #     return k, K, C
 
     def optimize(self, kl_step: float,
                  min_eta: float = 1e-4,
@@ -533,6 +530,7 @@ class OfflineController(iLQG):
         cost_trace = self._step_cost(xs, us)
         params = self.cost.control_parameters()
         params['is_stochastic'] = False
+        params['x0'] = self.x0
         us_old = self._control(**params)[1]
         us_new = self._control(xs, us, self._k, self._K,
                                self._C, self.alpha, False)[1]
