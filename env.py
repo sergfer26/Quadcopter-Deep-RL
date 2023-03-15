@@ -3,7 +3,6 @@ import gym
 import numba
 from Linear.equations import f, jac_f, angles2rotation, W0
 from Linear.constants import CONSTANTS, omega_0, F, C
-from DDPG.utils import OUNoise
 from numba import cuda
 from gym import spaces
 from numpy.linalg import norm
@@ -15,9 +14,9 @@ TIME_MAX = PARAMS_ENV['TIME_MAX']
 STEPS = PARAMS_ENV['STEPS']
 
 # constantes de la recompensa
-K1 = PARAMS_ENV['K1']
-K2 = PARAMS_ENV['K2']
-K3 = PARAMS_ENV['K3']
+K1 = eval(PARAMS_ENV['K1'])
+K2 = eval(PARAMS_ENV['K2'])
+K3 = eval(PARAMS_ENV['K3'])
 
 # constantes del control
 omega0_per = PARAMS_ENV['omega0_per']
