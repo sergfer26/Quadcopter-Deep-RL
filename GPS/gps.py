@@ -9,9 +9,9 @@ from os.path import exists
 # from functools import partial
 from .utils import OfflineCost  # , OnlineCost
 # from ilqr import RecedingHorizonController
-from .params import PARAMS_LQG
+from .params import PARAMS_LQG, PARAMS_OFFLINE
 from GPS.utils import ContinuousDynamics
-from .controller import OfflineController  # , OnlineController, OnlineMPC
+from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD
 
@@ -28,11 +28,11 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=3, M=2, eta=1e-3, nu=1e-2,
-                 lamb=1e-3, alpha_lamb=1e-1,
+                 N=3, M=2, eta=1e-3, nu=1e-3,
+                 lamb=1e-3, alpha_lamb=1e-6,
                  learning_rate=0.01, kl_step=200,
                  per_kl=.1, known_dynamics=False,
-                 u0=None):
+                 u0=None, init_sigma=1.0):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -105,7 +105,7 @@ class GPS:
         # u_bound=u_bound)
 
         self.policy = policy
-        self.policy_sigma = np.identity(self.n_u)
+        self.policy_sigma = init_sigma * np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
 
@@ -158,7 +158,7 @@ class GPS:
         us_mean += np.expand_dims(nominal_us, axis=1)
         us_mean += np.expand_dims(np.einsum('N, NTu-> NTu', alpha, k), axis=1)
         return us_mean
-# (N, M, T, n_x) - (N, T, n_x)
+        # (N, M, T, n_x) - (N, T, n_x)
 
     def cov_policy(self, C):
         if len(C.shape) == 5:
@@ -331,6 +331,13 @@ class GPS:
         nu[mask] /= 2.0
         return nu
 
+    def init_samples(self):
+        if self.N > 1:
+            self.x0 = np.array([self.env.observation_space.sample()
+                               for _ in range(self.N)])
+        else:
+            self.x0 = self.env.observation_space.sample()
+
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
@@ -339,7 +346,6 @@ class GPS:
         if self.N > 1:
             processes = list()
             for i in range(self.N):
-                x0 = self.env.observation_space.sample()
                 x0_samples = np.array(
                     [self.env.observation_space.sample() for _ in range(self.M)])
                 cost_kwargs = deepcopy(self.cost_kwargs)
@@ -347,7 +353,7 @@ class GPS:
                 cost_kwargs['nu'] = self.nu[i]
                 cost_kwargs['eta'] = self.eta[i]
                 p = mp.Process(target=fit_ilqg,
-                               args=(x0,
+                               args=(self.x0[i],
                                      self.kl_step,
                                      self.policy,
                                      cost_kwargs,
@@ -371,10 +377,9 @@ class GPS:
             cost_kwargs = deepcopy(self.cost_kwargs)
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
-            x0 = self.env.observation_space.sample()
             x0_samples = np.array(
                 [self.env.observation_space.sample() for _ in range(self.M)])
-            args = (x0,
+            args = (self.x0,
                     self.kl_step,
                     self.policy,
                     cost_kwargs,
@@ -441,7 +446,8 @@ class GPS:
 
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
-             path='', t_x=None, inv_t_u=None, policy_sigma=None, x0_samples=None):
+             path='', t_x=None, inv_t_u=None, policy_sigma=None,
+             x0_samples=None, method=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -471,12 +477,13 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         # file_name = file_name if exists(file_name) else 'control.npz'
         control.load(path, file_name)
     else:
-        # 'results_offline/23_02_01_13_30/'
-        # 'results_offline/23_02_15_09_14/' -> para 2 seg
-        # 'results_offline/23_02_16_13_50/'
-        # control.load('results_ilqr/23_02_16_23_21/')
-        # control.load('results_offline/23_02_15_09_14/')
-        control.load('results_offline/23_02_16_13_50/')
+        expert = iLQG(dynamics, cost, T, is_stochastic=False)
+        expert.load('models/')
+        us_init = expert.rollout(x0)[1]
+        cost.update_control(control=expert)
+        _ = control.fit_control(x0, us_init=us_init)
+
+        # control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)
     is_stochastic = control.is_stochastic
@@ -485,7 +492,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     control.is_stochastic = is_stochastic
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = x0, us
-    control.optimize(kl_step, cost.eta)
+    kl_div = control.optimize(
+        kl_step, min_eta=cost.eta, max_eta=eval(PARAMS_OFFLINE['max_eta']))[-1]
+    print(f'- eta={cost.eta} kl_div={kl_div}')
     control.save(path=path, file_name=f'control_{i}.npz')
 
     states = np.empty((M, T + 1, n_x))
@@ -503,5 +512,4 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              xs=states,
              us=actions
              )
-
     # Ajuste MPC
