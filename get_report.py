@@ -138,7 +138,7 @@ def _create_report(PATH):
 def create_report(path, title=None, subtitle='', file_name=None,
                   method='ddpg', extra_method='noise'):
     '''
-    Genera un documento pdf con el reporte de entrenamiento 
+    Genera un documento pdf con el reporte de entrenamiento
     de distintos algoritmos.
 
     path : str
@@ -189,7 +189,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
 
     elif method == 'gps':
-        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 750)
+        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 760)
         add_table(pdf, PARAMS_TRAIN_GPS, 350, 600)
     elif method is None:
         pass
@@ -201,14 +201,14 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_UTILS, 400, 340)
 
     elif extra_method == 'ilqr':
-        add_text(pdf, ['Parámetros de', 'iLQG'], 350, 580)
+        add_text(pdf, ['Parámetros de', 'iLQR'], 350, 580)
         add_table(pdf, PARAMS_LQG, 350, 400)
 
-        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 380)
-        add_table(pdf, PARAMS_OFFLINE, 350, 200)
+        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 390)
+        add_table(pdf, PARAMS_OFFLINE, 350, 190)
 
-        add_text(pdf, ['Parámetros de', '"Online control"'], 350, 180)
-        add_table(pdf, PARAMS_ONLINE, 350, 80)
+        add_text(pdf, ['Parámetros de', '"Online control"'], 350, 170)
+        add_table(pdf, PARAMS_ONLINE, 350, 60)
 
     elif method is None:
         pass
@@ -232,5 +232,6 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
 
 if __name__ == '__main__':
-    create_report('results_gcl/22_12_08_18_55/', title='Reporte de entrenamiento GCL',
+    create_report('results_gcl/22_12_08_18_55/',
+                  title='Reporte de entrenamiento GCL',
                   method='gcl', extra_method='ilqr')
