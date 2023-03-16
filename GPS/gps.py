@@ -29,10 +29,10 @@ class GPS:
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-3,
-                 lamb=1e-3, alpha_lamb=1e-6,
+                 lamb=1e-2, alpha_lamb=1e-3,
                  learning_rate=0.01, kl_step=200,
-                 per_kl=.1, known_dynamics=False,
-                 u0=None, init_sigma=1.0):
+                 u0=None, init_sigma=1.0, low_range=None,
+                 high_range=None):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -75,6 +75,15 @@ class GPS:
 
         # Instances for simulation.
         self.env = env
+        if isinstance(low_range, np.ndarray) or isinstance(low_range, list):
+            self.low_range = low_range
+        else:
+            self.low_range = self.env.observation_space.low
+
+        if isinstance(high_range, np.ndarray) or isinstance(high_range, list):
+            self.high_range = low_range
+        else:
+            self.high_range = self.env.observation_space.low
 
         # Lagrange's multipliers
         self.lamb = lamb * np.ones((N, T, self.n_u))   # contraint weight.
@@ -84,7 +93,6 @@ class GPS:
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
         self.kl_step = kl_step
-        self.per_kl = per_kl
 
         # ilQG instances.
         if not callable(cost_terminal):
@@ -97,12 +105,10 @@ class GPS:
                                 n_x=self.n_x,
                                 n_u=self.n_u,
                                 eta=eta,
-                                lamb=lamb * np.ones(self.n_u),
                                 nu=nu * np.ones(T),
+                                lamb=lamb * np.ones(self.n_u),
                                 T=T,
-                                known_dynamics=known_dynamics,
-                                u0=u0)  # ,
-        # u_bound=u_bound)
+                                u0=u0)
 
         self.policy = policy
         self.policy_sigma = init_sigma * np.identity(self.n_u)
@@ -198,18 +204,17 @@ class GPS:
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
         # Check if is symetric positive definite:
-        eigvals = np.linalg.eigvals(C)
-        eigvals_sigma = np.linalg.eigvals(sigma)
-        raise_error = False
-        if not np.apply_along_axis(np.greater, -1, eigvals, np.zeros(self.n_u)).all():
-            raise_error = True
-            error = 'C has negative eigen values'
-        if not np.apply_along_axis(np.greater, -1, eigvals_sigma, np.zeros(self.n_u)).all():
-            raise_error = True
-            error = 'sigma has negative eigen values: \n {sigma}'
-
-        if raise_error:
-            raise ValueError(error)
+        # eigvals = np.linalg.eigvals(C)
+        # eigvals_sigma = np.linalg.eigvals(sigma)
+        # raise_error = False
+        # if not np.apply_along_axis(np.greater, -1, eigvals, np.zeros(self.n_u)).all():
+        #     raise_error = True
+        #     error = 'C has negative eigen values'
+        # if not np.apply_along_axis(np.greater, -1, eigvals_sigma, np.zeros(self.n_u)).all():
+        #     raise_error = True
+        #     error = 'sigma has negative eigen values: \n {sigma}'
+        # if raise_error:
+        #     raise ValueError(error)
 
         if len(states.shape) == 4:
             arg1 = 'NMT,NT-> NMT'
@@ -331,12 +336,17 @@ class GPS:
         nu[mask] /= 2.0
         return nu
 
-    def init_samples(self):
+    def init_x0(self):
         if self.N > 1:
             self.x0 = np.array([self.env.observation_space.sample()
                                for _ in range(self.N)])
         else:
             self.x0 = self.env.observation_space.sample()
+
+    def _random_x0(self, x0, n):
+        size = (self.n_x, n)
+        x = np.random.uniform(self.low_range, self.high_range, size)
+        return x + x0
 
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
@@ -346,8 +356,7 @@ class GPS:
         if self.N > 1:
             processes = list()
             for i in range(self.N):
-                x0_samples = np.array(
-                    [self.env.observation_space.sample() for _ in range(self.M)])
+                x0_samples = self._random_x0(self.x0[i], self.M)
                 cost_kwargs = deepcopy(self.cost_kwargs)
                 cost_kwargs['lamb'] = self.lamb[i]
                 cost_kwargs['nu'] = self.nu[i]
@@ -377,8 +386,7 @@ class GPS:
             cost_kwargs = deepcopy(self.cost_kwargs)
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
-            x0_samples = np.array(
-                [self.env.observation_space.sample() for _ in range(self.M)])
+            x0_samples = self._random_x0(self.x0, self.M)
             args = (self.x0,
                     self.kl_step,
                     self.policy,
@@ -399,22 +407,6 @@ class GPS:
         # 1.2 Loading fitted parameters
         (K, k, C, nominal_xs, nominal_us,
          xs, us, alphas) = self._load_fitted_lqg(path)
-        if np.isnan(K).any():
-            raise ValueError('K has NaNs')
-        if np.isnan(k).any():
-            raise ValueError('k has NaNs')
-        if np.isnan(C).any():
-            raise ValueError('C has NaNs')
-        if np.isnan(self.eta).any():
-            raise ValueError('eta has NaNs')
-        if np.isnan(nominal_us).any():
-            raise ValueError('nominal us has NaNs')
-        if np.isnan(nominal_xs).any():
-            raise ValueError('nominal xs has NaNs')
-        if np.isnan(xs).any():
-            raise ValueError('xs has NaNs')
-        if np.isnan(us).any():
-            raise ValueError('us has NaNs')
         # 1.3 Loading simulations
         # 2. Policy fitting
         us_mean = self.mean_control(xs, nominal_xs, nominal_us, K, k, alphas)
@@ -468,8 +460,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     cost = OfflineCost(**cost_kwargs)
     cost.update_policy(policy=policy, t_x=t_x,
                        inv_t_u=inv_t_u, cov=policy_sigma)
-    control = OfflineController(dynamics, cost, T,
-                                known_dynamics=cost_kwargs['known_dynamics'])
+    control = OfflineController(dynamics, cost, T)
 
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
