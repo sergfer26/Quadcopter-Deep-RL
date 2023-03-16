@@ -35,7 +35,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1):
     etas = np.empty(K)
     lambdas = np.empty((K, gps.n_u))
     # Inicializa x0s
-    gps.init_samples()
+    gps.init_x0()
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
