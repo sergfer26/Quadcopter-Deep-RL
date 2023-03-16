@@ -10,10 +10,10 @@ PARAMS_TRAIN_GPS = {'UPDATES': 3, 'N': 1, 'M': 50,
                     'SHOW': True, 'rollouts': 100, 'samples': 2}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '2', '$y$': '2', '$z$': '2',
+              '$x$': '4', '$y$': '4', '$z$': '4',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
-              '$\psi$': 'np.pi/16', r'$\theta$': 'np.pi/16',
-              '$\phi$': 'np.pi/16'}
+              '$\psi$': 'np.pi/34', r'$\theta$': 'np.pi/64',
+              '$\phi$': 'np.pi/64'}
 
 # Etiquetas
 STATE_NAMES = list(PARAMS_OBS.keys())
