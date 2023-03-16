@@ -4,7 +4,7 @@ from scipy.stats import multivariate_normal
 from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
-from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD, isPD
+from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
 
 
 class iLQG(iLQR):
@@ -12,12 +12,11 @@ class iLQG(iLQR):
     # env: gym.Env, dynamics: Dynamics, cost: Cost):
     def __init__(self, dynamics,
                  cost, steps: int,
-                 min_reg=1e-3,
+                 min_reg=1e-6,
                  max_reg=1e4,
                  reg=20,
                  delta_0=2.0,
-                 is_stochastic=PARAMS_LQG['is_stochastic']
-                 ):
+                 is_stochastic=PARAMS_LQG['is_stochastic']):
         '''
         dynamics : `ilqr.Dynamics`
             Es el sistema dinámico bajo el cual funciona el sistema.
@@ -398,13 +397,11 @@ class OfflineController(iLQG):
                  max_reg=1e4,
                  reg=20,
                  delta_0=2.0,
-                 is_stochastic=PARAMS_LQG['is_stochastic'],
-                 known_dynamics=False):
+                 is_stochastic=PARAMS_LQG['is_stochastic']):
         super().__init__(dynamics, cost, steps, min_reg, max_reg,
                          reg, delta_0, is_stochastic)
         # Cost regularization parametrs
         self.check_constrain = True
-        self.known_dynamics = known_dynamics
 
     def save(self, path, file_name='ilqr_control.npz'):
         file_path = path + file_name
@@ -493,36 +490,33 @@ class OfflineController(iLQG):
                     a list of `ILQRStepResult` if `full_history` is enabled
                     (in order they were visited)
         """
-        if not self.known_dynamics:
-            # Check if constraind is fulfilled at maximum deviation
-            if self.step(min_eta) <= kl_step:
-                # return self.step(min_eta)
-                self.cost.eta = min_eta
-            else:
-                # Check if constraint cen be fulfilled at all
-                if self.check_constrain:
-                    print("max_eta")
-                    kl_div = self.step(max_eta)
-                    if kl_div > kl_step:
-                        raise ValueError(
-                            f"max_eta eta to low ({max_eta})")
+        # Check if constraind is fulfilled at maximum deviation
+        if self.step(min_eta) <= kl_step:
+            # return self.step(min_eta)
+            self.cost.eta = min_eta
+        else:
+            # Check if constraint cen be fulfilled at all
+            if self.check_constrain:
+                print("max_eta")
+                kl_div = self.step(max_eta)
+                if kl_div > kl_step:
+                    raise ValueError(
+                        f"max_eta eta to low ({max_eta})")
+            # Find the point where kl divergence equals the kl_step
 
-                # Find the point where kl divergence equals the kl_step
-                def constraint_violation(log_eta):
-                    return self.step(np.exp(log_eta)) - kl_step
+            def constraint_violation(log_eta):
+                return self.step(np.exp(log_eta)) - kl_step
+            # Search root of the constraint violation
+            # Perform search in log-space, as this requires much fewer
+            # iterations
+            print("Brent's method begins...")
+            log_eta = brentq(
+                constraint_violation, np.log(min_eta), np.log(max_eta),
+                rtol=rtol, maxiter=kl_maxiter, disp=False)
+            self.cost.eta = np.exp(log_eta)
 
-                # Search root of the constraint violation
-                # Perform search in log-space, as this requires much fewer
-                # iterations
-                print("Brent's method begins...")
-                log_eta = brentq(
-                    constraint_violation, np.log(min_eta), np.log(max_eta),
-                    rtol=rtol, maxiter=kl_maxiter, disp=False)
+        print(f'iLQR optimization step with eta= {self.cost.eta}...')
 
-                print(f"eta= {np.exp(log_eta)}")
-                self.cost.eta = np.exp(log_eta)
-
-        print("iLQR optimization step...")
         xs, us = self.fit(self.x0, self.us_init,
                           n_iterations=PARAMS_LQG['n_iterations'],
                           tol=PARAMS_LQG['tol'],
