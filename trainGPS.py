@@ -1,5 +1,5 @@
 import time
-import torch
+# import torch
 import pathlib
 import send_email
 import numpy as np
@@ -29,11 +29,11 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train_gps(gps: GPS, K, path):
+def train_gps(gps: GPS, K, path, per_kl=0.1):
     losses = np.empty(K)
-    nus = np.empty((K, gps.T))
+    nus = np.empty(K)
     etas = np.empty(K)
-    lambdas = np.empty((K, gps.T, gps.n_u))
+    lambdas = np.empty((K, gps.n_u))
     # Inicializa x0s
     gps.init_samples()
     with tqdm(total=K) as pbar:
@@ -41,16 +41,17 @@ def train_gps(gps: GPS, K, path):
             pbar.set_description(f'Update {k + 1}/'+str(K))
             loss, _ = gps.update_policy(path)
             losses[k] = loss
-            nus[k] = np.mean(gps.nu, axis=0)
+            nus[k] = np.mean(gps.nu, axis=(0, 1))
             etas[k] = np.mean(gps.eta, axis=0)
-            lambdas[k] = np.mean(gps.lamb, axis=0)
-            lamb_1, lamb_2, lamb_3, lamb_4 = np.mean(lambdas[k], axis=0)
+            lambdas[k] = np.mean(gps.lamb, axis=(0, 1))
+            lamb = np.linalg.norm(lambdas[k])
             pbar.set_postfix(loss='{:.2f}'.format(loss),
                              kl_step='{:.2f}'.format(gps.kl_step),
-                             lamb_1=lamb_1, lamb_2=lamb_2,
-                             lamb_3=lamb_3, lamb_4=lamb_4,
-                             eta='{:.2f}'.format(etas[k]))
+                             lamb=lamb,
+                             eta='{:.2f}'.format(etas[k]),
+                             nu='{:.3f}'.format(nus[k]))
             pbar.update(1)
+            gps.kl_step = gps.kl_step * (1 - per_kl)
     return losses, nus, etas, lambdas
 
 
@@ -66,13 +67,14 @@ def main(path):
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
     policy = Policy(other_env, [64, 64])
-    policy.load_state_dict(torch.load(
-        'results_ddpg/12_9_113/actor', map_location='cpu'))
+    # policy.load_state_dict(torch.load(
+    #     'results_ddpg/12_9_113/actor', map_locatxion='cpu'))
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
     # 2. Training
-    ti = time.time()
-
+    high_range = np.array(
+        [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/32, np.pi/32, np.pi/32])
+    low_range = - high_range
     gps = GPS(env,
               policy,
               dynamics_kwargs,
@@ -88,12 +90,14 @@ def main(path):
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
               kl_step=KL_STEP,
-              per_kl=PARAMS_OFFLINE['kl_step'],
-              known_dynamics=PARAMS['known_dynamics'],
               u0=W0,
-              init_sigma=W0[0]
+              init_sigma=W0[0],
+              low_range=low_range,
+              high_range=high_range
               )
-    losses, nus, etas, lambdas = train_gps(gps, K, PATH)
+    ti = time.time()
+    losses, nus, etas, lambdas = train_gps(
+        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'])
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
@@ -140,7 +144,7 @@ def main(path):
     states_samples = states[sample_indices]
     actions_samples = actions[sample_indices]
     scores_samples = scores[sample_indices]
-
+    print('Creando animación...')
     create_animation(states_samples, actions_samples, env.time,
                      scores=scores_samples,
                      state_labels=STATE_NAMES,
