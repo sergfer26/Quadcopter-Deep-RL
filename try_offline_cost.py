@@ -209,7 +209,7 @@ if __name__ == '__main__':
     per_kl = PARAMS['per_kl']
     kl_step = PARAMS['kl_step']
     max_eta = eval(PARAMS['max_eta'])
-    # send_email.report_sender(main, args=[updates, samples, PATH, OLD_PATH, adaptive_kl,
-    #                                      per_kl, kl_step, max_eta])
+    # send_email.report_sender(main, args=[updates, PATH, OLD_PATH,
+    #                                      adaptive_kl, per_kl, kl_step, max_eta])
     main(updates, PATH, OLD_PATH,
          adaptive_kl, per_kl, kl_step, max_eta)
