@@ -344,7 +344,7 @@ class GPS:
             self.x0 = self.env.observation_space.sample()
 
     def _random_x0(self, x0, n):
-        size = (self.n_x, n)
+        size = (n, self.n_x)
         x = np.random.uniform(self.low_range, self.high_range, size)
         return x + x0
 
