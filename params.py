@@ -1,18 +1,18 @@
 
 PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 251, 'omega0_per': 0.60,
-              'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '0.5'}
+              'K1': '100', 'K11': '100', 'K2': '1000', 'K21': '100', 'K3': '5'}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
                      'EPISODES': 1000, 'n': 5, 'SHOW': True}
 
-PARAMS_TRAIN_GPS = {'UPDATES': 3, 'N': 1, 'M': 50,
-                    'SHOW': True, 'rollouts': 100, 'samples': 2}
+PARAMS_TRAIN_GPS = {'UPDATES': 10, 'N': 8, 'M': 100,
+                    'SHOW': True, 'rollouts': 100, 'samples': 3}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '4', '$y$': '4', '$z$': '4',
+              '$x$': '3', '$y$': '3', '$z$': '3',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
-              '$\psi$': 'np.pi/34', r'$\theta$': 'np.pi/64',
+              '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
               '$\phi$': 'np.pi/64'}
 
 # Etiquetas
