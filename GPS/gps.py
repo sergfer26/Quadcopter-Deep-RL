@@ -29,7 +29,7 @@ class GPS:
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
                  N=3, M=2, eta=1e-3, nu=1e-3,
-                 lamb=1e-2, alpha_lamb=1e-3,
+                 lamb=1e-3, alpha_lamb=1e-5,
                  learning_rate=0.01, kl_step=200,
                  u0=None, init_sigma=1.0, low_range=None,
                  high_range=None):
