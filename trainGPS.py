@@ -73,7 +73,7 @@ def main(path):
                            dt=dt, u0=W0)
     # 2. Training
     high_range = np.array(
-        [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/32, np.pi/32, np.pi/32])
+        [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
     low_range = - high_range
     gps = GPS(env,
               policy,
@@ -90,7 +90,6 @@ def main(path):
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
               kl_step=KL_STEP,
-              u0=W0,
               init_sigma=W0[0],
               low_range=low_range,
               high_range=high_range
