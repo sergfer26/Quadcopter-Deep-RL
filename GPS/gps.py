@@ -81,9 +81,9 @@ class GPS:
             self.low_range = self.env.observation_space.low
 
         if isinstance(high_range, np.ndarray) or isinstance(high_range, list):
-            self.high_range = low_range
+            self.high_range = high_range
         else:
-            self.high_range = self.env.observation_space.low
+            self.high_range = self.env.observation_space.high
 
         # Lagrange's multipliers
         self.lamb = lamb * np.ones((N, T, self.n_u))   # contraint weight.
@@ -99,7 +99,7 @@ class GPS:
             def cost_terminal(x, i): return cost(x, np.zeros(self.n_u), i)
 
         self.dynamics_kwargs = dynamics_kwargs
-        u0 = np.zeros(self._u) if u0 is None else u0
+        u0 = np.zeros(self.n_u) if u0 is None else u0
         self.cost_kwargs = dict(cost=cost,
                                 l_terminal=cost_terminal,
                                 n_x=self.n_x,
@@ -216,14 +216,14 @@ class GPS:
         # if raise_error:
         #     raise ValueError(error)
 
-        if len(states.shape) == 4:
-            arg1 = 'NMT,NT-> NMT'
-            arg2 = 'NMTu,NTu-> NMT'
-        elif len(states.shape) == 3:
-            arg1 = 'NT,NT-> NT'
-            arg2 = 'NTu,NTu-> NT'
-        else:
-            print('states de dimensión {states.shape} no es compatible')
+        # if len(states.shape) == 4:
+        #     arg1 = 'NMT,NT-> NMT'
+        #     arg2 = 'NMTu,NTu-> NMT'
+        # elif len(states.shape) == 3:
+        #     arg1 = 'NT,NT-> NT'
+        #     arg2 = 'NTu,NTu-> NT'
+        # else:
+        #     print('states de dimensión {states.shape} no es compatible')
 
         if len(C.shape) == 4:
             C = np.expand_dims(C, axis=1)
@@ -233,21 +233,37 @@ class GPS:
         sigma = torch.FloatTensor(sigma).to(device)
         lamb = torch.FloatTensor(self.lamb).to(device)
         nu = torch.FloatTensor(self.nu).to(device)
-        # C = torch.FloatTensor(control._C).to(device)
+
+        # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
 
+        # 2. Cálculo de terminos de regularización
+        reg = torch.einsum('NMTuu, NTu -> NMTu', C, lamb)
+        reg = torch.einsum('NT, NMTu -> NMTu', 1/nu, reg)
+
+        # 3. Cálculo de perdida
         loss = 0.0
-        loss += 0.5 * _batch_mahalanobis(C, policy_actions - actions)
-        # calculo de la traza
-        loss -= 0.5 * \
-            torch.diagonal(torch.matmul(C, sigma), dim1=-2, dim2=-1).sum(-1)
-        # loss -= 0.5 * torch.einsum('bii->b', C @ self.policy.sigma)
-        loss += 0.5 * torch.log(torch.linalg.det(sigma))
+        # 3.1 Cálculo de la distancia Mahalanobis
+        loss += _batch_mahalanobis(C, policy_actions - actions + reg)
+
         kld = loss
-        loss = torch.einsum(arg1, loss, nu)
+        # 3.2 Multiplicación escalar de
+        loss = torch.einsum('NMT, NT -> NMT', loss, nu)
+
+        # loss = 0.0
+        # loss += 0.5 * _batch_mahalanobis(C, policy_actions - actions)
+        # calculo de la traza
+        # loss -= 0.5 * \
+        #     torch.diagonal(torch.matmul(C, sigma), dim1=-2, dim2=-1).sum(-1)
+        # loss -= 0.5 * torch.einsum('bii->b', C @ self.policy.sigma)
+        # loss += 0.5 * torch.log(torch.linalg.det(sigma))
+        # kld = loss
+        # loss = torch.einsum(arg1, loss, nu)
         # reg = actions * lamb
-        loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
-        loss = torch.sum(loss.flatten(), dim=0)
+        # loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
+
+        # Cálculo de perdida promedio
+        loss = (0.5/self.N) * torch.sum(loss.flatten(), dim=0)
         # kld = torch.mean(kld, dim=0)
         return loss, kld
 
@@ -351,6 +367,8 @@ class GPS:
     def update_policy(self, path):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
+        low_constrain = self.env.action_space.low
+        high_constain = self.env.action_space.high
 
         # 1. Control fitting
         if self.N > 1:
@@ -374,7 +392,9 @@ class GPS:
                                      self.t_x,
                                      self.inv_t_u,
                                      self.policy._sigma,
-                                     x0_samples
+                                     x0_samples,
+                                     low_constrain,
+                                     high_constain
                                      )
                                )
                 processes.append(p)
@@ -399,7 +419,9 @@ class GPS:
                     self.t_x,
                     self.inv_t_u,
                     self.policy._sigma,
-                    x0_samples
+                    x0_samples,
+                    low_constrain,
+                    high_constain
                     )
             fit_ilqg(*args)
         # 1.1 update eta
@@ -439,7 +461,7 @@ class GPS:
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              path='', t_x=None, inv_t_u=None, policy_sigma=None,
-             x0_samples=None, method=None):
+             x0_samples=None, low_constrain=None, high_constrain=None):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -495,7 +517,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         x0_samples = multivariate_normal.rvs(
             mean=x0, cov=0.01 * np.identity(n_x), size=M)
     for r in range(M):
-        xs, us = control.rollout(x0_samples[r])
+        xs, us = control.rollout(x0_samples[r],
+                                 low_constrain=low_constrain,
+                                 high_constrain=high_constrain)
         states[r] = xs
         actions[r] = us
 
