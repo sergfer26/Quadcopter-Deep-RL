@@ -55,6 +55,17 @@ def train_gps(gps: GPS, K, path, per_kl=0.1):
     return losses, nus, etas, lambdas
 
 
+def select_x0(gps, n):
+    if gps.N > 1:
+        indices = np.random.choice(gps.N, n)
+        state_init = gps.x0[indices]
+        x0 = np.apply_along_axis(gps._random_x0, -1, state_init, 1)
+        x0 = np.squeeze(x0, axis=1)
+    else:
+        x0 = gps._random_x0(gps.x0, n)
+    return x0
+
+
 def main(path):
     K = PARAMS['UPDATES']
     rollouts = PARAMS['rollouts']
@@ -125,8 +136,12 @@ def main(path):
     plot_rollouts(lambdas, env.time, labels, ax=ax)
     fig.savefig(path + 'train_performance.png')
     # 4. Simulation
+
+    states_init = np.apply_along_axis(
+        gps.t_x, -1, select_x0(gps, rollouts))
     states, actions, scores = n_rollouts(
-        policy, other_env, rollouts, t_x=inv_transform_x)
+        policy, other_env, rollouts, t_x=inv_transform_x,
+        states_init=states_init)
     fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
@@ -137,6 +152,7 @@ def main(path):
                   method='gps', extra_method='ilqr')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
+
     print('Terminó de simualación...')
 
     sample_indices = np.random.randint(states.shape[0], size=samples)
@@ -151,6 +167,17 @@ def main(path):
                      score_labels=REWARD_NAMES,
                      path=subpath
                      )
+
+    states = np.empty(gps.N, env.steps, gps.n_x)
+    actions = np.empty(gps.N, env.steps - 1, gps.n_u)
+    for i in range(gps.N):
+        file = np.load(path + f'buffer/control_{i}.npz')
+        states[i] = file['xs']
+        actions[i] = file['us']
+    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.2)
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.2)
+    fig1.savefig(path + 'buffer/state_control.png')
+    fig2.savefig(path + 'buffer/action_control.png')
     return path
 
 
