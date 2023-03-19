@@ -5,6 +5,7 @@ from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
 from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
+from ilqr.dynamics import constrain
 
 
 class iLQG(iLQR):
@@ -120,13 +121,15 @@ class iLQG(iLQR):
 
         return action
 
-    def rollout(self, x0):
+    def rollout(self, x0, low_constrain=None, high_constrain=None):
         self.reset()
         us = np.empty_like(self._nominal_us)
         xs = np.empty_like(self._nominal_xs)
         xs[0] = x0
         for i in range(self.N):
             us[i] = self.get_action(xs[i])
+            if isinstance(low_constrain, np.ndarray) and isinstance(high_constrain, np.ndarray):
+                us[i] = constrain(us[i], low_constrain, high_constrain)
             xs[i+1] = self.dynamics.f(xs[i], us[i], i)
         return xs, us
 
