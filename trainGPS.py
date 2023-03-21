@@ -80,9 +80,6 @@ def main(path):
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
     policy = Policy(other_env, [64, 64])
-    if PARAMS['pre-training']:
-        policy.load_state_dict(torch.load(
-            'results_ddpg/12_9_113/actor', map_location='cpu'))
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
     # 2. Training
@@ -111,7 +108,7 @@ def main(path):
               )
     ti = time.time()
     losses, nus, etas, lambdas = train_gps(
-        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'], 
+        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
         constrained_actions=constrained_actions)
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
