@@ -202,10 +202,10 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
     elif extra_method == 'ilqr':
         add_text(pdf, ['Parámetros de', 'iLQR'], 350, 580)
-        add_table(pdf, PARAMS_LQG, 350, 400)
+        add_table(pdf, PARAMS_LQG, 350, 420)
 
-        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 390)
-        add_table(pdf, PARAMS_OFFLINE, 350, 190)
+        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 410)
+        add_table(pdf, PARAMS_OFFLINE, 350, 180)
 
         add_text(pdf, ['Parámetros de', '"Online control"'], 350, 170)
         add_table(pdf, PARAMS_ONLINE, 350, 60)
