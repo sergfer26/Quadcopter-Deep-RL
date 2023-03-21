@@ -8,10 +8,10 @@ PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
 
 PARAMS_TRAIN_GPS = {'UPDATES': 15, 'N': 8, 'M': 100,
                     'SHOW': False, 'rollouts': 100, 'samples': 3,
-                    'pre-training': True}
+                    'constrained_actions': True}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '2', '$y$': '2', '$z$': '2',
+              '$x$': '5', '$y$': '5', '$z$': '5',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
               '$\phi$': 'np.pi/64'}

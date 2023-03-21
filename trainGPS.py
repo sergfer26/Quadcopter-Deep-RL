@@ -29,7 +29,7 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train_gps(gps: GPS, K, path, per_kl=0.1):
+def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
     losses = np.empty(K)
     nus = np.empty(K)
     etas = np.empty(K)
@@ -39,7 +39,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1):
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
-            loss, div = gps.update_policy(path)
+            loss, div = gps.update_policy(path, constrained_actions)
             div = np.sum(div.flatten(), axis=0) / (2 * gps.N * gps.M)
             losses[k] = loss
             nus[k] = np.mean(gps.nu, axis=(0, 1))
@@ -72,6 +72,7 @@ def main(path):
     rollouts = PARAMS['rollouts']
     samples = PARAMS['samples']
     KL_STEP = PARAMS_OFFLINE['kl_step']
+    constrained_actions = PARAMS['constrained_actions']
     # 1. Setup
     env = QuadcopterEnv()
     dt = env.time[-1] - env.time[-2]
@@ -110,7 +111,8 @@ def main(path):
               )
     ti = time.time()
     losses, nus, etas, lambdas = train_gps(
-        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'])
+        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'], 
+        constrained_actions=constrained_actions)
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)

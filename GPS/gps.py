@@ -365,11 +365,15 @@ class GPS:
         x = np.random.uniform(self.low_range, self.high_range, size)
         return x + x0
 
-    def update_policy(self, path):
+    def update_policy(self, path, constrained_actions=False):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
-        low_constrain = self.env.action_space.low
-        high_constain = self.env.action_space.high
+        if constrained_actions:
+            low_constrain = self.env.action_space.low
+            high_constain = self.env.action_space.high
+        else:
+            low_constrain = None
+            high_constain = None
 
         # 1. Control fitting
         if self.N > 1:
