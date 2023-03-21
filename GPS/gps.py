@@ -28,8 +28,8 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=3, M=2, eta=1e-3, nu=1e-3,
-                 lamb=1e-3, alpha_lamb=1e-5,
+                 N=3, M=2, eta=1e-3, nu=1e-4,
+                 lamb=1e-9, alpha_lamb=1e-8,
                  learning_rate=0.01, kl_step=200,
                  u0=None, init_sigma=1.0, low_range=None,
                  high_range=None):
@@ -233,7 +233,8 @@ class GPS:
         sigma = torch.FloatTensor(sigma).to(device)
         lamb = torch.FloatTensor(self.lamb).to(device)
         nu = torch.FloatTensor(self.nu).to(device)
-
+        N = states.shape[0]
+        M = states.shape[1]
         # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
 
@@ -263,7 +264,7 @@ class GPS:
         # loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
 
         # Cálculo de perdida promedio
-        loss = (0.5/self.N) * torch.sum(loss.flatten(), dim=0)
+        loss = torch.sum(loss.flatten(), dim=0) / (2 * N * M)
         # kld = torch.mean(kld, dim=0)
         return loss, kld
 
@@ -435,7 +436,6 @@ class GPS:
         self.policy._sigma = self.cov_policy(C)
         if callable(self.t_x):
             xs = np.apply_along_axis(self.t_x, -1, xs)  # x_t -> o_t
-
         loss, div = self.policy_loss(xs, us_mean, C, self.policy._sigma)
         div = div.detach().cpu().numpy()
         mean_div = np.mean(div, axis=1)  # (N, T)
@@ -446,7 +446,6 @@ class GPS:
         self.policy_optimizer.step()
 
         # 3. Update Langrange's multipliers
-        # x_t -> o_t
         us_policy = self.policy.get_action(xs)
         if callable(self.inv_t_u):  # a_t -> u_t
             us_policy = np.apply_along_axis(self.inv_t_u, -1, us_policy)
@@ -507,7 +506,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     control.x0, control.us_init = x0, us
     kl_div = control.optimize(
         kl_step, min_eta=cost.eta, max_eta=eval(PARAMS_OFFLINE['max_eta']))[-1]
-    print(f'- eta={cost.eta} kl_div={kl_div}')
+    print(f'- eta={cost.eta}, kl_div={kl_div}')
     control.save(path=path, file_name=f'control_{i}.npz')
 
     states = np.empty((M, T + 1, n_x))
