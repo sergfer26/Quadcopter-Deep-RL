@@ -1,5 +1,5 @@
 import time
-# import torch
+import torch
 import pathlib
 import send_email
 import numpy as np
@@ -39,7 +39,8 @@ def train_gps(gps: GPS, K, path, per_kl=0.1):
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
-            loss, _ = gps.update_policy(path)
+            loss, div = gps.update_policy(path)
+            div = np.sum(div.flatten(), axis=0) / (2 * gps.N * gps.M)
             losses[k] = loss
             nus[k] = np.mean(gps.nu, axis=(0, 1))
             etas[k] = np.mean(gps.eta, axis=0)
@@ -49,7 +50,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1):
                              kl_step='{:.2f}'.format(gps.kl_step),
                              lamb=lamb,
                              eta='{:.2f}'.format(etas[k]),
-                             nu='{:.3f}'.format(nus[k]))
+                             nu='{:.3f}'.format(nus[k]), div=div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
     return losses, nus, etas, lambdas
@@ -78,8 +79,9 @@ def main(path):
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
     policy = Policy(other_env, [64, 64])
-    # policy.load_state_dict(torch.load(
-    #     'results_ddpg/12_9_113/actor', map_locatxion='cpu'))
+    if PARAMS['pre-training']:
+        policy.load_state_dict(torch.load(
+            'results_ddpg/12_9_113/actor', map_location='cpu'))
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
     # 2. Training
@@ -100,6 +102,7 @@ def main(path):
               eta=eval(PARAMS_OFFLINE['min_eta']),
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
+              alpha_lamb=PARAMS_OFFLINE['alpha_lamb'],
               kl_step=KL_STEP,
               init_sigma=W0[0],
               low_range=low_range,
@@ -168,16 +171,22 @@ def main(path):
                      path=subpath
                      )
 
-    states = np.empty(gps.N, env.steps, gps.n_x)
-    actions = np.empty(gps.N, env.steps - 1, gps.n_u)
+    N = gps.N
+    M = gps.M
+    T = gps.T
+
+    states = np.empty((gps.N, gps.M, gps.T + 1, n_x))
+    actions = np.empty((gps.N, gps.M, gps.T, n_u))
     for i in range(gps.N):
-        file = np.load(path + f'buffer/control_{i}.npz')
+        file = np.load(path + f'buffer/rollouts_{i}.npz')
         states[i] = file['xs']
         actions[i] = file['us']
-    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.2)
-    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.2)
-    fig1.savefig(path + 'buffer/state_control.png')
-    fig2.savefig(path + 'buffer/action_control.png')
+    fig1, _ = plot_rollouts(states.reshape((N * M, T + 1, n_x)),
+                            env.time, STATE_NAMES, alpha=0.005)
+    fig2, _ = plot_rollouts(actions.reshape((N * M, T, n_u)),
+                            env.time, ACTION_NAMES, alpha=0.005)
+    fig1.savefig(path + 'buffer/state_rollouts.png')
+    fig2.savefig(path + 'buffer/action_rollouts.png')
     return path
 
 
