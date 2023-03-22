@@ -31,9 +31,9 @@ if not SHOW:
 
 def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
     losses = np.empty(K)
-    nus = np.empty(K)
+    nus = np.empty((K, gps.N, gps.T))
     etas = np.empty(K)
-    lambdas = np.empty((K, gps.n_u))
+    lambdas = np.empty((K, gps.N, gps.T, gps.n_u))
     # Inicializa x0s
     gps.init_x0()
     with tqdm(total=K) as pbar:
@@ -42,15 +42,16 @@ def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
             loss, div = gps.update_policy(path, constrained_actions)
             div = np.sum(div.flatten(), axis=0) / (2 * gps.N * gps.M)
             losses[k] = loss
-            nus[k] = np.mean(gps.nu, axis=(0, 1))
+            nus[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
             etas[k] = np.mean(gps.eta, axis=0)
-            lambdas[k] = np.mean(gps.lamb, axis=(0, 1))
-            lamb = np.linalg.norm(lambdas[k])
+            lambdas[k] = gps.lamb  # np.mean(gps.lamb, axis=(0, 1))
+            lamb = np.linalg.norm(np.mean(gps.lamb, axis=(0, 1)))
             pbar.set_postfix(loss='{:.2f}'.format(loss),
                              kl_step='{:.2f}'.format(gps.kl_step),
                              lamb=lamb,
                              eta='{:.2f}'.format(etas[k]),
-                             nu='{:.3f}'.format(nus[k]), div=div)
+                             nu='{:.3f}'.format(np.mean(gps.nu, axis=(0, 1))),
+                             div=div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
     return losses, nus, etas, lambdas
@@ -128,14 +129,14 @@ def main(path):
                      ylabel='$L_{\\theta}(\\theta, p)$',
                      title='Entrenamiento', ax=ax1)
     # 3.2 eta's and nu's evolution
-    dic = {'$\eta$': etas, '$\\nu$': nus}
+    dic = {'$\eta$': etas, '$\\nu$': np.mean(nus, axis=(1, 2))}
     for ax, key in zip([ax2, ax3], dic.keys()):
         ax.plot(dic[key])
         ax.set_title(key)
     # 3.3 lambdas
-    labels = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
+    LAMB_NAMES = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
-    plot_rollouts(lambdas, env.time, labels, ax=ax)
+    plot_rollouts(np.mean(lambdas, axis=(1, 2)), env.time, LAMB_NAMES, ax=ax)
     fig.savefig(path + 'train_performance.png')
     # 4. Simulation
 
@@ -150,6 +151,10 @@ def main(path):
     fig1.savefig(path + 'state_rollouts.png')
     fig2.savefig(path + 'action_rollouts.png')
     fig3.savefig(path + 'score_rollouts.png')
+
+    fig4, _ = plot_rollouts(lambdas[-1], env.time, LAMB_NAMES, alpha=0.2)
+    fig4.savefig(path + 'lambdas.png')
+
     create_report(path, title='Entrenamiento GPS',
                   method='gps', extra_method='ilqr')
     subpath = path + 'sample_rollouts/'
