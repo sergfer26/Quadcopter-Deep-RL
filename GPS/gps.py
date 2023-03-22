@@ -176,7 +176,7 @@ class GPS:
         # C_new += PARAMS_LQG['cov_reg'] * np.identity(C.shape[-1])
         return C_new
 
-    def policy_loss(self, states, actions, C, sigma):
+    def policy_loss(self, states, actions, C):
         '''
         Cálculo de la función de pérdida, ecuación [2].
 
@@ -203,39 +203,15 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
-        # Check if is symetric positive definite:
-        # eigvals = np.linalg.eigvals(C)
-        # eigvals_sigma = np.linalg.eigvals(sigma)
-        # raise_error = False
-        # if not np.apply_along_axis(np.greater, -1, eigvals, np.zeros(self.n_u)).all():
-        #     raise_error = True
-        #     error = 'C has negative eigen values'
-        # if not np.apply_along_axis(np.greater, -1, eigvals_sigma, np.zeros(self.n_u)).all():
-        #     raise_error = True
-        #     error = 'sigma has negative eigen values: \n {sigma}'
-        # if raise_error:
-        #     raise ValueError(error)
-
-        # if len(states.shape) == 4:
-        #     arg1 = 'NMT,NT-> NMT'
-        #     arg2 = 'NMTu,NTu-> NMT'
-        # elif len(states.shape) == 3:
-        #     arg1 = 'NT,NT-> NT'
-        #     arg2 = 'NTu,NTu-> NT'
-        # else:
-        #     print('states de dimensión {states.shape} no es compatible')
 
         if len(C.shape) == 4:
             C = np.expand_dims(C, axis=1)
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         C = torch.FloatTensor(C).to(device)
-        sigma = torch.FloatTensor(sigma).to(device)
         lamb = torch.FloatTensor(self.lamb).to(device)
         nu = torch.FloatTensor(self.nu).to(device)
-        N = states.shape[0]
-        M = states.shape[1]
-        T = states.shape[2]
+
         # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
 
@@ -246,25 +222,13 @@ class GPS:
 
         kld = loss
         # 2.2 Multiplicación escalar de
-        loss = torch.einsum('NMT, NT -> NMT', loss, nu)
+        loss = torch.einsum('NT, NMT -> NMT', nu, loss)
 
         # 3. Cálculo de terminos de regularización
-        loss += 2 * torch.einsum('NMTu, NMTu -> NMT', lamb, policy_actions)
-
-        # loss = 0.0
-        # loss += 0.5 * _batch_mahalanobis(C, policy_actions - actions)
-        # calculo de la traza
-        # loss -= 0.5 * \
-        #     torch.diagonal(torch.matmul(C, sigma), dim1=-2, dim2=-1).sum(-1)
-        # loss -= 0.5 * torch.einsum('bii->b', C @ self.policy.sigma)
-        # loss += 0.5 * torch.log(torch.linalg.det(sigma))
-        # kld = loss
-        # loss = torch.einsum(arg1, loss, nu)
-        # reg = actions * lamb
-        # loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
+        loss += 2 * torch.einsum('NTu, NMTu -> NMT', lamb, policy_actions)
 
         # Cálculo de perdida promedio
-        loss = torch.sum(loss.flatten(), dim=0) / (2 * N * M * T)
+        loss = 0.5 * torch.mean(loss)
         # kld = torch.mean(kld, dim=0)
         return loss, kld
 
@@ -375,7 +339,7 @@ class GPS:
             low_constrain = None
             high_constain = None
 
-        # 1. Control fitting
+        # 1. Control iLQR fitting
         if self.N > 1:
             processes = list()
             for i in range(self.N):
@@ -412,35 +376,24 @@ class GPS:
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
             x0_samples = self._random_x0(self.x0, self.M)
-            args = (self.x0,
-                    self.kl_step,
-                    self.policy,
-                    cost_kwargs,
-                    self.dynamics_kwargs,
-                    i,
-                    self.T,
-                    self.M,
-                    path,
-                    self.t_x,
-                    self.inv_t_u,
-                    self.policy._sigma,
-                    x0_samples,
-                    low_constrain,
-                    high_constain
-                    )
-            fit_ilqg(*args)
+            fit_ilqg(self.x0, self.kl_step, self.policy, cost_kwargs,
+                     self.dynamics_kwargs, i, self.T, self.M, path,
+                     self.t_x, self.inv_t_u, self.policy._sigma,
+                     x0_samples, low_constrain, high_constain
+                     )
+
         # 1.1 update eta
         self.eta = self._update_eta(path)
-        # 1.2 Loading fitted parameters
+        # 1.2 Loading fitted parameters and simulations
         (K, k, C, nominal_xs, nominal_us,
          xs, us, alphas) = self._load_fitted_lqg(path)
-        # 1.3 Loading simulations
+
         # 2. Policy fitting
         us_mean = self.mean_control(xs, nominal_xs, nominal_us, K, k, alphas)
         self.policy._sigma = self.cov_policy(C)
         if callable(self.t_x):
             xs = np.apply_along_axis(self.t_x, -1, xs)  # x_t -> o_t
-        loss, div = self.policy_loss(xs, us_mean, C, self.policy._sigma)
+        loss, div = self.policy_loss(xs, us_mean, C)
         div = div.detach().cpu().numpy()
         mean_div = np.mean(div, axis=1)  # (N, T)
 
@@ -453,12 +406,14 @@ class GPS:
         us_policy = self.policy.get_action(xs)
         if callable(self.inv_t_u):  # a_t -> u_t
             us_policy = np.apply_along_axis(self.inv_t_u, -1, us_policy)
-        self.lamb = self._update_lamb(us_policy, us)
-        self.nu = self._update_nu(mean_div)
-        loss = loss.detach().cpu().item()
 
-        # 4. Update kl_step
-        # self.kl_step = self.kl_step * (1 - self.per_kl)
+        # 3.1 Update lamb
+        self.lamb = self._update_lamb(us_policy, us)
+
+        # 3.2 Update nu
+        self.nu = self._update_nu(mean_div)
+
+        loss = loss.detach().cpu().item()
         return loss, div
 
 
