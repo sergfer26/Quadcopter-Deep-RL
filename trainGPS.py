@@ -1,5 +1,4 @@
 import time
-import torch
 import pathlib
 import send_email
 import numpy as np
@@ -40,7 +39,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
             loss, div = gps.update_policy(path, constrained_actions)
-            div = np.sum(div.flatten(), axis=0) / (2 * gps.N * gps.M)
+            mean_div = 0.5 * np.mean(div)
             losses[k] = loss
             nus[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
             etas[k] = np.mean(gps.eta, axis=0)
@@ -51,7 +50,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
                              lamb=lamb,
                              eta='{:.2f}'.format(etas[k]),
                              nu='{:.3f}'.format(np.mean(gps.nu, axis=(0, 1))),
-                             div=div)
+                             mean_div=mean_div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
     return losses, nus, etas, lambdas
