@@ -11,7 +11,7 @@ PARAMS_TRAIN_GPS = {'UPDATES': 15, 'N': 8, 'M': 100,
                     'constrained_actions': True}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '5', '$y$': '5', '$z$': '5',
+              '$x$': '4', '$y$': '4', '$z$': '4',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
               '$\phi$': 'np.pi/64'}
