@@ -235,21 +235,21 @@ class GPS:
         nu = torch.FloatTensor(self.nu).to(device)
         N = states.shape[0]
         M = states.shape[1]
+        T = states.shape[2]
         # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
 
-        # 2. Cálculo de terminos de regularización
-        reg = torch.einsum('NMTuu, NTu -> NMTu', C, lamb)
-        reg = torch.einsum('NT, NMTu -> NMTu', 1/nu, reg)
-
-        # 3. Cálculo de perdida
+        # 2. Cálculo de perdida
         loss = 0.0
-        # 3.1 Cálculo de la distancia Mahalanobis
-        loss += _batch_mahalanobis(C, policy_actions - actions + reg)
+        # 2.1 Cálculo de la distancia Mahalanobis
+        loss += _batch_mahalanobis(C, policy_actions - actions)
 
         kld = loss
-        # 3.2 Multiplicación escalar de
+        # 2.2 Multiplicación escalar de
         loss = torch.einsum('NMT, NT -> NMT', loss, nu)
+
+        # 3. Cálculo de terminos de regularización
+        loss += 2 * torch.einsum('NMTu, NMTu -> NMT', lamb, policy_actions)
 
         # loss = 0.0
         # loss += 0.5 * _batch_mahalanobis(C, policy_actions - actions)
@@ -264,7 +264,7 @@ class GPS:
         # loss += torch.einsum(arg2, actions, lamb)  # reg.sum(dim=-1)
 
         # Cálculo de perdida promedio
-        loss = torch.sum(loss.flatten(), dim=0) / (2 * N * M)
+        loss = torch.sum(loss.flatten(), dim=0) / (2 * N * M * T)
         # kld = torch.mean(kld, dim=0)
         return loss, kld
 
