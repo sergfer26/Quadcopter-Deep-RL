@@ -203,7 +203,6 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
-
         if len(C.shape) == 4:
             C = np.expand_dims(C, axis=1)
         states = torch.FloatTensor(states).to(device)
@@ -340,6 +339,7 @@ class GPS:
             high_constain = None
 
         # 1. Control iLQR fitting
+        self.policy.eval()
         if self.N > 1:
             processes = list()
             for i in range(self.N):
@@ -393,6 +393,8 @@ class GPS:
         self.policy._sigma = self.cov_policy(C)
         if callable(self.t_x):
             xs = np.apply_along_axis(self.t_x, -1, xs)  # x_t -> o_t
+
+        self.policy.train()
         loss, div = self.policy_loss(xs, us_mean, C)
         div = div.detach().cpu().numpy()
         mean_div = np.mean(div, axis=1)  # (N, T)
@@ -403,6 +405,7 @@ class GPS:
         self.policy_optimizer.step()
 
         # 3. Update Langrange's multipliers
+        self.policy.eval()
         us_policy = self.policy.get_action(xs)
         if callable(self.inv_t_u):  # a_t -> u_t
             us_policy = np.apply_along_axis(self.inv_t_u, -1, us_policy)
