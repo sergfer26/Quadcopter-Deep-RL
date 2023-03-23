@@ -9,7 +9,6 @@ from torch.autograd import Variable
 # from .models_merge import Actor, Critic, weights_init
 from .models import Actor, Critic
 from .utils import Memory
-from .params import PARAMS_DDPG
 
 
 device = 'cpu'
