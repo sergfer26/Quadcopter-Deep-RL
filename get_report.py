@@ -6,8 +6,8 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GPS
-from params import PARAMS_OBS
-from DDPG.params import PARAMS_UTILS, PARAMS_DDPG
+from params import PARAMS_OBS, PARAMS_DDPG
+from DDPG.params import PARAMS_UTILS
 from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
 # from PPO.params import PARAMS_PPO
 
