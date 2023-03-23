@@ -54,7 +54,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
                              mean_div=mean_div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
-    return losses, nus, etas, lambdas
+    return losses, nus, etas, lambdas, div
 
 
 def select_x0(gps, n):
@@ -112,7 +112,7 @@ def main(path):
               )
     ti = time.time()
     # 2. Training
-    losses, nus, etas, lambdas = train_gps(
+    losses, nus, etas, lambdas, div = train_gps(
         gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
         constrained_actions=constrained_actions)
     tf = time.time()
@@ -166,18 +166,34 @@ def main(path):
     T = gps.T
 
     # 3.5 Control's simulations
-    states = np.empty((gps.N, gps.M, gps.T + 1, n_x))
-    actions = np.empty((gps.N, gps.M, gps.T, n_u))
+    states_control = np.empty((gps.N, gps.M, gps.T + 1, n_x))
+    actions_control = np.empty((gps.N, gps.M, gps.T, n_u))
     for i in range(gps.N):
         file = np.load(path + f'buffer/rollouts_{i}.npz')
-        states[i] = file['xs']
-        actions[i] = file['us']
-    fig1, _ = plot_rollouts(states.reshape((N * M, T + 1, n_x)),
+        states_control[i] = file['xs']
+        actions_control[i] = file['us']
+    fig1, _ = plot_rollouts(states_control.reshape((N * M, T + 1, n_x)),
                             env.time, STATE_NAMES, alpha=0.005)
-    fig2, _ = plot_rollouts(actions.reshape((N * M, T, n_u)),
+    fig2, _ = plot_rollouts(actions_control.reshape((N * M, T, n_u)),
                             env.time, ACTION_NAMES, alpha=0.005)
     fig1.savefig(path + 'buffer/state_rollouts.png')
     fig2.savefig(path + 'buffer/action_rollouts.png')
+
+    # 3.4 Divergence's along time
+    mean_div = np.mean(div, axis=(0, 1))  # (T,)
+    std_div = np.std(div, axis=(0, 1))  # (T, )
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(env.time, mean_div, alpha=0.6, color='blue',
+            label='current', linewidth=2.0)
+    ax.fill_between(env.time, mean_div + std_div, mean_div - std_div,
+                    color='lightskyblue', alpha=0.4)
+    ax.fill_between(env.time, mean_div + 2 * std_div, mean_div + 2 * std_div,
+                    color='lightskyblue', alpha=0.2)
+    ax.legend(loc='best')
+    ax.set_ylabel("divergence")
+    ax.set_xlabel("$t$ (s)")
+    fig.savefig(path + 'kl_div.png')
 
     # 4. Creación de reporte
     create_report(path, title='Entrenamiento GPS',
