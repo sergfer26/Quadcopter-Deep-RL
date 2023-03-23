@@ -69,12 +69,13 @@ def select_x0(gps, n):
 
 
 def main(path):
+    # 1. Creación de instancias
     K = PARAMS['UPDATES']
     rollouts = PARAMS['rollouts']
     samples = PARAMS['samples']
     KL_STEP = PARAMS_OFFLINE['kl_step']
     constrained_actions = PARAMS['constrained_actions']
-    # 1. Setup
+    # 1.1 Dynamics
     env = QuadcopterEnv()
     dt = env.time[-1] - env.time[-2]
     n_u = env.action_space.shape[0]
@@ -84,7 +85,7 @@ def main(path):
     policy = Policy(other_env, hidden_sizes)
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
-    # 2. Training
+    # 1.2 GPS
     high_range = np.array(
         [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
     low_range = - high_range
@@ -103,13 +104,14 @@ def main(path):
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
               alpha_lamb=PARAMS_OFFLINE['alpha_lamb'],
-              learning_rate=PARAMS_DDPG['actor_learning_rate'], 
+              learning_rate=PARAMS_DDPG['actor_learning_rate'],
               kl_step=KL_STEP,
               init_sigma=W0[0],
               low_range=low_range,
               high_range=high_range
               )
     ti = time.time()
+    # 2. Training
     losses, nus, etas, lambdas = train_gps(
         gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
         constrained_actions=constrained_actions)
@@ -140,13 +142,15 @@ def main(path):
     ax = np.array([ax41, ax42, ax43, ax44])
     plot_rollouts(np.mean(lambdas, axis=(1, 2)), env.time, LAMB_NAMES, ax=ax)
     fig.savefig(path + 'train_performance.png')
-    # 4. Simulation
 
+    # 3.4 Policy's simulations
     states_init = np.apply_along_axis(
         gps.t_x, -1, select_x0(gps, rollouts))
     states, actions, scores = n_rollouts(
         policy, other_env, rollouts, t_x=inv_transform_x,
         states_init=states_init)
+    print('Terminó de simualación...')
+
     fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
@@ -157,30 +161,11 @@ def main(path):
     fig4, _ = plot_rollouts(lambdas[-1], env.time, LAMB_NAMES, alpha=0.2)
     fig4.savefig(path + 'lambdas.png')
 
-    create_report(path, title='Entrenamiento GPS',
-                  method='gps', extra_method='ilqr')
-    subpath = path + 'sample_rollouts/'
-    pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
-
-    print('Terminó de simualación...')
-
-    sample_indices = np.random.randint(states.shape[0], size=samples)
-    states_samples = states[sample_indices]
-    actions_samples = actions[sample_indices]
-    scores_samples = scores[sample_indices]
-    print('Creando animación...')
-    create_animation(states_samples, actions_samples, env.time,
-                     scores=scores_samples,
-                     state_labels=STATE_NAMES,
-                     action_labels=ACTION_NAMES,
-                     score_labels=REWARD_NAMES,
-                     path=subpath
-                     )
-
     N = gps.N
     M = gps.M
     T = gps.T
 
+    # 3.5 Control's simulations
     states = np.empty((gps.N, gps.M, gps.T + 1, n_x))
     actions = np.empty((gps.N, gps.M, gps.T, n_u))
     for i in range(gps.N):
@@ -193,6 +178,28 @@ def main(path):
                             env.time, ACTION_NAMES, alpha=0.005)
     fig1.savefig(path + 'buffer/state_rollouts.png')
     fig2.savefig(path + 'buffer/action_rollouts.png')
+
+    # 4. Creación de reporte
+    create_report(path, title='Entrenamiento GPS',
+                  method='gps', extra_method='ilqr')
+
+    subpath = path + 'sample_rollouts/'
+    pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
+
+    sample_indices = np.random.randint(states.shape[0], size=samples)
+    states_samples = states[sample_indices]
+    actions_samples = actions[sample_indices]
+    scores_samples = scores[sample_indices]
+
+    # 5. Creación de animación
+    print('Creando animación...')
+    create_animation(states_samples, actions_samples, env.time,
+                     scores=scores_samples,
+                     state_labels=STATE_NAMES,
+                     action_labels=ACTION_NAMES,
+                     score_labels=REWARD_NAMES,
+                     path=subpath
+                     )
     return path
 
 
