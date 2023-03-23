@@ -14,6 +14,7 @@ from dynamics import transform_x, transform_u
 from dynamics import inv_transform_u, inv_transform_x
 from dynamics import penalty, terminal_penalty
 from params import PARAMS_TRAIN_GPS as PARAMS
+from params import PARAMS_DDPG
 from GPS.params import PARAMS_OFFLINE
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from simulation import plot_rollouts, n_rollouts
@@ -79,7 +80,8 @@ def main(path):
     n_u = env.action_space.shape[0]
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
-    policy = Policy(other_env, [64, 64])
+    hidden_sizes = PARAMS_DDPG['hidden_sizes']
+    policy = Policy(other_env, hidden_sizes)
     dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
                            dt=dt, u0=W0)
     # 2. Training
@@ -101,6 +103,7 @@ def main(path):
               nu=PARAMS_OFFLINE['nu'],
               lamb=PARAMS_OFFLINE['lamb'],
               alpha_lamb=PARAMS_OFFLINE['alpha_lamb'],
+              learning_rate=PARAMS_DDPG['actor_learning_rate'], 
               kl_step=KL_STEP,
               init_sigma=W0[0],
               low_range=low_range,
