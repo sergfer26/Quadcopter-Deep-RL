@@ -234,6 +234,12 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_text(pdf, ['Simulaciones iLQR (estados)'], 30, 390)
         add_image(path + 'buffer/', pdf,
                   'state_rollouts.png', 30, -10, 500, 500)
+
+        pdf.showPage()
+        add_text(
+            pdf, ['Divergencia Kullback-Leibler (política vs control)'], 30, 770)
+        add_image(path, pdf, 'kl_div.png', 100, 400, 350, 350)
+
     pdf.save()
 
 
