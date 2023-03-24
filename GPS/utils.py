@@ -9,6 +9,7 @@ from ilqr.dynamics import FiniteDiffDynamics
 from ilqr.cost import FiniteDiffCost
 from scipy.stats import multivariate_normal
 from scipy.spatial.distance import mahalanobis
+from torch.utils.data import Dataset
 from .params import PARAMS_LQG, PARAMS_ONLINE
 from .policy import Policy
 # from scipy.linalg import issymmetric
@@ -16,6 +17,46 @@ from .policy import Policy
 device = 'cpu'
 if torch.cuda.is_available():
     device = 'cuda'
+
+
+class iLQR_Rollouts(Dataset):
+
+    def __init__(self, N, M, T, n_u, n_x):
+        self.N = N
+        self.M = M
+        self.T = T
+        self.n_u = n_u
+        self.n_x = n_x
+
+    def __len__(self):
+        return self.N * self.T * self.M
+
+    def __getitem__(self, index):
+        '''
+        Retornos
+        --------
+        states, actions, lamb, nu, C
+        '''
+        return (self.states[index], self.actions[index], self.lamb[index],
+                self.nu[index], self.C[index])
+
+    # K, k, C, nominal_xs, nominal_us, xs, us, alphas
+    def update_rollouts(self, states, actions, lamb, nu, C):
+        # (K, k, C,
+        #  nominal_xs, nominal_us,
+        #  xs, us, alphas
+        #  ) = self._load_files(path)
+        # iLQR parameters
+        C = np.repeat(np.expand_dims(C, axis=1), self.M, axis=1)
+        lamb = np.repeat(np.expand_dims(lamb, axis=1), self.M, axis=1)
+        nu = np.repeat(np.expand_dims(nu, axis=1), self.M, axis=1)
+
+        self.C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
+        self.lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
+        self.nu = nu.reshape(self.N * self.M * self.T)
+
+        self.states = states.reshape(self.N * self.M * self.T, self.n_x)
+        self.actions = actions.reshape(self.N * self.M * self.T, self.n_u)
 
 
 class ContinuousDynamics(FiniteDiffDynamics):
