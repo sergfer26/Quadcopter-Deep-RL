@@ -13,7 +13,8 @@ from .params import PARAMS_LQG, PARAMS_OFFLINE
 from GPS.utils import ContinuousDynamics
 from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
-from .utils import nearestPD
+from .utils import nearestPD, iLQR_Rollouts
+from torch.utils.data import DataLoader
 
 
 device = 'cpu'
@@ -31,8 +32,9 @@ class GPS:
                  N=3, M=2, eta=1e-3, nu=1e-4,
                  lamb=1e-9, alpha_lamb=1e-8,
                  learning_rate=0.01, kl_step=200,
-                 u0=None, init_sigma=1.0, low_range=None,
-                 high_range=None):
+                 u0=None, init_sigma=1.0,
+                 low_range=None, high_range=None,
+                 batch_size=64):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -116,6 +118,8 @@ class GPS:
             self.policy.parameters(), lr=learning_rate)
 
         # Multiprocessing instances.
+        self.batch_size = batch_size
+        self.buffer = iLQR_Rollouts(N, M, T, self.n_u, self.n_x)
         self.manager = mp.Manager()
         self.buffer = self.manager.dict()
 
@@ -176,7 +180,7 @@ class GPS:
         # C_new += PARAMS_LQG['cov_reg'] * np.identity(C.shape[-1])
         return C_new
 
-    def policy_loss(self, states, actions, C):
+    def policy_loss(self, states, actions, lamb, nu, C):
         '''
         Cálculo de la función de pérdida, ecuación [2].
 
@@ -208,8 +212,8 @@ class GPS:
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
         C = torch.FloatTensor(C).to(device)
-        lamb = torch.FloatTensor(self.lamb).to(device)
-        nu = torch.FloatTensor(self.nu).to(device)
+        lamb = torch.FloatTensor(lamb).to(device)
+        nu = torch.FloatTensor(nu).to(device)
 
         # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
@@ -328,6 +332,22 @@ class GPS:
         x = np.random.uniform(self.low_range, self.high_range, size)
         return x + x0
 
+    def fit_policy(self, dataloader: DataLoader):
+        self.policy.train()
+        n = 0
+        avg_loss = 0.0
+        for i, data in enumerate(dataloader, 0):
+            loss = self.policy_loss(*data)[0]
+
+            # 2.1 Optimization step
+            self.policy_optimizer.zero_grad()
+            loss.backward()
+            self.policy_optimizer.step()
+            loss = loss.detach().cpu().item()
+            n += i
+            avg_loss += loss.detach().cpu().item()
+        return avg_loss / (i+1)
+
     def update_policy(self, path, constrained_actions=False):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
@@ -389,20 +409,22 @@ class GPS:
          xs, us, alphas) = self._load_fitted_lqg(path)
 
         # 2. Policy fitting
+
+        # 2.1 Calculate mean action
         us_mean = self.mean_control(xs, nominal_xs, nominal_us, K, k, alphas)
-        self.policy._sigma = self.cov_policy(C)
         if callable(self.t_x):
             xs = np.apply_along_axis(self.t_x, -1, xs)  # x_t -> o_t
 
-        self.policy.train()
-        loss, div = self.policy_loss(xs, us_mean, C)
-        div = div.detach().cpu().numpy()
-        mean_div = np.mean(div, axis=1)  # (N, T)
+        # 2.2 Create Dataset and Dataloader instances
+        self.buffer.update_rollouts(xs, us_mean, self.lamb, self.nu, C)
+        dataloader = DataLoader(
+            self.buffer, batch_size=self.batch_size, shuffle=True)
 
-        # 2.1 Update policy network
-        self.policy_optimizer.zero_grad()
-        loss.backward()
-        self.policy_optimizer.step()
+        # 2.3 Mean policy fitting (neural network)
+        loss = self.fit_policy(dataloader)
+
+        # 2.4 Update policy covariance matrix
+        self.policy._sigma = self.cov_policy(C)
 
         # 3. Update Langrange's multipliers
         self.policy.eval()
@@ -414,9 +436,11 @@ class GPS:
         self.lamb = self._update_lamb(us_policy, us)
 
         # 3.2 Update nu
+        div = self.policy_loss(xs, us_mean, self.lamb, self.nu, C)[1]
+        div = div.detach().cpu().numpy()
+        mean_div = np.mean(div, axis=1)  # (N, T)
         self.nu = self._update_nu(mean_div)
 
-        loss = loss.detach().cpu().item()
         return loss, div
 
 
