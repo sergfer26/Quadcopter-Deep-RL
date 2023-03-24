@@ -1,7 +1,7 @@
 import torch
 import pathlib
 import numpy as np
-# import multiprocessing as mp
+import multiprocessing as mp
 from scipy.stats import multivariate_normal
 from torch import optim
 from copy import deepcopy
