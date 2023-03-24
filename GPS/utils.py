@@ -40,12 +40,7 @@ class iLQR_Rollouts(Dataset):
         return (self.states[index], self.actions[index], self.lamb[index],
                 self.nu[index], self.C[index])
 
-    # K, k, C, nominal_xs, nominal_us, xs, us, alphas
     def update_rollouts(self, states, actions, lamb, nu, C):
-        # (K, k, C,
-        #  nominal_xs, nominal_us,
-        #  xs, us, alphas
-        #  ) = self._load_files(path)
         # iLQR parameters
         C = np.repeat(np.expand_dims(C, axis=1), self.M, axis=1)
         lamb = np.repeat(np.expand_dims(lamb, axis=1), self.M, axis=1)
