@@ -1,7 +1,7 @@
 import torch
 import pathlib
 import numpy as np
-import multiprocessing as mp
+# import multiprocessing as mp
 from scipy.stats import multivariate_normal
 from torch import optim
 from copy import deepcopy
@@ -119,9 +119,9 @@ class GPS:
 
         # Multiprocessing instances.
         self.batch_size = batch_size
-        self.buffer = iLQR_Rollouts(N, M, T, self.n_u, self.n_x)
-        self.manager = mp.Manager()
-        self.buffer = self.manager.dict()
+        self.buffer = iLQR_Rollouts(N, M, T, self.n_u, self.policy.state_dim)
+        # self.manager = mp.Manager()
+        # self.buffer = self.manager.dict()
 
     def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
         '''
@@ -207,7 +207,7 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
-        if len(C.shape) == 4:
+        if (len(C.shape) == 4) and (len(states.shape) == 4):
             C = np.expand_dims(C, axis=1)
         states = torch.FloatTensor(states).to(device)
         actions = torch.FloatTensor(actions).to(device)
