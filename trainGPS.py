@@ -166,8 +166,8 @@ def main(path):
     T = gps.T
 
     # 3.5 Control's simulations
-    states_control = np.empty((gps.N, gps.M, gps.T + 1, n_x))
-    actions_control = np.empty((gps.N, gps.M, gps.T, n_u))
+    states_control = np.empty((N, M, T + 1, n_x))
+    actions_control = np.empty((N, M, T, n_u))
     for i in range(gps.N):
         file = np.load(path + f'buffer/rollouts_{i}.npz')
         states_control[i] = file['xs']
@@ -184,11 +184,11 @@ def main(path):
     std_div = np.std(div, axis=(0, 1))  # (T, )
 
     fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(env.time, mean_div, alpha=0.6, color='blue',
+    ax.plot(env.time[:T], mean_div, alpha=0.6, color='blue',
             label='current', linewidth=2.0)
-    ax.fill_between(env.time, mean_div + std_div, mean_div - std_div,
+    ax.fill_between(env.time[:T], mean_div + std_div, mean_div - std_div,
                     color='lightskyblue', alpha=0.4)
-    ax.fill_between(env.time, mean_div + 2 * std_div, mean_div + 2 * std_div,
+    ax.fill_between(env.time[:T], mean_div + 2 * std_div, mean_div + 2 * std_div,
                     color='lightskyblue', alpha=0.2)
     ax.legend(loc='best')
     ax.set_ylabel("divergence")
