@@ -112,7 +112,7 @@ class GPS:
                                 T=T,
                                 u0=u0)
 
-        self.policy = policy
+        self.policy = policy.to(device)
         self.policy_sigma = init_sigma * np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
@@ -209,11 +209,22 @@ class GPS:
         '''
         if (len(C.shape) == 4) and (len(states.shape) == 4):
             C = np.expand_dims(C, axis=1)
-        states = torch.FloatTensor(states).to(device)
-        actions = torch.FloatTensor(actions).to(device)
-        C = torch.FloatTensor(C).to(device)
-        lamb = torch.FloatTensor(lamb).to(device)
-        nu = torch.FloatTensor(nu).to(device)
+        if not isinstance(states, torch.Tensor):
+            states = torch.FloatTensor(states)
+        if not isinstance(actions, torch.Tensor):
+            actions = torch.FloatTensor(actions)
+        if not isinstance(C, torch.Tensor):
+            C = torch.FloatTensor(C)
+        if not isinstance(lamb, torch.Tensor):
+            lamb = torch.FloatTensor(lamb)
+        if not isinstance(nu, torch.Tensor):
+            nu = torch.FloatTensor(nu)
+
+        states = states.to(device)
+        actions = actions.to(device)
+        C = C.to(device)
+        lamb = lamb.to(device)
+        nu = nu.to(device)
 
         # 1. Cálculo de \mu^{\pi}(x)
         policy_actions = self.inv_t_u(self.policy(states))
@@ -225,10 +236,16 @@ class GPS:
 
         kld = loss
         # 2.2 Multiplicación escalar de
-        loss = torch.einsum('NT, NMT -> NMT', nu, loss)
+        if len(loss.shape) == 3:
+            loss = torch.einsum('NT, NMT -> NMT', nu, loss)
+        else:
+            loss = nu * loss
 
         # 3. Cálculo de terminos de regularización
-        loss += 2 * torch.einsum('NTu, NMTu -> NMT', lamb, policy_actions)
+        if len(lamb.shape) == 3:
+            loss += 2 * torch.einsum('NTu, NMTu -> NMT', lamb, policy_actions)
+        else:
+            loss += 2 * torch.einsum('Nu, Nu -> N', lamb, policy_actions)
 
         # Cálculo de perdida promedio
         loss = 0.5 * torch.mean(loss)
@@ -345,7 +362,7 @@ class GPS:
             self.policy_optimizer.step()
             loss = loss.detach().cpu().item()
             n += i
-            avg_loss += loss.detach().cpu().item()
+            avg_loss += loss
         return avg_loss / (i+1)
 
     def update_policy(self, path, constrained_actions=False):
