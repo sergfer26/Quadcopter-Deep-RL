@@ -46,12 +46,19 @@ class iLQR_Rollouts(Dataset):
         lamb = np.repeat(np.expand_dims(lamb, axis=1), self.M, axis=1)
         nu = np.repeat(np.expand_dims(nu, axis=1), self.M, axis=1)
 
-        self.C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
-        self.lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
-        self.nu = nu.reshape(self.N * self.M * self.T)
+        C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
+        lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
+        nu = nu.reshape(self.N * self.M * self.T)
 
-        self.states = states.reshape(self.N * self.M * self.T, self.n_x)
-        self.actions = actions.reshape(self.N * self.M * self.T, self.n_u)
+        states = states.reshape(self.N * self.M * self.T, self.n_x)
+        actions = actions.reshape(self.N * self.M * self.T, self.n_u)
+
+        self.C = torch.FloatTensor(C)
+        self.lamb = torch.FloatTensor(lamb)
+        self.nu = torch.FloatTensor(nu)
+
+        self.states = torch.FloatTensor(states)
+        self.actions = torch.FloatTensor(actions)
 
 
 class ContinuousDynamics(FiniteDiffDynamics):
