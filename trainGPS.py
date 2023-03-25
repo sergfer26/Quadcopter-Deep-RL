@@ -74,7 +74,6 @@ def main(path):
     rollouts = PARAMS['rollouts']
     samples = PARAMS['samples']
     KL_STEP = PARAMS_OFFLINE['kl_step']
-    constrained_actions = PARAMS['constrained_actions']
     # 1.1 Dynamics
     env = QuadcopterEnv()
     dt = env.time[-1] - env.time[-2]
@@ -108,13 +107,13 @@ def main(path):
               kl_step=KL_STEP,
               init_sigma=W0[0],
               low_range=low_range,
-              high_range=high_range
+              high_range=high_range,
+              batch_size=PARAMS['batch_size']
               )
     ti = time.time()
     # 2. Training
     losses, nus, etas, lambdas, div = train_gps(
-        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
-        constrained_actions=constrained_actions)
+        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'])
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
