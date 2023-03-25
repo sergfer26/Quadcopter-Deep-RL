@@ -117,11 +117,9 @@ class GPS:
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
 
-        # Multiprocessing instances.
+        # Buffer's instances.
         self.batch_size = batch_size
         self.buffer = iLQR_Rollouts(N, M, T, self.n_u, self.policy.state_dim)
-        # self.manager = mp.Manager()
-        # self.buffer = self.manager.dict()
 
     def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
         '''
