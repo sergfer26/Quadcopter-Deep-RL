@@ -46,18 +46,18 @@ def rollout(agent, env, flag=False, state_init=None):
     states = np.zeros((env.steps, env.observation_space.shape[0]))
     actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
     scores = np.zeros((env.steps - 1, 2))  # r_t, Cr_t
-    states[0, :] = state
+    states[0] = state
     episode_reward = 0
     i = 0
     while True:
         action = agent.get_action(state)
         new_state, reward, done, info = env.step(action)
         episode_reward += reward
-        states[i + 1, :] = state
+        states[i + 1] = state
         if isinstance(info, dict) and ('real_action' in info.keys()):
             action = info['real_action']  # env.action(action)
-        actions[i, :] = action
-        scores[i, :] = np.array([reward, episode_reward])
+        actions[i] = action
+        scores[i] = np.array([reward, episode_reward])
         state = new_state
         if done:
             break
