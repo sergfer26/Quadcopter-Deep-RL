@@ -108,7 +108,7 @@ def main(path):
               init_sigma=W0[0],
               low_range=low_range,
               high_range=high_range,
-              batch_size=PARAMS['batch_size'], 
+              batch_size=PARAMS['batch_size'],
               is_stochastic=PARAMS['is_stochastic']
               )
     ti = time.time()
