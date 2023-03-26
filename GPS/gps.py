@@ -34,7 +34,7 @@ class GPS:
                  learning_rate=0.01, kl_step=200,
                  u0=None, init_sigma=1.0,
                  low_range=None, high_range=None,
-                 batch_size=64):
+                 batch_size=64, is_stochastic=True):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -95,6 +95,7 @@ class GPS:
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
         self.kl_step = kl_step
+        self.is_stochastic = is_stochastic
 
         # ilQG instances.
         if not callable(cost_terminal):
@@ -398,7 +399,8 @@ class GPS:
                                      self.policy._sigma,
                                      x0_samples,
                                      low_constrain,
-                                     high_constain
+                                     high_constain,
+                                     self.is_stochastic
                                      )
                                )
                 processes.append(p)
@@ -414,7 +416,8 @@ class GPS:
             fit_ilqg(self.x0, self.kl_step, self.policy, cost_kwargs,
                      self.dynamics_kwargs, i, self.T, self.M, path,
                      self.t_x, self.inv_t_u, self.policy._sigma,
-                     x0_samples, low_constrain, high_constain
+                     x0_samples, low_constrain, high_constain,
+                     self.is_stochastic
                      )
 
         # 1.1 update eta
@@ -461,7 +464,8 @@ class GPS:
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              path='', t_x=None, inv_t_u=None, policy_sigma=None,
-             x0_samples=None, low_constrain=None, high_constrain=None):
+             x0_samples=None, low_constrain=None, high_constrain=None,
+             is_stochastic=False):
     '''
     i : int
         Indice de trayectoria producida por iLQG.
@@ -512,7 +516,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     states = np.empty((M, T + 1, n_x))
     actions = np.empty((M, T, n_u))
-    control.is_stochastic = True
+    control.is_stochastic = is_stochastic
     if not isinstance(x0_samples, np.ndarray):
         x0_samples = multivariate_normal.rvs(
             mean=x0, cov=0.01 * np.identity(n_x), size=M)
