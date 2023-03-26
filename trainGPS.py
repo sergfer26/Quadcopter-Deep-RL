@@ -71,7 +71,7 @@ def select_x0(gps, n):
 def main(path):
     # 1. Creación de instancias
     K = PARAMS['UPDATES']
-    rollouts = PARAMS['rollouts']
+    rollouts = PARAMS['M']
     samples = PARAMS['samples']
     KL_STEP = PARAMS_OFFLINE['kl_step']
     # 1.1 Dynamics
@@ -108,7 +108,8 @@ def main(path):
               init_sigma=W0[0],
               low_range=low_range,
               high_range=high_range,
-              batch_size=PARAMS['batch_size']
+              batch_size=PARAMS['batch_size'], 
+              is_stochastic=PARAMS['is_stochastic']
               )
     ti = time.time()
     # 2. Training
