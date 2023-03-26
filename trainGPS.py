@@ -86,7 +86,7 @@ def main(path):
                            dt=dt, u0=W0)
     # 1.2 GPS
     high_range = np.array(
-        [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
+        [.0, .0, .0, 1.5, 1.5, 1.5, .0, .0, .0, np.pi/32, np.pi/32, np.pi/32])
     low_range = - high_range
     gps = GPS(env,
               policy,
@@ -100,10 +100,10 @@ def main(path):
               N=PARAMS['N'],
               M=PARAMS['M'],
               eta=eval(PARAMS_OFFLINE['min_eta']),
-              nu=PARAMS_OFFLINE['nu'],
-              lamb=PARAMS_OFFLINE['lamb'],
-              alpha_lamb=PARAMS_OFFLINE['alpha_lamb'],
-              learning_rate=PARAMS_DDPG['actor_learning_rate'],
+              nu=eval(PARAMS_OFFLINE['nu']),
+              lamb=eval(PARAMS_OFFLINE['lamb']),
+              alpha_lamb=eval(PARAMS_OFFLINE['alpha_lamb']),
+              learning_rate=eval(PARAMS_DDPG['actor_learning_rate']),
               kl_step=KL_STEP,
               init_sigma=W0[0],
               low_range=low_range,
