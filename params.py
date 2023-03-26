@@ -11,12 +11,12 @@ PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 3, 'M': 100,
                     'batch_size': 128}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '5', '$y$': '5', '$z$': '5',
+              '$x$': '2', '$y$': '2', '$z$': '2',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
-              '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
-              '$\phi$': 'np.pi/64'}
+              '$\psi$': 'np.pi/16', r'$\theta$': 'np.pi/16',
+              '$\phi$': 'np.pi/16'}
 
-PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': 1e-2,
+PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-3',
                'critic_learning_rate': 1e-4, 'gamma': 0.98, 'tau': 0.125,
                'max_memory_size': int(1e4)}
 
