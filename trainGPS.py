@@ -62,7 +62,14 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
                              mean_div=mean_div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
+            # Validación de modelos
             x0, indices = select_x0(gps, gps.M, return_indices=True)
+
+            episode_rewards = rewards_lqr(
+                x0, indices, control, gps.env, path + 'buffer/')
+            std_cost[1, k] = np.std(episode_rewards, axis=0)
+            mean_cost[1, k] = np.mean(episode_rewards, axis=0)
+
             x0 = np.apply_along_axis(gps.t_x, -1, x0)
             episode_rewards = n_rollouts(gps.policy, gps.policy.env,
                                          gps.M, t_x=gps.inv_t_x,
@@ -70,10 +77,6 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
             std_cost[0, k] = np.std(episode_rewards, axis=0)
             mean_cost[0, k] = np.mean(episode_rewards, axis=0)
 
-            episode_rewards = rewards_lqr(
-                x0, indices, control, gps.env, path + 'buffer/')
-            std_cost[1, k] = np.std(episode_rewards, axis=0)
-            mean_cost[1, k] = np.mean(episode_rewards, axis=0)
     return losses, nus, etas, lambdas, div, mean_cost, std_cost
 
 
