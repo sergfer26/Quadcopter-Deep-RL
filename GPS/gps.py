@@ -10,11 +10,11 @@ from os.path import exists
 from .utils import OfflineCost  # , OnlineCost
 # from ilqr import RecedingHorizonController
 from .params import PARAMS_LQG, PARAMS_OFFLINE
-from GPS.utils import ContinuousDynamics
 from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
-from .utils import nearestPD, iLQR_Rollouts
+from .utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
 from torch.utils.data import DataLoader
+from ilqr.cost import FiniteDiffCost
 
 
 device = 'cpu'
@@ -485,13 +485,17 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         # file_name = file_name if exists(file_name) else 'control.npz'
         control.load(path, file_name)
     else:
-        expert = iLQG(dynamics, cost, T, is_stochastic=False)
+        simple_cost = FiniteDiffCost(l=cost_kwargs['cost'],
+                                     l_terminal=cost_kwargs['cost_terminal'],
+                                     state_size=cost_kwargs['n_x'],
+                                     action_size=cost_kwargs['n_u'])
+        expert = iLQG(dynamics, simple_cost, T, is_stochastic=False)
         expert.load('models/')
         us_init = expert.rollout(x0)[1]
-        cost.update_control(control=expert)
+        control.cost = simple_cost
         _ = control.fit_control(x0, us_init=us_init)
+        control.cost = cost
 
-    # control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)
     is_stochastic = control.is_stochastic
