@@ -144,7 +144,6 @@ def main(path):
               )
     ti = time.time()
     # 2. Training
-    breakpoint()
     losses, nus, etas, lambdas, div, mean_cost, std_cost = train_gps(
         gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
         shuffle_batches=PARAMS['shuffle_batches'])
