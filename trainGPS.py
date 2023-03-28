@@ -79,10 +79,10 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
 
 def rewards_lqr(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
     n = len(indices)
-    episode_rewards = np.empty((n, control.N, control.num_states))
-    for e, x, i in enumerate(zip(x0, indices)):
+    episode_rewards = np.empty((n, control.N))
+    for e, i in enumerate(indices):
         control.load(path, file_name=f'control_{i}.npz')
-        episode_rewards[e] = rollout(control, env, state_init=x)[2][-1, 1]
+        episode_rewards[e] = rollout(control, env, state_init=x0[e])[2][-1, 1]
     return episode_rewards
 
 
@@ -243,7 +243,7 @@ def main(path):
         # 3.5 Mean and std cost evolution
         fig, ax = plt.subplots(figsize=(8, 4), dpi=250)
         for e, label, cmp in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
-            colors = mcp.gen_color(cmap=cmp, n=2)
+            colors = mcp.gen_color(cmap=cmp, n=3)
             ax.plot(mean_cost[e], alpha=0.6, color=colors[0],
                     label=label, linewidth=2.0)
             ax.fill_between(np.arange(K), mean_cost[e] + std_cost[e],
@@ -251,7 +251,7 @@ def main(path):
                             color=colors[1], alpha=0.4)
             ax.fill_between(np.arange(K), mean_cost[e] + 2 * std_cost[e],
                             mean_cost[e] + 2 * std_cost[e],
-                            color=colors[1], alpha=0.3)
+                            color=colors[2], alpha=0.3)
         ax.legend(loc='best')
         ax.set_ylabel("cost")
         ax.set_xlabel("updates")
