@@ -118,8 +118,8 @@ class OfflineCost(FiniteDiffCost):
         # Parameters of the nonlinear policy
         self.policy_cov = np.identity(n_u) if not callable(
             policy_cov) else policy_cov
-        self.policy_mean = lambda x: np.zeros(
-            n_u) if not callable(policy_mean) else policy_mean
+        self.policy_mean = None  # lambda x: np.zeros(
+        # n_u) if not callable(policy_mean) else policy_mean
 
         self.cost = cost  # l_bounded
         self.known_dynamics = known_dynamics
@@ -130,8 +130,9 @@ class OfflineCost(FiniteDiffCost):
         C = self._C[i]
         c = 0.0
         c += self.cost(x, u, i) - (self.u0 + u).T@self.lamb[i]
-        c -= self.nu[i] * logpdf(x=u, mean=self.policy_mean(x),
-                                 cov=self.policy_cov)
+        if callable(self.policy_mean):
+            c -= self.nu[i] * logpdf(x=u, mean=self.policy_mean(x),
+                                     cov=self.policy_cov)
         c /= (self.eta + self.nu[i])
         c -= self.eta * logpdf(x=u, mean=self._control(x, i),
                                cov=C) / (self.eta + self.nu[i])
