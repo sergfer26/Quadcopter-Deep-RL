@@ -29,17 +29,22 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
+def train_gps(gps: GPS, K, path, per_kl=0.1,
+              constrained_actions=False,
+              shuffle_batches=True):
     losses = np.empty(K)
     nus = np.empty((K, gps.N, gps.T))
     etas = np.empty(K)
     lambdas = np.empty((K, gps.N, gps.T, gps.n_u))
     # Inicializa x0s
     gps.init_x0()
+    mean_cost = np.empty(K)
+    std_cost = np.empty(K)
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
-            loss, div = gps.update_policy(path, constrained_actions)
+            loss, div = gps.update_policy(
+                path, constrained_actions, shuffle_batches)
             mean_div = 0.5 * np.mean(div)
             losses[k] = loss
             nus[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
@@ -54,7 +59,13 @@ def train_gps(gps: GPS, K, path, per_kl=0.1, constrained_actions=False):
                              mean_div=mean_div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
-    return losses, nus, etas, lambdas, div
+            x0 = select_x0(gps, gps.M)
+            episode_rewards = n_rollouts(gps.policy, gps.policy.env,
+                                         gps.M, t_x=gps.inv_t_x,
+                                         states_init=x0)[2][:, -1, 1]
+            std_cost[k] = np.std(episode_rewards, axis=0)
+            mean_cost[k] = np.mean(episode_rewards, axis=0)
+    return losses, nus, etas, lambdas, div, mean_cost, std_cost
 
 
 def select_x0(gps, n):
@@ -86,7 +97,7 @@ def main(path):
                            dt=dt, u0=W0)
     # 1.2 GPS
     high_range = np.array(
-        [.0, .0, .0, 1.5, 1.5, 1.5, .0, .0, .0, np.pi/32, np.pi/32, np.pi/32])
+        [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
     low_range = - high_range
     gps = GPS(env,
               policy,
@@ -113,8 +124,9 @@ def main(path):
               )
     ti = time.time()
     # 2. Training
-    losses, nus, etas, lambdas, div = train_gps(
-        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'])
+    losses, nus, etas, lambdas, div, mean_cost, std_cost = train_gps(
+        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
+        shuffle_batches=PARAMS['shuffle_batches'])
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
@@ -150,6 +162,16 @@ def main(path):
         policy, other_env, rollouts, t_x=inv_transform_x,
         states_init=states_init)
     print('Terminó de simualación...')
+
+    up = 10 * np.ones(n_x)
+    down = -10 * np.ones(n_x)
+    idx = np.apply_along_axis(lambda x: (
+        np.less(x, up) & np.greater(x, down)).all(), 1, states[:, -1])
+
+    if sum(idx) > samples:
+        states = states[idx]
+        actions = actions[idx]
+        scores = scores[idx]
 
     fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
@@ -188,12 +210,31 @@ def main(path):
             label='current', linewidth=2.0)
     ax.fill_between(env.time[:T], mean_div + std_div, mean_div - std_div,
                     color='lightskyblue', alpha=0.4)
-    ax.fill_between(env.time[:T], mean_div + 2 * std_div, mean_div + 2 * std_div,
+    ax.fill_between(env.time[:T], mean_div + 2 * std_div,
+                    mean_div + 2 * std_div,
                     color='lightskyblue', alpha=0.2)
     ax.legend(loc='best')
     ax.set_ylabel("divergence")
     ax.set_xlabel("$t$ (s)")
     fig.savefig(path + 'kl_div.png')
+
+    try:
+        # 3.5 Mean and std cost evolution
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.plot(mean_cost, alpha=0.6, color='blue',
+                label='current', linewidth=2.0)
+        ax.fill_between(np.arange(K), mean_cost + std_cost,
+                        mean_cost - std_cost,
+                        color='lightskyblue', alpha=0.4)
+        ax.fill_between(np.arange(K), mean_cost + 2 * std_cost,
+                        mean_cost + 2 * std_cost,
+                        color='lightskyblue', alpha=0.2)
+        ax.legend(loc='best')
+        ax.set_ylabel("cost")
+        ax.set_xlabel("updates")
+        fig.savefig(path + 'cost_updates.png')
+    except:
+        print('fallo cost_updates.png')
 
     # 4. Creación de reporte
     create_report(path, title='Entrenamiento GPS',
