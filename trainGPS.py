@@ -39,8 +39,8 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     lambdas = np.empty((K, gps.N, gps.T, gps.n_u))
     # Inicializa x0s
     gps.init_x0()
-    mean_cost = np.empty(K)
-    std_cost = np.empty(K)
+    mean_cost = np.empty((2, K))
+    std_cost = np.empty((2, K))
     dynamics = ContinuousDynamics(**gps.dynamics_kwargs)
     control = iLQG(dynamics, None, gps.T)
     with tqdm(total=K) as pbar:
