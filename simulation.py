@@ -1,11 +1,8 @@
-from cmath import isnan
-import gym
+
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from progressbar import progressbar
 
 
 def rollout(agent, env, flag=False, state_init=None):
@@ -78,9 +75,9 @@ def n_rollouts(agent, env, n, flag=False, states_init=None, t_x=None, t_u=None):
                 state_init = states_init
         states, actions, scores = rollout(
             agent, env, flag=flag, state_init=state_init)
-        n_states[k, :, :] = states
-        n_actions[k, :, :] = actions
-        n_scores[k, :, :] = scores
+        n_states[k] = states
+        n_actions[k] = actions
+        n_scores[k] = scores
     if callable(t_x):
         n_states = np.apply_along_axis(t_x, -1, n_states)
     if callable(t_u):
