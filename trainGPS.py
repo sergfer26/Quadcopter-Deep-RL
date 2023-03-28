@@ -71,7 +71,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
             mean_cost[0, k] = np.mean(episode_rewards, axis=0)
 
             episode_rewards = rewards_lqr(
-                x0, indices, control, path + 'buffer/')
+                x0, indices, control, gps.env, path + 'buffer/')
             std_cost[1, k] = np.std(episode_rewards, axis=0)
             mean_cost[1, k] = np.mean(episode_rewards, axis=0)
     return losses, nus, etas, lambdas, div, mean_cost, std_cost
