@@ -114,7 +114,7 @@ class GPS:
                                 u0=u0)
 
         self.policy = policy.to(device)
-        self.policy_sigma = init_sigma * np.identity(self.n_u)
+        self.policy_sigma = None  # init_sigma * np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
 
@@ -364,7 +364,8 @@ class GPS:
             avg_loss += loss
         return avg_loss / (i+1)
 
-    def update_policy(self, path, constrained_actions=False):
+    def update_policy(self, path, constrained_actions=False,
+                      shuffle_batches=False):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
         if constrained_actions:
@@ -436,7 +437,7 @@ class GPS:
         # 2.2 Create Dataset and Dataloader instances
         self.buffer.update_rollouts(xs, us_mean, self.lamb, self.nu, C)
         dataloader = DataLoader(
-            self.buffer, batch_size=self.batch_size, shuffle=True)
+            self.buffer, batch_size=self.batch_size, shuffle=shuffle_batches)
 
         # 2.3 Mean policy fitting (neural network)
         loss = self.fit_policy(dataloader)
@@ -484,8 +485,6 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
-    cost.update_policy(policy=policy, t_x=t_x,
-                       inv_t_u=inv_t_u, cov=policy_sigma)
     control = OfflineController(dynamics, cost, T)
 
     # Actualización de parametros de control para costo
@@ -499,8 +498,12 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         us_init = expert.rollout(x0)[1]
         cost.update_control(control=expert)
         _ = control.fit_control(x0, us_init=us_init)
+        Q = np.linalg.inv(control._C)
+        policy_sigma = nearestPD(np.linalg.inv(np.mean(Q, axis=1)))
 
-        # control.load('results_offline/23_02_16_13_50/')
+    cost.update_policy(policy=policy, t_x=t_x,
+                       inv_t_u=inv_t_u, cov=policy_sigma)
+    # control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)
     is_stochastic = control.is_stochastic
