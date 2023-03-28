@@ -486,7 +486,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         control.load(path, file_name)
     else:
         simple_cost = FiniteDiffCost(l=cost_kwargs['cost'],
-                                     l_terminal=cost_kwargs['cost_terminal'],
+                                     l_terminal=cost_kwargs['l_terminal'],
                                      state_size=cost_kwargs['n_x'],
                                      action_size=cost_kwargs['n_u'])
         expert = iLQG(dynamics, simple_cost, T, is_stochastic=False)
