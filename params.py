@@ -6,15 +6,15 @@ PARAMS_ENV = {'TIME_MAX': 10, 'STEPS': 251, 'omega0_per': 0.60,
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
                      'EPISODES': 1000, 'n': 5, 'SHOW': True}
 
-PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 3, 'M': 100,
+PARAMS_TRAIN_GPS = {'UPDATES': 10, 'N': 8, 'M': 100,
                     'SHOW': True, 'is_stochastic': False, 'samples': 3,
-                    'batch_size': 128}
+                    'batch_size': 256, 'shuffle_batches': False}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '2', '$y$': '2', '$z$': '2',
+              '$x$': '3', '$y$': '3', '$z$': '3',
               '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
-              '$\psi$': 'np.pi/16', r'$\theta$': 'np.pi/16',
-              '$\phi$': 'np.pi/16'}
+              '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
+              '$\phi$': 'np.pi/64'}
 
 PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-3',
                'critic_learning_rate': 1e-4, 'gamma': 0.98, 'tau': 0.125,
