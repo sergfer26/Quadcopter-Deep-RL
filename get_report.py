@@ -230,7 +230,8 @@ def create_report(path, title=None, subtitle='', file_name=None,
     if method == 'gps':
         pdf.showPage()
         add_text(pdf, ['Simulaciones iLQR (acciones)'], 30, 770)
-        add_image(path, pdf, 'action_rollouts.png', 100, 400, 350, 350)
+        add_image(path + 'buffer/', pdf,
+                  'action_rollouts.png', 100, 400, 350, 350)
         add_text(pdf, ['Simulaciones iLQR (estados)'], 30, 390)
         add_image(path + 'buffer/', pdf,
                   'state_rollouts.png', 30, -10, 500, 500)
@@ -239,6 +240,10 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_text(
             pdf, ['Divergencia Kullback-Leibler (política vs control)'], 30, 770)
         add_image(path, pdf, 'kl_div.png', 100, 400, 350, 350)
+        if os.path.exists(path + 'cost_updates.png'):
+            add_text(pdf, ['Evolución costo (mean vs std)'], 30, 390)
+            add_image(path, pdf,
+                      'cost_updates.png', 30, -10, 500, 500)
 
     pdf.save()
 
