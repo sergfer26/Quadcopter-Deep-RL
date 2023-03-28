@@ -153,21 +153,11 @@ class GPS:
             Conjunto de trayectorias resultantes de acciones con
             dimensión (B, n_u).
         '''
-        # if len(xs.shape) == 4:  # (N, M, T, n_x)
-        #     arg_x = 'NMTux,NMTx ->NMTu'
-        #     arg_k = 'NMT,NMTu ->NMTu'
-        # elif len(xs.shape) == 3:  # (N, T, n_x)
-        #     arg_x = 'NTux,NTx ->NTu'
-        #     arg_k = 'NT,NTu ->NTu'
-        # elif len(xs.shape) == 2:  # (T, x)
-        #     arg_x = 'Tux,Tx -> Tu'
-        #     arg_k = 'T,Tu ->Tu'
         nominal_xs = np.expand_dims(nominal_xs, axis=1)
         us_mean = np.einsum('NTux, NMTx -> NMTu', K, xs - nominal_xs)
         us_mean += np.expand_dims(nominal_us, axis=1)
         us_mean += np.expand_dims(np.einsum('N, NTu-> NTu', alpha, k), axis=1)
         return us_mean
-        # (N, M, T, n_x) - (N, T, n_x)
 
     def cov_policy(self, C):
         if len(C.shape) == 5:
@@ -176,7 +166,6 @@ class GPS:
             axis = (0, 1)
         Q = np.linalg.inv(C)
         C_new = nearestPD(np.linalg.inv(np.mean(Q, axis=axis)))
-        # C_new += PARAMS_LQG['cov_reg'] * np.identity(C.shape[-1])
         return C_new
 
     def policy_loss(self, states, actions, lamb, nu, C):
@@ -327,7 +316,6 @@ class GPS:
             Con dimensiones (N, T).
         '''
         nu = deepcopy(self.nu)
-        # div = np.mean(div, axis=1)  # (N, T)
         mean_div = np.mean(div, axis=-1)  # (N,)
         std_div = np.std(div, axis=-1)
         mask = np.apply_along_axis(lambda x: np.greater(x, mean_div), 0, div)
@@ -468,6 +456,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              x0_samples=None, low_constrain=None, high_constrain=None,
              is_stochastic=False):
     '''
+    Argumentos
+    ----------
     i : int
         Indice de trayectoria producida por iLQG.
     T : int
