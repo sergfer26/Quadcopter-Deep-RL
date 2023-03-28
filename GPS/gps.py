@@ -114,7 +114,7 @@ class GPS:
                                 u0=u0)
 
         self.policy = policy.to(device)
-        self.policy_sigma = None  # init_sigma * np.identity(self.n_u)
+        self.policy_sigma = init_sigma * np.identity(self.n_u)
         self.policy_optimizer = optim.Adam(
             self.policy.parameters(), lr=learning_rate)
 
@@ -486,6 +486,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
     control = OfflineController(dynamics, cost, T)
+    cost.update_policy(policy=policy, t_x=t_x,
+                       inv_t_u=inv_t_u, cov=policy_sigma)
 
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
@@ -498,11 +500,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         us_init = expert.rollout(x0)[1]
         cost.update_control(control=expert)
         _ = control.fit_control(x0, us_init=us_init)
-        Q = np.linalg.inv(control._C)
-        policy_sigma = nearestPD(np.linalg.inv(np.mean(Q, axis=1)))
 
-    cost.update_policy(policy=policy, t_x=t_x,
-                       inv_t_u=inv_t_u, cov=policy_sigma)
     # control.load('results_offline/23_02_16_13_50/')
     # También puede actualizar eta
     cost.update_control(control)

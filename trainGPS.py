@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from Linear.equations import f, W0
 from utils import date_as_path
 from utils import plot_performance
-from GPS import GPS, Policy
+from GPS import GPS, Policy, ContinuousDynamics, iLQG
 from env import QuadcopterEnv
 from DDPG.utils import AgentEnv
 from dynamics import transform_x, transform_u
@@ -17,9 +17,10 @@ from params import PARAMS_TRAIN_GPS as PARAMS
 from params import PARAMS_DDPG
 from GPS.params import PARAMS_OFFLINE
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
-from simulation import plot_rollouts, n_rollouts
+from simulation import plot_rollouts, n_rollouts, rollout
 from animation import create_animation
 from get_report import create_report
+from mycolorpy import colorlist as mcp
 
 
 SHOW = PARAMS['SHOW']
@@ -32,7 +33,7 @@ if not SHOW:
 def train_gps(gps: GPS, K, path, per_kl=0.1,
               constrained_actions=False,
               shuffle_batches=True):
-    losses = np.empty(K)
+    losses = np.empty((K, 2))
     nus = np.empty((K, gps.N, gps.T))
     etas = np.empty(K)
     lambdas = np.empty((K, gps.N, gps.T, gps.n_u))
@@ -40,6 +41,8 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     gps.init_x0()
     mean_cost = np.empty(K)
     std_cost = np.empty(K)
+    dynamics = ContinuousDynamics(**gps.dynamics_kwargs)
+    control = iLQG(dynamics, None, gps.T)
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
@@ -59,16 +62,31 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
                              mean_div=mean_div)
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
-            x0 = select_x0(gps, gps.M)
+            x0, indices = select_x0(gps, gps.M, return_indices=True)
+            x0 = np.apply_along_axis(gps.t_x, -1, x0)
             episode_rewards = n_rollouts(gps.policy, gps.policy.env,
                                          gps.M, t_x=gps.inv_t_x,
                                          states_init=x0)[2][:, -1, 1]
-            std_cost[k] = np.std(episode_rewards, axis=0)
-            mean_cost[k] = np.mean(episode_rewards, axis=0)
+            std_cost[0, k] = np.std(episode_rewards, axis=0)
+            mean_cost[0, k] = np.mean(episode_rewards, axis=0)
+
+            episode_rewards = rewards_lqr(
+                x0, indices, control, path + 'buffer/')
+            std_cost[1, k] = np.std(episode_rewards, axis=0)
+            mean_cost[1, k] = np.mean(episode_rewards, axis=0)
     return losses, nus, etas, lambdas, div, mean_cost, std_cost
 
 
-def select_x0(gps, n):
+def rewards_lqr(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
+    n = len(indices)
+    episode_rewards = np.empty((n, control.N, control.num_states))
+    for e, x, i in enumerate(zip(x0, indices)):
+        control.load(path, file_name=f'control_{i}.npz')
+        episode_rewards[e] = rollout(control, env, state_init=x)[2][-1, 1]
+    return episode_rewards
+
+
+def select_x0(gps: GPS, n, return_indices=False):
     if gps.N > 1:
         indices = np.random.choice(gps.N, n)
         state_init = gps.x0[indices]
@@ -76,6 +94,8 @@ def select_x0(gps, n):
         x0 = np.squeeze(x0, axis=1)
     else:
         x0 = gps._random_x0(gps.x0, n)
+    if return_indices:
+        return x0, indices
     return x0
 
 
@@ -220,15 +240,17 @@ def main(path):
 
     try:
         # 3.5 Mean and std cost evolution
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.plot(mean_cost, alpha=0.6, color='blue',
-                label='current', linewidth=2.0)
-        ax.fill_between(np.arange(K), mean_cost + std_cost,
-                        mean_cost - std_cost,
-                        color='lightskyblue', alpha=0.4)
-        ax.fill_between(np.arange(K), mean_cost + 2 * std_cost,
-                        mean_cost + 2 * std_cost,
-                        color='lightskyblue', alpha=0.2)
+        fig, ax = plt.subplots(figsize=(8, 4), dpi=250)
+        for e, label, cmp in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
+            colors = mcp.gen_color(cmap=cmp, n=2)
+            ax.plot(mean_cost[e], alpha=0.6, color=colors[0],
+                    label=label, linewidth=2.0)
+            ax.fill_between(np.arange(K), mean_cost[e] + std_cost[e],
+                            mean_cost[e] - std_cost[e],
+                            color=colors[1], alpha=0.4)
+            ax.fill_between(np.arange(K), mean_cost[e] + 2 * std_cost[e],
+                            mean_cost[e] + 2 * std_cost[e],
+                            color=colors[1], alpha=0.3)
         ax.legend(loc='best')
         ax.set_ylabel("cost")
         ax.set_xlabel("updates")
