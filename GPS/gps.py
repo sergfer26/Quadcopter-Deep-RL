@@ -14,7 +14,6 @@ from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
 from torch.utils.data import DataLoader
-from ilqr.cost import FiniteDiffCost
 
 
 device = 'cpu'
@@ -475,10 +474,9 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # ###### Instancias control iLQG #######
     cost = OfflineCost(**cost_kwargs)
-    control = OfflineController(dynamics, cost, T)
     cost.update_policy(policy=policy, t_x=t_x,
                        inv_t_u=inv_t_u, cov=policy_sigma)
-
+    control = OfflineController(dynamics, cost, T)
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
     if exists(path + file_name):
@@ -488,7 +486,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         expert = iLQG(dynamics, cost, T, is_stochastic=False)
         expert.load('models/')
         us_init = expert.rollout(x0)[1]
-        cost.update_control(expert)
+        cost.update_control(control=expert)
         _ = control.fit_control(x0, us_init=us_init)
 
     # También puede actualizar eta
