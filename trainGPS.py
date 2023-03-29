@@ -64,7 +64,6 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
             gps.kl_step = gps.kl_step * (1 - per_kl)
             # Validación de modelos
             x0, indices = select_x0(gps, gps.M, return_indices=True)
-
             episode_rewards = rewards_lqr(
                 x0, indices, control, gps.env, path + 'buffer/')
             std_cost[1, k] = np.std(episode_rewards, axis=0)
@@ -82,7 +81,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
 
 def rewards_lqr(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
     n = len(indices)
-    episode_rewards = np.empty((n, control.N))
+    episode_rewards = np.empty(n)
     for e, i in enumerate(indices):
         control.load(path, file_name=f'control_{i}.npz')
         episode_rewards[e] = rollout(control, env, state_init=x0[e])[2][-1, 1]
@@ -244,7 +243,7 @@ def main(path):
     try:
         # 3.5 Mean and std cost evolution
         fig, ax = plt.subplots(figsize=(8, 4), dpi=250)
-        for e, label, cmp in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
+        for e, (label, cmp) in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
             colors = mcp.gen_color(cmap=cmp, n=3)
             ax.plot(mean_cost[e], alpha=0.6, color=colors[0],
                     label=label, linewidth=2.0)
