@@ -419,7 +419,8 @@ class OfflineController(iLQG):
                  xs_old=self._xs,
                  us_old=self._us,
                  alpha=self.alpha,
-                 eta=self.cost.eta
+                 eta=self.cost.eta,
+                 div=self.div
                  )
 
     def load(self, path, file_name='ilqr_control.npz'):
@@ -458,21 +459,6 @@ class OfflineController(iLQG):
                       for j in range(N)])
         print(f'- eta= {eta}, kl_div= {kl_div}')
         return kl_div
-
-    # def _backward_pass(self, F_x, F_u, L_x, L_u, L_xx, L_ux, L_uu,
-    #                    F_xx=None, F_ux=None, F_uu=None):
-    #     k, K, C = super()._backward_pass(F_x, F_u, L_x, L_u,
-    #                                      L_xx, L_ux, L_uu, F_xx, F_ux, F_uu)
-    #     for j in range(C.shape[0]):
-    #         if not isPD(C[j]):
-    #             try:
-    #                 C[j] = nearestPD(C[j])
-    #             except np.linalg.LinAlgError as e:
-    #                 # Quu was not positive-definite and this diverged.
-    #                 # Try again with a higher regularization term.
-    #                 warnings.warn(str(e))
-    #                 print(C[j])
-    #     return k, K, C
 
     def optimize(self, kl_step: float,
                  min_eta: float = 1e-4,
@@ -536,9 +522,9 @@ class OfflineController(iLQG):
         self._C = np.array([nearestPD(self._C[i]) for i in range(N)])
         C_new = self._C
         C_new += PARAMS_LQG['cov_reg'] * np.identity(us.shape[-1])
-        kl_div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
-                      for j in range(N)])
-        return xs, us, cost_trace, kl_div
+        self.div = sum([mvn_kl_div(us_new[j], us_old[j], C_new[j], C_old[j])
+                        for j in range(N)])
+        return xs, us, cost_trace, self.div
 
 
 class OnlineController(iLQG):
