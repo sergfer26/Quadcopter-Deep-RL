@@ -210,6 +210,16 @@ def main(path):
         actions = actions[idx]
         scores = scores[idx]
 
+    try:
+        print(f'abs(state) < 10 -> {sum(idx) / len(idx)}')
+        up = np.ones(n_x)
+        down = -np.ones(n_x)
+        idx = np.apply_along_axis(lambda x: (
+            np.less(x, up) & np.greater(x, down)).all(), 1, states[:, -1])
+        print(f'abs(state) < 1 -> {sum(idx)/len(idx)}')
+    except:
+        print('error en cuentas de estados')
+
     fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
