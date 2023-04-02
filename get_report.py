@@ -239,7 +239,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
         pdf.showPage()
         add_text(
             pdf, ['Divergencia Kullback-Leibler (política vs control)'], 30, 770)
-        add_image(path, pdf, 'kl_div.png', 100, 400, 350, 350)
+        add_image(path, pdf, 'div_updates.png', 100, 400, 350, 350)
         if os.path.exists(path + 'cost_updates.png'):
             add_text(pdf, ['Evolución costo (mean vs std)'], 30, 390)
             add_image(path, pdf,
