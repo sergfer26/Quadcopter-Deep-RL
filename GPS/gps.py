@@ -231,6 +231,7 @@ class GPS:
         # 3. Cálculo de terminos de regularización
         if len(lamb.shape) == 3:
             loss += 2 * torch.einsum('NTu, NMTu -> NMT', lamb, policy_actions)
+            loss = torch.sum(loss, dim=-1)
         else:
             loss += 2 * torch.einsum('Nu, Nu -> N', lamb, policy_actions)
 
@@ -283,6 +284,8 @@ class GPS:
         nominal_xs = np.empty((self.N, self.T + 1, self.n_x))
         nominal_us = np.empty((self.N, self.T, self.n_u))
         alphas = np.empty(self.N)
+        eta = np.empty(self.N)
+        div = np.empty(self.N)
         xs = np.empty((self.N, self.M, self.T + 1, self.n_x))
         us = np.empty((self.N, self.M, self.T, self.n_u))
         for i in range(self.N):
@@ -296,9 +299,11 @@ class GPS:
             xs[i] = rollouts['xs']
             us[i] = rollouts['us']
             alphas[i] = file['alpha']
+            eta[i] = file['eta']
+            div[i] = file['div']
         nominal_xs = nominal_xs[:, :-1]
         xs = xs[:, :, :-1]
-        return K, k, C, nominal_xs, nominal_us, xs, us, alphas
+        return K, k, C, nominal_xs, nominal_us, xs, us, alphas, eta, div
 
     def _update_lamb(self, us_policy, us_control):
         new_lamb = self.lamb
@@ -408,12 +413,10 @@ class GPS:
                      self.is_stochastic
                      )
 
-        # 1.1 update eta
-        self.eta = self._update_eta(path)
-        # 1.2 Loading fitted parameters and simulations
+        # 1.1 Loading fitted parameters and simulations
         (K, k, C, nominal_xs, nominal_us,
-         xs, us, alphas) = self._load_fitted_lqg(path)
-
+         xs, us, alphas, eta, control_div) = self._load_fitted_lqg(path)
+        self.eta = eta
         # 2. Policy fitting
 
         # 2.1 Calculate mean action
@@ -442,12 +445,13 @@ class GPS:
         self.lamb = self._update_lamb(us_policy, us)
 
         # 3.2 Update nu
-        div = self.policy_loss(xs, us_mean, self.lamb, self.nu, C)[1]
-        div = div.detach().cpu().numpy()
-        mean_div = np.mean(div, axis=1)  # (N, T)
+        policy_div = self.policy_loss(xs, us_mean, self.lamb, self.nu, C)[1]
+        policy_div = np.sum(
+            policy_div.detach().cpu().numpy(), axis=-1)  # (NM,)
+        mean_div = np.mean(policy_div, axis=1)  # (N, T)
         self.nu = self._update_nu(mean_div)
 
-        return loss, div
+        return loss, policy_div, control_div
 
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
@@ -486,6 +490,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         expert = iLQG(dynamics, cost, T, is_stochastic=False)
         expert.load('models/')
         us_init = expert.rollout(x0)[1]
+        cost.nu = np.zeros(control.N)
         cost.update_control(control=expert)
         _ = control.fit_control(x0, us_init=us_init)
 
