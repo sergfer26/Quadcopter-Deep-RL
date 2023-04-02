@@ -58,12 +58,9 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     control_cost = np.empty((K, gps.M))
     dynamics = ContinuousDynamics(**gps.dynamics_kwargs)
     control = iLQG(dynamics, None, gps.T)
-    nu = gps.nu
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
-            if k == 0:
-                gps.nu = np.zeros(gps.T)
             loss[k], policy_div[k], control_div[k] = gps.update_policy(
                 path, constrained_actions, shuffle_batches)
             nu[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
@@ -87,8 +84,6 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
             policy_cost[k] = n_rollouts(gps.policy, gps.policy.env,
                                         gps.M, t_x=gps.inv_t_x,
                                         states_init=x0)[2][:, -1, 1]
-            if k == 0:
-                gps.nu = np.zeros(gps.T)
 
     return GPSResult(loss, nu, eta, lamb, policy_div, control_div,
                      policy_cost, control_cost)
