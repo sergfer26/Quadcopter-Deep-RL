@@ -3,6 +3,7 @@ import pathlib
 import send_email
 import numpy as np
 from tqdm import tqdm
+from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from Linear.equations import f, W0
 from utils import date_as_path
@@ -30,53 +31,67 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
+@dataclass
+class GPSResult:
+    loss: np.ndarray
+    nu: np.ndarray
+    eta: np.ndarray
+    lamb: np.ndarray
+    policy_div: np.ndarray
+    control_div: np.ndarray
+    policy_cost: np.ndarray
+    control_cost: np.ndarray
+
+
 def train_gps(gps: GPS, K, path, per_kl=0.1,
               constrained_actions=False,
               shuffle_batches=True):
-    losses = np.empty((K, 2))
-    nus = np.empty((K, gps.N, gps.T))
-    etas = np.empty(K)
-    lambdas = np.empty((K, gps.N, gps.T, gps.n_u))
+    loss = np.empty(K)
+    nu = np.empty((K, gps.N, gps.T))
+    eta = np.empty(K)
+    lamb = np.empty((K, gps.N, gps.T, gps.n_u))
+    policy_div = np.empty((K, gps.N, gps.M))
+    control_div = np.empty((K, gps.N))
     # Inicializa x0s
     gps.init_x0()
-    mean_cost = np.empty((2, K))
-    std_cost = np.empty((2, K))
+    policy_cost = np.empty((K, gps.M))
+    control_cost = np.empty((K, gps.M))
     dynamics = ContinuousDynamics(**gps.dynamics_kwargs)
     control = iLQG(dynamics, None, gps.T)
+    nu = gps.nu
     with tqdm(total=K) as pbar:
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
-            loss, div = gps.update_policy(
+            if k == 0:
+                gps.nu = np.zeros(gps.T)
+            loss[k], policy_div[k], control_div[k] = gps.update_policy(
                 path, constrained_actions, shuffle_batches)
-            mean_div = 0.5 * np.mean(div)
-            losses[k] = loss
-            nus[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
-            etas[k] = np.mean(gps.eta, axis=0)
-            lambdas[k] = gps.lamb  # np.mean(gps.lamb, axis=(0, 1))
-            lamb = np.linalg.norm(np.mean(gps.lamb, axis=(0, 1)))
-            pbar.set_postfix(loss='{:.2f}'.format(loss),
+            nu[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
+            eta[k] = np.mean(gps.eta, axis=0)
+            lamb[k] = gps.lamb  # np.mean(gps.lamb, axis=(0, 1))
+            lamb_ = np.linalg.norm(np.mean(gps.lamb, axis=(0, 1)))
+            pbar.set_postfix(loss='{:.2f}'.format(loss[k]),
                              kl_step='{:.2f}'.format(gps.kl_step),
-                             lamb=lamb,
-                             eta='{:.2f}'.format(etas[k]),
+                             lamb=lamb_,
+                             eta='{:.2f}'.format(eta[k]),
                              nu='{:.3f}'.format(np.mean(gps.nu, axis=(0, 1))),
-                             mean_div=mean_div)
+                             policy_div=0.5 * np.mean(policy_div[k]))
             pbar.update(1)
             gps.kl_step = gps.kl_step * (1 - per_kl)
             # Validación de modelos
             x0, indices = select_x0(gps, gps.M, return_indices=True)
-            episode_rewards = rewards_lqr(
+            control_cost[k] = rewards_lqr(
                 x0, indices, control, gps.env, path + 'buffer/')
-            std_cost[1, k] = np.std(episode_rewards, axis=0)
-            mean_cost[1, k] = np.mean(episode_rewards, axis=0)
 
             x0 = np.apply_along_axis(gps.t_x, -1, x0)
-            episode_rewards = n_rollouts(gps.policy, gps.policy.env,
-                                         gps.M, t_x=gps.inv_t_x,
-                                         states_init=x0)[2][:, -1, 1]
-            std_cost[0, k] = np.std(episode_rewards, axis=0)
-            mean_cost[0, k] = np.mean(episode_rewards, axis=0)
+            policy_cost[k] = n_rollouts(gps.policy, gps.policy.env,
+                                        gps.M, t_x=gps.inv_t_x,
+                                        states_init=x0)[2][:, -1, 1]
+            if k == 0:
+                gps.nu = np.zeros(gps.T)
 
-    return losses, nus, etas, lambdas, div, mean_cost, std_cost
+    return GPSResult(loss, nu, eta, lamb, policy_div, control_div,
+                     policy_cost, control_cost)
 
 
 def rewards_lqr(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
@@ -146,9 +161,8 @@ def main(path):
               )
     ti = time.time()
     # 2. Training
-    losses, nus, etas, lambdas, div, mean_cost, std_cost = train_gps(
-        gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
-        shuffle_batches=PARAMS['shuffle_batches'])
+    result = train_gps(gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
+                       shuffle_batches=PARAMS['shuffle_batches'])
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
@@ -163,18 +177,19 @@ def main(path):
     ax43 = fig.add_subplot(gs[2, -1])
     ax44 = fig.add_subplot(gs[3, -1])
     # 3.1 Loss' plot
-    plot_performance(losses, xlabel='iteraciones',
+    plot_performance(result.loss, xlabel='iteraciones',
                      ylabel='$L_{\\theta}(\\theta, p)$',
                      title='Entrenamiento', ax=ax1)
     # 3.2 eta's and nu's evolution
-    dic = {'$\eta$': etas, '$\\nu$': np.mean(nus, axis=(1, 2))}
+    dic = {'$\eta$': result.eta, '$\\nu$': np.mean(result.nu, axis=(1, 2))}
     for ax, key in zip([ax2, ax3], dic.keys()):
         ax.plot(dic[key])
         ax.set_title(key)
     # 3.3 lambdas
     LAMB_NAMES = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
-    plot_rollouts(np.mean(lambdas, axis=(1, 2)), env.time, LAMB_NAMES, ax=ax)
+    plot_rollouts(np.mean(result.lamb, axis=(1, 2)),
+                  env.time, LAMB_NAMES, ax=ax)
     fig.savefig(path + 'train_performance.png')
 
     # 3.4 Policy's simulations
@@ -202,7 +217,7 @@ def main(path):
     fig2.savefig(path + 'action_rollouts.png')
     fig3.savefig(path + 'score_rollouts.png')
 
-    fig4, _ = plot_rollouts(lambdas[-1], env.time, LAMB_NAMES, alpha=0.2)
+    fig4, _ = plot_rollouts(result.lamb[-1], env.time, LAMB_NAMES, alpha=0.2)
     fig4.savefig(path + 'lambdas.png')
 
     N = gps.N
@@ -223,25 +238,42 @@ def main(path):
     fig1.savefig(path + 'buffer/state_rollouts.png')
     fig2.savefig(path + 'buffer/action_rollouts.png')
 
-    # 3.4 Divergence's along time
-    mean_div = np.mean(div, axis=(0, 1))  # (T,)
-    std_div = np.std(div, axis=(0, 1))  # (T, )
+    try:
+        # 3.4 Mean and std div evolution
+        mean_div = np.empty((2, K))
+        std_div = np.empty((2, K))
+        mean_div[0] = np.mean(result.policy_div, axis=(1, 2))  # (K,)
+        std_div[0] = np.std(result.policy_div, axis=(1, 2))  # (K, )
+        mean_div[1] = np.mean(result.control_div, axis=1)
+        std_div[1] = np.std(result.control_div, axis=1)
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(env.time[:T], mean_div, alpha=0.6, color='blue',
-            label='current', linewidth=2.0)
-    ax.fill_between(env.time[:T], mean_div + std_div, mean_div - std_div,
-                    color='lightskyblue', alpha=0.4)
-    ax.fill_between(env.time[:T], mean_div + 2 * std_div,
-                    mean_div + 2 * std_div,
-                    color='lightskyblue', alpha=0.2)
-    ax.legend(loc='best')
-    ax.set_ylabel("divergence")
-    ax.set_xlabel("$t$ (s)")
-    fig.savefig(path + 'kl_div.png')
+        fig, axes = plt.subplots(figsize=(10, 5), ncols=2, dpi=250)
+        for e, (label, cmp) in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
+            colors = mcp.gen_color(cmap=cmp, n=3)
+            axes[e].plot(mean_div[e], alpha=0.6, color=colors[0],
+                         label=label, linewidth=2.0)
+            axes[e].fill_between(np.arange(K), mean_div[e] + std_div[e],
+                                 mean_div[e] - std_div[e],
+                                 color=colors[1], alpha=0.4)
+            axes[e].fill_between(np.arange(K), mean_div[e] + 2 * std_div[e],
+                                 mean_div[e] + 2 * std_div[e],
+                                 color=colors[2], alpha=0.3)
+            axes[e].legend(loc='best')
+            axes[e].set_ylabel("div")
+            axes[e].set_xlabel("updates")
+        fig.savefig(path + 'div_updates.png')
+    except:
+        print('fallo div_updates.png')
 
     try:
         # 3.5 Mean and std cost evolution
+        mean_cost = np.empty((2, K))
+        std_cost = np.empty((2, K))
+        mean_cost[0] = np.mean(result.policy_cost, axis=1)
+        mean_cost[1] = np.mean(result.control_cost, axis=1)
+        std_cost[0] = np.std(result.policy_cost, axis=1)
+        std_cost[1] = np.std(result.control_cost, axis=1)
+
         fig, ax = plt.subplots(figsize=(8, 4), dpi=250)
         for e, (label, cmp) in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
             colors = mcp.gen_color(cmap=cmp, n=3)
