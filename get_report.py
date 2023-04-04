@@ -189,8 +189,8 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
 
     elif method == 'gps':
-        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 760)
-        add_table(pdf, PARAMS_TRAIN_GPS, 350, 600)
+        add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 780)
+        add_table(pdf, PARAMS_TRAIN_GPS, 350, 540)
     elif method is None:
         pass
     else:
@@ -201,14 +201,14 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_UTILS, 400, 340)
 
     elif extra_method == 'ilqr':
-        add_text(pdf, ['Parámetros de', 'iLQR'], 350, 580)
-        add_table(pdf, PARAMS_LQG, 350, 420)
+        add_text(pdf, ['Parámetros de', 'iLQR'], 350, 530)
+        add_table(pdf, PARAMS_LQG, 350, 380)
 
-        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 410)
-        add_table(pdf, PARAMS_OFFLINE, 350, 180)
+        add_text(pdf, ['Parámetros de', '"Offline control"'], 350, 370)
+        add_table(pdf, PARAMS_OFFLINE, 350, 150)
 
-        add_text(pdf, ['Parámetros de', '"Online control"'], 350, 170)
-        add_table(pdf, PARAMS_ONLINE, 350, 60)
+        add_text(pdf, ['Parámetros de', '"Online control"'], 350, 140)
+        add_table(pdf, PARAMS_ONLINE, 350, 20)
 
     elif method is None:
         pass
