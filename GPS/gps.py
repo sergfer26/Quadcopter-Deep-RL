@@ -33,7 +33,7 @@ class GPS:
                  learning_rate=0.01, kl_step=200,
                  u0=None, init_sigma=1.0,
                  low_range=None, high_range=None,
-                 batch_size=64, is_stochastic=True):
+                 batch_size=4, time_step=25, is_stochastic=True):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -119,7 +119,10 @@ class GPS:
 
         # Buffer's instances.
         self.batch_size = batch_size
-        self.buffer = iLQR_Rollouts(N, M, T, self.n_u, self.policy.state_dim)
+        self.buffer = iLQR_Rollouts(N, M, T,
+                                    self.n_u,
+                                    self.policy.state_dim,
+                                    time_step=time_step)
 
     def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
         '''
@@ -194,8 +197,13 @@ class GPS:
             Divergencia de Kullback-Leibler entre control y política
             en cada paso de tiempo. Tensor de dimensión `b = (N, T)`.
         '''
-        if (len(C.shape) == 4) and (len(states.shape) == 4):
+        if (len(C.shape) == 4) and (len(actions.shape) == 4):
             C = np.expand_dims(C, axis=1)
+        if (len(lamb.shape) == 3) and (len(actions.shape) == 4):
+            lamb = np.expand_dims(lamb, axis=1)
+        if (len(nu.shape) == 2) and (len(actions.shape) == 4):
+            nu = np.expand_dims(nu, axis=1)
+
         if not isinstance(states, torch.Tensor):
             states = torch.FloatTensor(states)
         if not isinstance(actions, torch.Tensor):
@@ -224,13 +232,13 @@ class GPS:
         kld = loss
         # 2.2 Multiplicación escalar de
         if len(loss.shape) == 3:
-            loss = torch.einsum('NT, NMT -> NMT', nu, loss)
+            loss = torch.einsum('NMT, NMT -> NMT', nu, loss)
         else:
             loss = nu * loss
 
         # 3. Cálculo de terminos de regularización
         if len(lamb.shape) == 3:
-            loss += 2 * torch.einsum('NTu, NMTu -> NMT', lamb, policy_actions)
+            loss += 2 * torch.einsum('NMTu, NMTu -> NMT', lamb, policy_actions)
             loss = torch.sum(loss, dim=-1)
         else:
             loss += 2 * torch.einsum('Nu, Nu -> N', lamb, policy_actions)
@@ -340,24 +348,24 @@ class GPS:
         x = np.random.uniform(self.low_range, self.high_range, size)
         return x + x0
 
-    def fit_policy(self, dataloader: DataLoader):
+    def fit_policy(self, dataloader: DataLoader, time_step: int = 25, updates: int = 3):
         self.policy.train()
         n = 0
         avg_loss = 0.0
-        for i, data in enumerate(dataloader, 0):
-            loss = self.policy_loss(*data)[0]
-
-            # 2.1 Optimization step
-            self.policy_optimizer.zero_grad()
-            loss.backward()
-            self.policy_optimizer.step()
-            loss = loss.detach().cpu().item()
-            n += i
-            avg_loss += loss
-        return avg_loss / (i+1)
+        for _, batch in enumerate(dataloader, 0):
+            for data in batch:
+                loss = self.policy_loss(*data)[0]
+                # 2.1 Optimization step
+                self.policy_optimizer.zero_grad()
+                loss.backward()
+                self.policy_optimizer.step()
+                loss = loss.detach().cpu().item()
+                n += 1
+                avg_loss += loss
+        return avg_loss / n
 
     def update_policy(self, path, constrained_actions=False,
-                      shuffle_batches=False):
+                      shuffle_batches=False, policy_updates=2):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
         if constrained_actions:
@@ -426,11 +434,14 @@ class GPS:
 
         # 2.2 Create Dataset and Dataloader instances
         self.buffer.update_rollouts(xs, us_mean, self.lamb, self.nu, C)
-        dataloader = DataLoader(
-            self.buffer, batch_size=self.batch_size, shuffle=shuffle_batches)
 
         # 2.3 Mean policy fitting (neural network)
-        loss = self.fit_policy(dataloader)
+        for _ in range(policy_updates):
+            dataloader = DataLoader(
+                self.buffer,
+                batch_size=self.batch_size,
+                shuffle=shuffle_batches)
+            loss = self.fit_policy(dataloader)
 
         # 2.4 Update policy covariance matrix
         self.policy._sigma = self.cov_policy(C)
@@ -445,9 +456,10 @@ class GPS:
         self.lamb = self._update_lamb(us_policy, us)
 
         # 3.2 Update nu
-        policy_div = self.policy_loss(xs, us_mean, self.lamb, self.nu, C)[1]
+        loss, policy_div = self.policy_loss(xs, us_mean, self.lamb, self.nu, C)
         policy_div = np.sum(
             policy_div.detach().cpu().numpy(), axis=-1)  # (NM,)
+        loss = loss.detach().cpu().item()
         mean_div = np.mean(policy_div, axis=1)  # (N, T)
         self.nu = self._update_nu(mean_div)
 
