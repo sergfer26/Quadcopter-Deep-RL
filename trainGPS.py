@@ -45,7 +45,7 @@ class GPSResult:
 
 def train_gps(gps: GPS, K, path, per_kl=0.1,
               constrained_actions=False,
-              shuffle_batches=True):
+              shuffle_batches=True, policy_updates=2):
     loss = np.empty(K)
     nu = np.empty((K, gps.N, gps.T))
     eta = np.empty(K)
@@ -62,7 +62,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
             loss[k], policy_div[k], control_div[k] = gps.update_policy(
-                path, constrained_actions, shuffle_batches)
+                path, constrained_actions, shuffle_batches, policy_updates)
             nu[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
             eta[k] = np.mean(gps.eta, axis=0)
             lamb[k] = gps.lamb  # np.mean(gps.lamb, axis=(0, 1))
@@ -152,12 +152,14 @@ def main(path):
               low_range=low_range,
               high_range=high_range,
               batch_size=PARAMS['batch_size'],
-              is_stochastic=PARAMS['is_stochastic']
+              is_stochastic=PARAMS['is_stochastic'],
+              time_step=PARAMS['time_step']
               )
     ti = time.time()
     # 2. Training
     result = train_gps(gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
-                       shuffle_batches=PARAMS['shuffle_batches'])
+                       shuffle_batches=PARAMS['shuffle_batches'],
+                       policy_updates=PARAMS['policy_updates'])
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
