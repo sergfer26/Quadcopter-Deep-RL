@@ -21,15 +21,23 @@ if torch.cuda.is_available():
 
 class iLQR_Rollouts(Dataset):
 
-    def __init__(self, N, M, T, n_u, n_x):
+    def __init__(self, N, M, T, n_u, n_x,
+                 is_sequential=True,
+                 time_step=25):
         self.N = N
         self.M = M
         self.T = T
         self.n_u = n_u
         self.n_x = n_x
+        self.is_sequential = is_sequential
+        self.time_step = time_step
 
     def __len__(self):
-        return self.N * self.T * self.M
+        if self.is_sequential:
+            length = self.M
+        else:
+            length = self.N * self.T * self.M
+        return length
 
     def __getitem__(self, index):
         '''
@@ -37,8 +45,22 @@ class iLQR_Rollouts(Dataset):
         --------
         states, actions, lamb, nu, C
         '''
-        return (self.states[index], self.actions[index], self.lamb[index],
-                self.nu[index], self.C[index])
+        if self.is_sequential:
+            steps = self.T // self.time_step
+            out = [(self.states[:, index, t * self.time_step:
+                                (t+1) * self.time_step],
+                    self.actions[:, index,  t * self.time_step:
+                                 (t+1) * self.time_step],
+                    self.lamb[:, index, t * self.time_step:
+                              (t+1) * self.time_step],
+                    self.nu[:, index, t * self.time_step:
+                            (t+1) * self.time_step],
+                    self.C[:, index, t * self.time_step:
+                           (t+1) * self.time_step]) for t in range(steps)]
+        else:
+            out = (self.states[index], self.actions[index], self.lamb[index],
+                   self.nu[index], self.C[index])
+        return out
 
     def update_rollouts(self, states, actions, lamb, nu, C):
         # iLQR parameters
@@ -46,12 +68,13 @@ class iLQR_Rollouts(Dataset):
         lamb = np.repeat(np.expand_dims(lamb, axis=1), self.M, axis=1)
         nu = np.repeat(np.expand_dims(nu, axis=1), self.M, axis=1)
 
-        C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
-        lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
-        nu = nu.reshape(self.N * self.M * self.T)
+        if not self.is_sequential:
+            C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
+            lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
+            nu = nu.reshape(self.N * self.M * self.T)
 
-        states = states.reshape(self.N * self.M * self.T, self.n_x)
-        actions = actions.reshape(self.N * self.M * self.T, self.n_u)
+            states = states.reshape(self.N * self.M * self.T, self.n_x)
+            actions = actions.reshape(self.N * self.M * self.T, self.n_u)
 
         self.C = torch.FloatTensor(C)
         self.lamb = torch.FloatTensor(lamb)
