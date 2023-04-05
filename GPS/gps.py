@@ -237,7 +237,7 @@ class GPS:
             loss = nu * loss
 
         # 3. Cálculo de terminos de regularización
-        if len(lamb.shape) == 3:
+        if len(lamb.shape) == 4:
             loss += 2 * torch.einsum('NMTu, NMTu -> NMT', lamb, policy_actions)
             loss = torch.sum(loss, dim=-1)
         else:
