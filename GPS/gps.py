@@ -436,11 +436,11 @@ class GPS:
         self.buffer.update_rollouts(xs, us_mean, self.lamb, self.nu, C)
 
         # 2.3 Mean policy fitting (neural network)
+        dataloader = DataLoader(
+            self.buffer,
+            batch_size=self.batch_size,
+            shuffle=shuffle_batches)
         for _ in range(policy_updates):
-            dataloader = DataLoader(
-                self.buffer,
-                batch_size=self.batch_size,
-                shuffle=shuffle_batches)
             loss = self.fit_policy(dataloader)
 
         # 2.4 Update policy covariance matrix
