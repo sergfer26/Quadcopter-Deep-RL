@@ -23,7 +23,7 @@ class iLQR_Rollouts(Dataset):
 
     def __init__(self, N, M, T, n_u, n_x,
                  is_sequential=True,
-                 time_step=25):
+                 time_step=25, shuffle=True):
         self.N = N
         self.M = M
         self.T = T
@@ -31,6 +31,7 @@ class iLQR_Rollouts(Dataset):
         self.n_x = n_x
         self.is_sequential = is_sequential
         self.time_step = time_step
+        self.shuffle = shuffle
 
     def __len__(self):
         if self.is_sequential:
@@ -68,6 +69,13 @@ class iLQR_Rollouts(Dataset):
         lamb = np.repeat(np.expand_dims(lamb, axis=1), self.M, axis=1)
         nu = np.repeat(np.expand_dims(nu, axis=1), self.M, axis=1)
 
+        if self.shuffle:
+            indices = np.random.permutation(states.shape[2])
+            states = states[:, :, indices]
+            actions = actions[:, :, indices]
+            lamb = lamb[:, :, indices]
+            nu = nu[:, :, indices]
+            C = C[:, :, indices]
         if not self.is_sequential:
             C = C.reshape(self.N * self.M * self.T, self.n_u, self.n_u)
             lamb = lamb.reshape(self.N * self.M * self.T, self.n_u)
