@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from Linear.equations import f, W0
 from utils import date_as_path
-from utils import plot_performance
+from utils import plot_performance, violin_plot
 from GPS import GPS, Policy, ContinuousDynamics, iLQG
 from env import QuadcopterEnv
 from DDPG.utils import AgentEnv
@@ -21,7 +21,7 @@ from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 from simulation import plot_rollouts, n_rollouts, rollout
 from animation import create_animation
 from get_report import create_report
-from mycolorpy import colorlist as mcp
+# from mycolorpy import colorlist as mcp
 
 
 SHOW = PARAMS['SHOW']
@@ -247,54 +247,27 @@ def main(path):
 
     try:
         # 3.4 Mean and std div evolution
-        mean_div = np.empty((2, K))
-        std_div = np.empty((2, K))
-        mean_div[0] = np.mean(result.policy_div, axis=(1, 2))  # (K,)
-        std_div[0] = np.std(result.policy_div, axis=(1, 2))  # (K, )
-        mean_div[1] = np.mean(result.control_div, axis=1)
-        std_div[1] = np.std(result.control_div, axis=1)
-
         fig, axes = plt.subplots(figsize=(10, 5), ncols=2, dpi=250)
-        for e, (label, cmp) in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
-            colors = mcp.gen_color(cmap=cmp, n=3)
-            axes[e].plot(mean_div[e], alpha=0.6, color=colors[0],
-                         label=label, linewidth=2.0)
-            axes[e].fill_between(np.arange(K), mean_div[e] + std_div[e],
-                                 mean_div[e] - std_div[e],
-                                 color=colors[1], alpha=0.4)
-            axes[e].fill_between(np.arange(K), mean_div[e] + 2 * std_div[e],
-                                 mean_div[e] + 2 * std_div[e],
-                                 color=colors[2], alpha=0.3)
-            axes[e].legend(loc='best')
-            axes[e].set_ylabel("div")
-            axes[e].set_xlabel("updates")
+        violin_plot(policy_div=np.mean(result.policy_div, axis=-1).T,
+                    x_name='iteraciones',
+                    y_name='$Div(\pi, p)$', ax=axes[0],
+                    )
+        violin_plot(control_div=result.control_div.T,
+                    x_name='iteraciones',
+                    y_name='$Div(p, \hat p)$', ax=axes[1]
+                    )
         fig.savefig(path + 'div_updates.png')
     except:
         print('fallo div_updates.png')
 
     try:
         # 3.5 Mean and std cost evolution
-        mean_cost = np.empty((2, K))
-        std_cost = np.empty((2, K))
-        mean_cost[0] = np.mean(result.policy_cost, axis=1)
-        mean_cost[1] = np.mean(result.control_cost, axis=1)
-        std_cost[0] = np.std(result.policy_cost, axis=1)
-        std_cost[1] = np.std(result.control_cost, axis=1)
-
         fig, ax = plt.subplots(figsize=(8, 4), dpi=250)
-        for e, (label, cmp) in enumerate(zip(['policy', 'iLQR'], ['autumn', 'winter'])):
-            colors = mcp.gen_color(cmap=cmp, n=3)
-            ax.plot(mean_cost[e], alpha=0.6, color=colors[0],
-                    label=label, linewidth=2.0)
-            ax.fill_between(np.arange(K), mean_cost[e] + std_cost[e],
-                            mean_cost[e] - std_cost[e],
-                            color=colors[1], alpha=0.4)
-            ax.fill_between(np.arange(K), mean_cost[e] + 2 * std_cost[e],
-                            mean_cost[e] + 2 * std_cost[e],
-                            color=colors[2], alpha=0.3)
-        ax.legend(loc='best')
-        ax.set_ylabel("cost")
-        ax.set_xlabel("updates")
+        violin_plot(policy=result.policy_cost.T,
+                    control=result.control_cost.T,
+                    x_name='iteraciones',
+                    y_name='$c(\\tau)$',
+                    hue='cost', ax=ax)
         fig.savefig(path + 'cost_updates.png')
     except:
         print('fallo cost_updates.png')

@@ -1,8 +1,10 @@
 # import os
 import pytz
+import seaborn as sns
 # import pathlib
 import numpy as np
 # from GPS.utils import Memory
+import pandas as pd
 from mycolorpy import colorlist as mcp
 from matplotlib.pyplot import cm
 from matplotlib import pyplot as plt
@@ -172,3 +174,31 @@ def plot_state(dic_state, alpha=1, init_state=None, t=None, cmap=None,
                              linestyles='--')
 
     return axs
+
+
+def violin_plot(x_name='x', y_name='y', hue=None, split=True, ax=None,
+                style="seaborn-whitegrid", **kwargs):
+    # (K, M)
+    plt.style.use(style)
+    columns = [x_name, y_name]
+    if isinstance(hue, str):
+        columns += [hue]
+    else:
+        split = False
+    data = pd.DataFrame(columns=columns)
+    for key, array in kwargs.items():
+        K = array.shape[1]
+        M = array.shape[0]
+        labels = list()
+        for i in range(K):
+            labels += [i for _ in range(M)]
+        labels = np.array(labels, dtype=int)
+        array = array.flatten()
+        array = np.stack([labels, array], axis=1)
+
+        aux = pd.DataFrame(data=array, columns=[x_name, y_name])
+        if isinstance(hue, str):
+            aux[hue] = key
+        data = pd.concat([data, aux])
+    return sns.violinplot(data=data, x=x_name, y=y_name, hue=hue,
+                          split=split, ax=ax)
