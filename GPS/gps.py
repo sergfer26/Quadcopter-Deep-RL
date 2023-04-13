@@ -350,7 +350,7 @@ class GPS:
         x = np.random.uniform(self.low_range, self.high_range, size)
         return x + x0
 
-    def fit_policy(self, dataloader: DataLoader, time_step: int = 25, updates: int = 3):
+    def fit_policy(self, dataloader: DataLoader):
         self.policy.train()
         n = 0
         avg_loss = 0.0
