@@ -35,7 +35,7 @@ def apply_R(p, R):
 
 
 def create_animation(states, actions, time, scores=None, state_labels=None,
-                     action_labels=None, score_labels=None,
+                     action_labels=None, score_labels=None, title=None,
                      file_name='animation', path=PATH):
     '''
     Argumentos
@@ -81,7 +81,7 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
                        state_labels=state_labels,
                        action_labels=action_labels,
                        score_labels=score_labels,
-                       path=path, j=j)
+                       path=path, j=j, title=title)
         with imageio.get_writer(file_name.format(j), mode='i') as writer:
             for i in range(0, steps):
                 image = imageio.v2.imread(path + f'/frame_{j}_{i}.png')
@@ -92,7 +92,8 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
 
 def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
                    scores=None, state_labels=None, action_labels=None,
-                   score_labels=None, goal=None, path=PATH, j=None):
+                   score_labels=None, goal=None, path=PATH, j=None,
+                   title=None, fontsize=30):
     '''
     Argumentos
     ----------
@@ -168,6 +169,9 @@ def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
             file_name = path + f'frame_{j}_{i}.png'
         else:
             file_name = path + f'frame_{i}.png'
+
+        if isinstance(title, str):
+            fig.suptitle(title, fontsize=fontsize)
         plt.savefig(file_name)
         plt.close()
 
