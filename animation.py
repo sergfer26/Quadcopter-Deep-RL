@@ -35,8 +35,8 @@ def apply_R(p, R):
 
 
 def create_animation(states, actions, time, scores=None, state_labels=None,
-                     action_labels=None, score_labels=None, title=None,
-                     file_name='animation', path=PATH):
+                     action_labels=None, score_labels=None, goal=None,
+                     title=None, file_name='animation', path=PATH):
     '''
     Argumentos
     ----------
@@ -81,6 +81,7 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
                        state_labels=state_labels,
                        action_labels=action_labels,
                        score_labels=score_labels,
+                       goal=goal,
                        path=path, j=j, title=title)
         with imageio.get_writer(file_name.format(j), mode='i') as writer:
             for i in range(0, steps):
@@ -185,7 +186,7 @@ def _quadcopter_frame(states, goal_pos=None, state_bounds=None, ax=None):
     if not isinstance(ax, plt.Axes):
         ax = plt.axes(projection='3d')
     if isinstance(goal_pos, np.ndarray) | isinstance(goal_pos, list):
-        ax.plot(goal_pos[0], goal_pos[1], goal_pos[2], 'r.')
+        ax.plot(goal_pos[0], goal_pos[1], goal_pos[2], 'r.', alpha=0.1)
     ax.plot(x, y, z, alpha=0.5, linestyle='-.')
     R = angles2rotation(
         np.array([psi[-1], theta[-1], phi[-1]]).flatten(), flatten=False)
