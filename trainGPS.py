@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from Linear.equations import f, W0
 from utils import date_as_path
+from GPS.utils import PolicyNoise
 from utils import plot_performance, violin_plot
 from GPS import GPS, Policy, ContinuousDynamics, iLQG
 from env import QuadcopterEnv
@@ -123,10 +124,11 @@ def main(path):
     n_u = env.action_space.shape[0]
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
+    other_env.noise_on = False
     hidden_sizes = PARAMS_DDPG['hidden_sizes']
     policy = Policy(other_env, hidden_sizes)
-    dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u,
-                           dt=dt, u0=W0)
+    other_env.noise = PolicyNoise(policy)
+    dynamics_kwargs = dict(f=f, n_x=n_x, n_u=n_u, dt=dt, u0=W0)
     # 1.2 GPS
     high_range = np.array(
         [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
@@ -291,6 +293,8 @@ def main(path):
                      state_labels=STATE_NAMES,
                      action_labels=ACTION_NAMES,
                      score_labels=REWARD_NAMES,
+                     goal=np.zeros(3),
+                     title='Guided Policy Search: policy $\pi_{\\theta}$',
                      path=subpath
                      )
     return path
