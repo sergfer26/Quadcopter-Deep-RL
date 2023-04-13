@@ -355,6 +355,15 @@ class OnlineCost(FiniteDiffCost):
         return c
 
 
+class PolicyNoise(object):
+
+    def __init__(self, policy):
+        self.policy = policy
+
+    def get_action(self, action, t=0):
+        return multivariate_normal.rvs(action, self.policy._sigma, 1)
+
+
 def logpdf(x, mean, cov):
     '''
     https://blogs.sas.com/content/iml/2020/07/15/multivariate-normal-log-likelihood.html
@@ -415,13 +424,13 @@ def nearestPD(A):
     """
 
     B = (A + A.T) / 2
-    _, s, V = np.linalg.svd(B)
+    _, s, V=np.linalg.svd(B)
 
-    H = np.dot(V.T, np.dot(np.diag(s), V))
+    H=np.dot(V.T, np.dot(np.diag(s), V))
 
-    A2 = (B + H) / 2
+    A2=(B + H) / 2
 
-    A3 = (A2 + A2.T) / 2
+    A3=(A2 + A2.T) / 2
 
     if isPD(A3):
         return A3

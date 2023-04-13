@@ -7,9 +7,9 @@ PARAMS_LQG = {
     'cov_reg': 1e-4
 }
 PARAMS_OFFLINE = {
-    'lamb': '1e-16',
-    'alpha_lamb': '1e-2',
-    'nu': '1e-2',
+    'lamb': '1e-20',
+    'alpha_lamb': '5e-2',
+    'nu': '5e-3',
     'kl_step': 800,
     'per_kl': .0,
     'adaptive_kl': False,
