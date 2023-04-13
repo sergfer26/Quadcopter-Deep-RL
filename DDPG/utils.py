@@ -83,10 +83,13 @@ class NormalizedEnv(gym.ActionWrapper):
 
 class AgentEnv(NormalizedEnv):
 
-    def __init__(self, env, tx=None, inv_tx=None):
+    def __init__(self, env, tx=None, inv_tx=None, noise=None, noise_on=True):
         super().__init__(env)
-        self.noise = OUNoise(env.action_space)
-        self.noise_on = True
+        if noise is None:
+            self.noise = OUNoise(env.action_space)
+        else:
+            self.noise = noise
+        self.noise_on = noise_on
         self._tx = tx
         self._inv_tx = inv_tx
         low = self._tx(env.observation_space.low)
