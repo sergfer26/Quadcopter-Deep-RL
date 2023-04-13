@@ -336,10 +336,12 @@ class GPS:
         nu[mask] /= 2.0
         return nu
 
-    def init_x0(self):
+    def init_x0(self, inlude_origin=True):
         if self.N > 1:
             self.x0 = np.array([self.env.observation_space.sample()
                                for _ in range(self.N)])
+            if inlude_origin:
+                self.x0[0] = np.zeros(self.n_x)
         else:
             self.x0 = self.env.observation_space.sample()
 
