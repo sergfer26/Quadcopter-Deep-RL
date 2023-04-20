@@ -48,7 +48,7 @@ costs = list()  # np.zeros((EPISODES, env.steps - 1))
 xs, us, cost_trace = agent.fit_control(x0, us_init)
 print('ya acabo el ajuste del control')
 costs.append(cost_trace)
-agent.save(PATH)
+agent.save(PATH, f'ilqr_control_{int(N)}.npz')
 print('los parametros del control fueron guardadados')
 
 plt.style.use("fivethirtyeight")
