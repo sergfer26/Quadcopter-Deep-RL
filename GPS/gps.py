@@ -527,9 +527,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         x0_samples = multivariate_normal.rvs(
             mean=x0, cov=0.01 * np.identity(n_x), size=M)
     for r in range(M):
-        xs, us = control.rollout(x0_samples[r],
-                                 low_constrain=low_constrain,
-                                 high_constrain=high_constrain)
+        xs, us = control.rollout(x0_samples[r])
         states[r] = xs
         actions[r] = us
 
