@@ -109,7 +109,7 @@ class ContinuousDynamics(FiniteDiffDynamics):
 
 class OfflineCost(FiniteDiffCost):
 
-    def __init__(self, cost, l_terminal, n_x, n_u,
+    def __init__(self, l, l_terminal, state_size, action_size,
                  x_eps=None, u_eps=None,
                  eta=0.1, nu=None, lamb=None,
                  T=10, policy_mean=None, policy_cov=None,
@@ -138,24 +138,25 @@ class OfflineCost(FiniteDiffCost):
         # Steps of the trajectory
         self.T = T
         # Parameters of the old control
-        self._k = np.zeros((T, n_u))
-        self._K = np.zeros((T, n_u, n_u))
-        self._C = np.stack([np.identity(n_u)
+        self._k = np.zeros((T, action_size))
+        self._K = np.zeros((T, action_size, state_size))
+        self._C = np.stack([np.identity(action_size)
                             for _ in range(T)])
         # Lagrange's multipliers
         self.eta = eta
         self.nu = 0.001 * np.ones(T) if nu is None else nu
-        self.lamb = 0.001 * np.ones((T, n_u)) if lamb is None else lamb
+        self.lamb = 0.001 * np.ones((T, action_size)) if lamb is None else lamb
         # Parameters of the nonlinear policy
-        self.policy_cov = np.identity(n_u) if not callable(
+        self.policy_cov = np.identity(action_size) if not callable(
             policy_cov) else policy_cov
         self.policy_mean = None  # lambda x: np.zeros(
         # n_u) if not callable(policy_mean) else policy_mean
 
-        self.cost = cost  # l_bounded
+        self.cost = l  # l_bounded
         self.known_dynamics = known_dynamics
-        self.u0 = np.zeros(n_u) if u0 is None else u0
-        super().__init__(self._cost, l_terminal, n_x, n_u, x_eps, u_eps)
+        self.u0 = np.zeros(action_size) if u0 is None else u0
+        super().__init__(self._cost, l_terminal, state_size,
+                         action_size, x_eps, u_eps)
 
     def _cost(self, x, u, i):
         C = self._C[i]
@@ -424,13 +425,13 @@ def nearestPD(A):
     """
 
     B = (A + A.T) / 2
-    _, s, V=np.linalg.svd(B)
+    _, s, V = np.linalg.svd(B)
 
-    H=np.dot(V.T, np.dot(np.diag(s), V))
+    H = np.dot(V.T, np.dot(np.diag(s), V))
 
-    A2=(B + H) / 2
+    A2 = (B + H) / 2
 
-    A3=(A2 + A2.T) / 2
+    A3 = (A2 + A2.T) / 2
 
     if isPD(A3):
         return A3
