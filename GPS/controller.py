@@ -5,12 +5,10 @@ from scipy.optimize import brentq
 from ilqr import iLQR
 from .params import PARAMS_LQG
 from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
-from ilqr.dynamics import constrain
 
 
 class iLQG(iLQR):
 
-    # env: gym.Env, dynamics: Dynamics, cost: Cost):
     def __init__(self, dynamics,
                  cost, steps: int,
                  min_reg=1e-6,
@@ -121,15 +119,14 @@ class iLQG(iLQR):
 
         return action
 
-    def rollout(self, x0, low_constrain=None, high_constrain=None):
+    def rollout(self, x0, N=None):
         self.reset()
-        us = np.empty_like(self._nominal_us)
-        xs = np.empty_like(self._nominal_xs)
+        us = np.empty((N, self.num_actions))
+        xs = np.empty((N + 1, self.num_states))
         xs[0] = x0
-        for i in range(self.N):
+        N = self.N if N is None else N
+        for i in range(N):
             us[i] = self.get_action(xs[i])
-            if isinstance(low_constrain, np.ndarray) and isinstance(high_constrain, np.ndarray):
-                us[i] = constrain(us[i], low_constrain, high_constrain)
             xs[i+1] = self.dynamics.f(xs[i], us[i], i)
         return xs, us
 
@@ -390,6 +387,7 @@ class iLQG(iLQR):
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
+        self.N = self._K.shape[0]
 
 
 class OfflineController(iLQG):
@@ -432,6 +430,7 @@ class OfflineController(iLQG):
         self._nominal_xs = npzfile['xs']
         self._nominal_us = npzfile['us']
         self.alpha = npzfile['alpha']
+        self.N = self._K.shape[0]
         if isinstance(self.cost, OfflineCost):
             self.cost.eta = npzfile['eta']
 
