@@ -500,8 +500,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
         control.load(path, file_name)
     else:
         expert = iLQG(dynamics, cost, T, is_stochastic=False)
-        expert.load('models/')
-        us_init = expert.rollout(x0, N=control.N)[1]
+        expert.load('models/', f'ilqr_control_{int(T)}.npz')
+        us_init = expert.rollout(x0)[1]
         # No influence of the policy in the first iteration
         cost.nu = np.zeros(control.N)
         cost.update_control(control=expert)
