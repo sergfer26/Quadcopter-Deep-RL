@@ -6,9 +6,7 @@ from scipy.stats import multivariate_normal
 from torch import optim
 from copy import deepcopy
 from os.path import exists
-# from functools import partial
 from .utils import OfflineCost  # , OnlineCost
-# from ilqr import RecedingHorizonController
 from .params import PARAMS_LQG, PARAMS_OFFLINE
 from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
@@ -102,10 +100,10 @@ class GPS:
 
         self.dynamics_kwargs = dynamics_kwargs
         u0 = np.zeros(self.n_u) if u0 is None else u0
-        self.cost_kwargs = dict(cost=cost,
+        self.cost_kwargs = dict(l=cost,
                                 l_terminal=cost_terminal,
-                                n_x=self.n_x,
-                                n_u=self.n_u,
+                                state_size=self.n_x,
+                                action_size=self.n_u,
                                 eta=eta,
                                 nu=nu * np.ones(T),
                                 lamb=lamb * np.ones(self.n_u),
@@ -503,7 +501,8 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     else:
         expert = iLQG(dynamics, cost, T, is_stochastic=False)
         expert.load('models/')
-        us_init = expert.rollout(x0)[1]
+        us_init = expert.rollout(x0, N=control.N)[1]
+        # No influence of the policy in the first iteration
         cost.nu = np.zeros(control.N)
         cost.update_control(control=expert)
         _ = control.fit_control(x0, us_init=us_init)
