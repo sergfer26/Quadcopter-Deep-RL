@@ -119,13 +119,12 @@ class iLQG(iLQR):
 
         return action
 
-    def rollout(self, x0, N=None):
+    def rollout(self, x0):
         self.reset()
-        us = np.empty((N, self.num_actions))
-        xs = np.empty((N + 1, self.num_states))
+        us = np.empty_like(self._nominal_us)
+        xs = np.empty_like(self._nominal_xs)
         xs[0] = x0
-        N = self.N if N is None else N
-        for i in range(N):
+        for i in range(self.N):
             us[i] = self.get_action(xs[i])
             xs[i+1] = self.dynamics.f(xs[i], us[i], i)
         return xs, us
