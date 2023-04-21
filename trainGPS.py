@@ -45,7 +45,6 @@ class GPSResult:
 
 
 def train_gps(gps: GPS, K, path, per_kl=0.1,
-              constrained_actions=False,
               shuffle_batches=True, policy_updates=2):
     loss = np.empty(K)
     nu = np.empty((K, gps.N, gps.T))
@@ -63,7 +62,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
         for k in range(K):
             pbar.set_description(f'Update {k + 1}/'+str(K))
             loss[k], policy_div[k], control_div[k] = gps.update_policy(
-                path, constrained_actions, shuffle_batches, policy_updates)
+                path, shuffle_batches, policy_updates)
             nu[k] = gps.nu  # np.mean(gps.nu, axis=(0, 1))
             eta[k] = np.mean(gps.eta, axis=0)
             lamb[k] = gps.lamb  # np.mean(gps.lamb, axis=(0, 1))
@@ -154,7 +153,6 @@ def main(path):
               low_range=low_range,
               high_range=high_range,
               batch_size=PARAMS['batch_size'],
-              is_stochastic=PARAMS['is_stochastic'],
               time_step=PARAMS['time_step']
               )
     ti = time.time()
