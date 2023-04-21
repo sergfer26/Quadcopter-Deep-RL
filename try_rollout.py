@@ -9,7 +9,7 @@ from multiprocessing import Process
 from threading import Thread
 import multiprocessing as mp
 import numpy as np
-from simulation import rollout
+from simulation import rollout, n_rollouts
 from Linear.agent import LinearAgent
 from env import QuadcopterEnv
 # from Linear.classifier import postion_vs_velocity
@@ -18,10 +18,9 @@ from params import STATE_NAMES
 from matplotlib import pyplot as plt
 
 
-def rollout4mp(agent, env, mp_list, state_init=None):
-    states, actions, scores = rollout(
-        agent, env, flag=False, state_init=state_init)
-    mp_list.append(states[-1])
+def rollout4mp(agent, env, mp_list, n=1, state_init=None):
+    states = n_rollouts(agent, env, n, state_init=state_init)[0]
+    mp_list.append(states[:, -1])
 
 
 # def foo(lista):
@@ -50,6 +49,7 @@ if __name__ == '__main__':
         p.join()
     tf = time.time()
     print(tf - ti)
+    breakpoint()
 
     # fig, _ = plot_rollouts(np.array(init_states),
     #                        np.arange(0, 100, 1), STATE_NAMES)
