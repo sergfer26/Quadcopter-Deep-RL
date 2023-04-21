@@ -31,7 +31,7 @@ class GPS:
                  learning_rate=0.01, kl_step=200,
                  u0=None, init_sigma=1.0,
                  low_range=None, high_range=None,
-                 batch_size=4, time_step=25, is_stochastic=True):
+                 batch_size=4, time_step=25):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -92,7 +92,6 @@ class GPS:
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
         self.kl_step = kl_step
-        self.is_stochastic = is_stochastic
 
         # ilQG instances.
         if not callable(cost_terminal):
@@ -364,16 +363,9 @@ class GPS:
                 avg_loss += loss
         return avg_loss / n
 
-    def update_policy(self, path, constrained_actions=False,
-                      shuffle_batches=False, policy_updates=2):
+    def update_policy(self, path, shuffle_batches=False, policy_updates=2):
         pathlib.Path(path + 'buffer/').mkdir(parents=True, exist_ok=True)
         path = path + 'buffer/'
-        if constrained_actions:
-            low_constrain = self.env.action_space.low
-            high_constain = self.env.action_space.high
-        else:
-            low_constrain = None
-            high_constain = None
 
         # 1. Control iLQR fitting
         self.policy.eval()
@@ -399,9 +391,6 @@ class GPS:
                                      self.inv_t_u,
                                      self.policy._sigma,
                                      x0_samples,
-                                     low_constrain,
-                                     high_constain,
-                                     self.is_stochastic
                                      )
                                )
                 processes.append(p)
@@ -417,9 +406,7 @@ class GPS:
             fit_ilqg(self.x0, self.kl_step, self.policy, cost_kwargs,
                      self.dynamics_kwargs, i, self.T, self.M, path,
                      self.t_x, self.inv_t_u, self.policy._sigma,
-                     x0_samples, low_constrain, high_constain,
-                     self.is_stochastic
-                     )
+                     x0_samples)
 
         # 1.1 Loading fitted parameters and simulations
         (K, k, C, nominal_xs, nominal_us,
@@ -468,8 +455,7 @@ class GPS:
 
 def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
              path='', t_x=None, inv_t_u=None, policy_sigma=None,
-             x0_samples=None, low_constrain=None, high_constrain=None,
-             is_stochastic=False):
+             x0_samples=None):
     '''
     Argumentos
     ----------
@@ -492,7 +478,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
     cost = OfflineCost(**cost_kwargs)
     cost.update_policy(policy=policy, t_x=t_x,
                        inv_t_u=inv_t_u, cov=policy_sigma)
-    control = OfflineController(dynamics, cost, T)
+    control = OfflineController(dynamics, cost, T, is_stochastic=False)
     # Actualización de parametros de control para costo
     file_name = f'control_{i}.npz'
     if exists(path + file_name):
@@ -509,10 +495,7 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     # También puede actualizar eta
     cost.update_control(control)
-    is_stochastic = control.is_stochastic
-    control.is_stochastic = False
     xs, us = control.rollout(x0)
-    control.is_stochastic = is_stochastic
     # control.fit_control(xs[0], us_init)
     control.x0, control.us_init = x0, us
     kl_div = control.optimize(
@@ -522,7 +505,6 @@ def fit_ilqg(x0, kl_step, policy, cost_kwargs, dynamics_kwargs, i, T, M,
 
     states = np.empty((M, T + 1, n_x))
     actions = np.empty((M, T, n_u))
-    control.is_stochastic = is_stochastic
     if not isinstance(x0_samples, np.ndarray):
         x0_samples = multivariate_normal.rvs(
             mean=x0, cov=0.01 * np.identity(n_x), size=M)
