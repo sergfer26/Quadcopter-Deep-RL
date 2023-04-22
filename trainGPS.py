@@ -159,7 +159,7 @@ def main(path):
               )
     ti = time.time()
     # 2. Training
-    result = train_gps(gps, K, PATH, per_kl=PARAMS_OFFLINE['per_kl'],
+    result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],
                        shuffle_batches=PARAMS['shuffle_batches'],
                        policy_updates=PARAMS['policy_updates'])
     tf = time.time()
