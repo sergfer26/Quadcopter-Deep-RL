@@ -6,6 +6,9 @@
 
 import time
 import pathlib
+from GPS.policy import Policy
+from params import PARAMS_DDPG
+from DDPG.utils import AgentEnv
 from gym import spaces
 from multiprocessing import Process
 import multiprocessing as mp
@@ -19,6 +22,7 @@ from send_email import send_email
 from simulation import plot_rollouts
 from params import STATE_NAMES
 from matplotlib import pyplot as plt
+from dynamics import inv_transform_x, transform_x
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -39,7 +43,11 @@ if __name__ == '__main__':
     final_states = mp.Manager().list()
     otra_lista = list()
     env = QuadcopterEnv()
-    agent = LinearAgent(env)
+    other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
+    other_env.noise_on = False
+    hidden_sizes = PARAMS_DDPG['hidden_sizes']
+    policy = Policy(other_env, hidden_sizes)
+    policy.load('results_gps/23_04_13_14_57/')
     init_states = np.empty((n_process, sims, env.state.shape[0]))
     high = np.array([
         # u, v, w, x, y, z, p, q, r, psi, theta, phi
@@ -59,7 +67,10 @@ if __name__ == '__main__':
             [env.observation_space.sample() for _ in range(sims)])
 
         p = Process(target=rollout4mp, args=(
-            agent, env, final_states, sims, init_states[i]))
+            policy, other_env, final_states, sims,
+            np.apply_along_axis(transform_x, -1, init_states[i])
+        )
+        )
         otra_lista.append(p)
         p.start()
 
