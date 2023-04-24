@@ -60,10 +60,9 @@ class GPS:
         lamb : `float`
             Valor inicial de lambda
         '''
-        T = env.steps - 1
         self.N = N  # Number of fitted iLQG controlllers.
         self.M = M  # Number of fitted MPC controllers per iLQG c.
-        self.T = T  # Number of steps done in a simulation.
+        self.T = env.steps  # Number of steps done in a simulation.
 
         self.n_x = env.observation_space.shape[0]  # State dimention.
         self.n_u = env.action_space.shape[0]       # Action dimention.
@@ -87,10 +86,10 @@ class GPS:
             self.high_range = self.env.observation_space.high
 
         # Lagrange's multipliers
-        self.lamb = lamb * np.ones((N, T, self.n_u))   # contraint weight.
+        self.lamb = lamb * np.ones((N, self.T, self.n_u))   # contraint weight.
         # learning rate for lamb.
         self.alpha_lamb = alpha_lamb
-        self.nu = nu * np.ones((N, T))               # KL-div weight.
+        self.nu = nu * np.ones((N, self.T))               # KL-div weight.
         # old traj weight for iLQG.
         self.eta = eta * np.ones(N)
         self.kl_step = kl_step
