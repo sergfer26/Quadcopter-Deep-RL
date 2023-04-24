@@ -28,7 +28,7 @@ n_u = len(env.action_space.sample())
 n_x = len(env.observation_space.sample())
 
 # env.noise_on = False
-dt = env.time[-1] - env.time[-2]
+dt = env.dt
 dynamics = ContinuousDynamics(
     f, n_x=n_x, n_u=n_u, u0=W0, dt=dt, method='lsoda')
 
@@ -43,7 +43,7 @@ cost = FiniteDiffCost(l=penalty,
                       state_size=n_x,
                       action_size=n_u
                       )
-N = env.steps - 1
+N = env.steps
 
 controller = iLQG(dynamics, cost, N)
 controller.load('results_offline/23_02_09_17_21/', 'ilqr_control.npz')
@@ -54,7 +54,7 @@ agent = RecedingHorizonController(x0, controller)
 horizon = 50
 
 
-steps = env.steps - 1
+steps = env.steps
 _, us_init, _ = rollout(controller, env, state_init=x0)
 states = np.zeros((env.steps + 1, len(env.state)))
 actions = np.zeros((env.steps, env.action_space.shape[0]))

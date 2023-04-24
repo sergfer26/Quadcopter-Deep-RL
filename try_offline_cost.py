@@ -31,11 +31,11 @@ def main(updates, path, old_path,
     n_u = len(env.action_space.sample())
     n_x = len(env.observation_space.sample())
 
-    dt = env.time[-1] - env.time[-2]
+    dt = env.dt
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
 
-    T = env.steps - 1
+    T = env.steps
 
     cost = OfflineCost(cost=penalty,
                        l_terminal=terminal_penalty,

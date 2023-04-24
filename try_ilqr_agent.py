@@ -23,7 +23,7 @@ n_u = len(env.action_space.sample())
 n_x = len(env.observation_space.sample())
 
 # env.noise_on = False
-dt = env.time[-1] - env.time[-2]
+dt = env.dt
 dynamics = ContinuousDynamics(
     f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)  # ContinuousDynamics
 
@@ -33,12 +33,12 @@ cost = FiniteDiffCost(l=penalty,
                       action_size=n_u
                       )
 
-N = env.steps - 1
+N = env.steps
 agent = iLQG(dynamics, cost, N)
 expert = LinearAgent(env)
 
 
-steps = env.steps - 1
+steps = env.steps
 x0 = np.zeros(n_x)
 
 us_init = rollout(expert, env, state_init=x0)[1]

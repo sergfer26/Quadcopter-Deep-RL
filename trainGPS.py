@@ -120,7 +120,7 @@ def main(path):
     KL_STEP = PARAMS_OFFLINE['kl_step']
     # 1.1 Dynamics
     env = QuadcopterEnv()
-    dt = env.time[-1] - env.time[-2]
+    dt = env.dt
     n_u = env.action_space.shape[0]
     n_x = env.observation_space.shape[0]
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)

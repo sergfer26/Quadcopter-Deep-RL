@@ -10,7 +10,7 @@ from scipy.integrate import odeint
 from params import PARAMS_ENV, PARAMS_OBS
 
 
-TIME_MAX = PARAMS_ENV['TIME_MAX']
+DT = PARAMS_ENV['dt']
 STEPS = PARAMS_ENV['STEPS']
 
 # constantes de la recompensa
@@ -53,7 +53,7 @@ class QuadcopterEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=low, high=high, dtype=np.float64)
         self.state = self.reset()  # estado interno del ambiente
-        self.set_time(STEPS, TIME_MAX)
+        self.set_time(STEPS, DT)
         self.flag = False
         self.is_cuda_available()
         self.W0 = W0 if not isinstance(u0, np.ndarray) else u0
@@ -140,7 +140,7 @@ class QuadcopterEnv(gym.Env):
 
             regresa valor booleano.
         '''
-        if self.i == self.steps-2:  # Si se te acabo el tiempo
+        if self.i == self.steps-1:  # Si se te acabo el tiempo
             return True
         elif self.flag:  # Si el drone esta estrictamente contenido
             if self.is_contained(self.state):
@@ -194,15 +194,16 @@ class QuadcopterEnv(gym.Env):
         self.state = self.observation_space.sample()
         return self.state
 
-    def set_time(self, steps, time_max):
+    def set_time(self, steps, dt):
         '''
         set_time fija la cantidad de pasos y el tiempo de simulación;
         steps: candidad de pasos (int);
         time_max: tiempo de simulación (float).
         '''
-        self.time_max = time_max
+        self.dt = dt
+        self.time_max = dt * steps
         self.steps = steps
-        self.time = np.linspace(0, self.time_max, self.steps)
+        self.time = np.linspace(0, self.time_max, self.steps + 1)
 
     def render(self, mode='human', close=False):
         '''

@@ -32,10 +32,10 @@ def fit_mpc(env, expert, i, T, horizon, M, path=''):
     M : int
         Indice de trayectoria producida por MPC.
     '''
-    dt = env.time[-1] - env.time[-2]
+    dt = env.dt
     n_u = env.action_space.shape[0]
     n_x = env.observation_space.shape[0]
-    steps = env.steps - 1
+    steps = env.steps
     dynamics = ContinuousDynamics(
         f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
 
@@ -126,7 +126,7 @@ def main(path):
     n_x = len(env.observation_space.sample())
     time_max = env.time_max
 
-    T = env.steps - 1
+    T = env.steps
 
     # ###### Instancias control lineal #######
 

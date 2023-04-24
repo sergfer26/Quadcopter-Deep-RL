@@ -22,7 +22,7 @@ n_u = len(env.action_space.sample())
 n_x = len(env.observation_space.sample())
 
 # env.noise_on = False
-dt = env.time[-1] - env.time[-2]
+dt = env.dt
 dynamics = ContinuousDynamics(
     f, n_x=n_x, n_u=n_u, u0=W0, dt=dt)
 
@@ -31,7 +31,7 @@ cost = FiniteDiffCost(l=penalty,
                       state_size=n_x,
                       action_size=n_u
                       )
-N = env.steps - 1
+N = env.steps
 offline_control = iLQG(dynamics, cost, N)
 # 'results_offline/23_02_01_13_30/'
 offline_control.load('results_offline/23_02_16_13_50/', 'ilqr_control.npz')

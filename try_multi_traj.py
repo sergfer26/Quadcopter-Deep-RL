@@ -51,7 +51,7 @@ def fit_ilqg(env, expert, cost_kwargs, dynamics_kwargs, i, T, M, path=''):
     '''
     low = env.observation_space.low
     high = env.observation_space.high
-    steps = env.steps - 1
+    steps = env.steps
     dynamics = ContinuousDynamics(**dynamics_kwargs)
 
     # ###### Instancias control iLQG #######
@@ -83,7 +83,7 @@ def main(path):
     M = 2
     env = QuadcopterEnv()
 
-    T = env.steps - 1
+    T = env.steps
 
     # ###### Instancias control lineal #######
 
