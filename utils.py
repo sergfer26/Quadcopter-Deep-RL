@@ -18,61 +18,6 @@ def smooth(y, box_pts):
     return y_smooth
 
 
-"""
-def load_memory(expert, env, n, path='Linear/', n_x=None, n_u=None, t_x=None, t_u=None):
-    '''
-Carga el almacenamiento de las demostraciones del experto.
-
-Argumenetos
------------
-env: QuadcopterEnv
-Entorno del quadricoptero.
-n: int
-Número de simulaciones
-path: str
-Dirección donde será/esta guardada la memoria.
-n_x, n_u: int
-Dimensión de los estados y las acciones respectivamente.
-t_x, t_u: function
-Transformaciones aplicadas a las salidas de `env`.
-
-Retornos
---------
-memory: `GCL.utils.Memory``
-Es el almacenamiento de las demostraciones del experto.
-'''
-    if n_x is None:
-        n_x = env.observation_space.shape[0]
-    if n_u is None:
-        n_u = env.action_space.shape[0]
-    memory = Memory(max_size=n, action_dim=n_u, state_dim=n_x, T=env.steps - 1)
-    if os.path.exists(path + 'memory_transformed_x_u.npz'):
-        arrays = np.load(path + 'memory_transformed_x_u.npz')
-        states = arrays['states']
-        actions = arrays['actions']
-        new_states = arrays['next_states']
-        dones = arrays['dones']
-    else:
-        # expert = LinearAgent(env)
-        states, actions, _ = n_rollouts(expert, env, n)
-        if callable(t_x):
-            states = np.apply_along_axis(t_x, -1, states)
-        if callable(t_u):
-            actions = np.apply_along_axis(t_u, -1, actions)
-        new_states = states[:, 1:, :]
-        states = states[:, :-1, :]
-        dones = np.zeros((n, env.steps - 1), dtype=bool)
-        dones[:, -1] = True
-        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-        kwargs = dict(states=states, actions=actions,
-                      next_states=new_states, dones=dones)
-        np.savez(path + 'memory_transformed_x_u.npz', **kwargs)
-    memory.push(states=states, actions=actions,
-                next_states=new_states, dones=dones)
-    return memory
-"""
-
-
 def date_as_path():
     tz = pytz.timezone('America/Mexico_City')
     mexico_now = datetime.now(tz)
@@ -202,3 +147,32 @@ def violin_plot(x_name='x', y_name='y', hue=None, split=True, ax=None,
         data = pd.concat([data, aux])
     return sns.violinplot(data=data, x=x_name, y=y_name, hue=hue,
                           split=split, ax=ax)
+
+
+def plot_classifier(states, cluster, x_label='x', y_label='y',
+                    figsize=(6, 6), dpi=300, ax=None,
+                    style="seaborn-whitegrid"):
+    plt.style.use(style)
+    if not isinstance(ax, plt.Axes):
+        ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
+
+    ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    return ax
+
+
+def classifier(state, goal_state=None, c=1e-2):
+    if not isinstance(goal_state, np.ndarray):
+        goal_state = np.zeros_like(state)
+    return np.apply_along_axis(criterion, 0, state, goal_state, c=c).all()
+
+
+def criterion(x, y=0, c=1e-2):
+    return abs(x - y) < c
+
+
+def confidence_region(states, goal_states=None, c=1e-2):
+    if not isinstance(goal_states, np.ndarray):
+        goal_states = np.zeros_like(states)
+    return np.apply_along_axis(classifier, -1, states, goal_states, c)
