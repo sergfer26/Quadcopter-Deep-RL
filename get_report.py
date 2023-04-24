@@ -87,54 +87,6 @@ def add_image(PATH, pdf, name, x, y, width=500, height=500):
                         height=height, preserveAspectRatio=True)
 
 
-def _create_report(PATH):
-    fileName = 'Reporte.pdf'
-    fileName = PATH + fileName
-    documentTitle = 'Document title!'
-    title = 'Reporte de Entrenamiento DDPG'
-    subTitle = ''
-    pdf = canvas.Canvas(fileName)
-
-    pdf.setTitle(documentTitle)
-    pdf.drawCentredString(300, 800, title)
-    # RGB - Red Green and Blue
-    pdf.setFillColorRGB(0, 0, 255)
-    pdf.setFont("Courier-Bold", 26)
-    pdf.drawCentredString(290, 720, subTitle)
-    # drawMyRuler(pdf)
-    # add_table(pdf, PARAMS_OBS,100,610)
-
-    # pdf.showPage()
-
-    add_text(pdf, ['Parámetros del', 'Entrenamiento'], 100, 750)
-    add_table(pdf, PARAMS_TRAIN_DDPG, 100, 610)
-
-    add_text(pdf, ['Parámetros del',  'Ambiente'], 100, 560)
-    add_table(pdf, PARAMS_ENV, 100, 410)
-
-    add_text(pdf, ['Parámetros de', 'DDPG'], 100, 360)
-    add_table(pdf, PARAMS_DDPG, 100, 210)
-
-    add_text(pdf, ['Parámetros del', 'Ruido'], 100, 170)
-    add_table(pdf, PARAMS_UTILS, 100, 30)
-
-    add_text(pdf, ['Espacio de', 'simulación'], 250, 750)
-    add_table(pdf, PARAMS_OBS, 250, 420)
-
-    pdf.showPage()
-    add_image(PATH, pdf, 'train_rewards.png', 10, 350, 600, 600)
-    add_image(PATH, pdf, 'state_rollouts.png', 30, 10)
-    pdf.showPage()
-    # Siguiente pagina
-    add_image(PATH, pdf, 'action_rollouts.png', 30, 350, 550, 550)
-    add_image(PATH, pdf, 'score_rollouts.png', 30, 0, 550, 550)
-
-    # pdf.showPage()
-    # add_image(PATH, pdf, 'flight_rollouts.png', 30, 350, 550, 550)
-    # add_image(PATH,pdf,'/vuelos_2D.png',30,0,550,550)
-    pdf.save()
-
-
 def create_report(path, title=None, subtitle='', file_name=None,
                   method='ddpg', extra_method='noise'):
     '''
