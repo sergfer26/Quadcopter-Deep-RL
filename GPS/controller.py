@@ -8,6 +8,33 @@ from .utils import mvn_kl_div, OnlineCost, OfflineCost, nearestPD
 from ilqr.dynamics import constrain
 
 
+class DummyController:
+
+    def __init__(self, path, file_name):
+        file = np.load(path + file_name)
+        self._k = file['k']
+        self._K = file['K']
+        self._C = file['C']
+        self._nominal_xs = file['xs']
+        self._nominal_us = file['us']
+        self.alpha = file['alpha']
+        self.is_stochastic = False
+        self.i = 0
+        self.N = self._K.shape[0]
+
+    def get_action(self, state, update_time_step=True):
+        action = self._nominal_us[self.i] + self.alpha * self._k[self.i] + \
+            self._K[self.i] @ (state - self._nominal_xs[self.i])
+        if self.is_stochastic:
+            C = nearestPD(
+                self._C[self.i]) + PARAMS_LQG['cov_reg'] * np.identity(self.num_actions)
+            action = multivariate_normal.rvs(action, C, 1)
+        if update_time_step:
+            self.i += 1
+            self.i = self.i % (self.N)
+        return action
+
+
 class iLQG(iLQR):
 
     # env: gym.Env, dynamics: Dynamics, cost: Cost):

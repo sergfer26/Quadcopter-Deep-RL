@@ -30,6 +30,7 @@ results_ilqr/
 GPS/sample_rollouts/
 results_mpc/
 results_gps/
+results_online/
 results_offline/
-results_online
+results_sims/
 
