@@ -40,9 +40,9 @@ def rollout(agent, env, flag=False, state_init=None):
     if isinstance(state_init, np.ndarray):
         env.state = state_init
         state = state_init
-    states = np.zeros((env.steps, env.observation_space.shape[0]))
-    actions = np.zeros((env.steps - 1, env.action_space.shape[0]))
-    scores = np.zeros((env.steps - 1, 2))  # r_t, Cr_t
+    states = np.zeros((env.steps + 1, env.observation_space.shape[0]))
+    actions = np.zeros((env.steps, env.action_space.shape[0]))
+    scores = np.zeros((env.steps, 2))  # r_t, Cr_t
     states[0] = state
     episode_reward = 0
     i = 0
@@ -63,9 +63,9 @@ def rollout(agent, env, flag=False, state_init=None):
 
 
 def n_rollouts(agent, env, n, flag=False, states_init=None, t_x=None, t_u=None):
-    n_states = np.zeros((n, env.steps, env.observation_space.shape[0]))
-    n_actions = np.zeros((n, env.steps - 1, env.action_space.shape[0]))
-    n_scores = np.zeros((n, env.steps - 1, 2))
+    n_states = np.zeros((n, env.steps + 1, env.observation_space.shape[0]))
+    n_actions = np.zeros((n, env.steps, env.action_space.shape[0]))
+    n_scores = np.zeros((n, env.steps, 2))
     state_init = None
     for k in range(n):  # for k in progressbar(range(n)):
         if isinstance(states_init, np.ndarray):
