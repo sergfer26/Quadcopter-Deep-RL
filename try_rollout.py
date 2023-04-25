@@ -100,7 +100,6 @@ if __name__ == '__main__':
     results_path = PATH + 'buffer/'
     sims_path = PATH + 'sims/'
     pathlib.Path(sims_path).mkdir(parents=True, exist_ok=True)
-    T = 250
     sims = int(1e1)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
@@ -158,7 +157,7 @@ if __name__ == '__main__':
         fig.suptitle(f'Control {k}')
         fig.savefig(sims_path + f'samples_control_{k}.png')
 
-    policy.env.env.set_time(T, env.dt)
+    # policy.env.env.set_time(T, env.dt)
     # 3. Policy's simulations
     init_states, final_states = rollouts(policy, env, sims, state_space,
                                          inv_transform_x=inv_transform_x,
