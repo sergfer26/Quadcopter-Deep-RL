@@ -106,9 +106,9 @@ class GPS:
                                 n_x=self.n_x,
                                 n_u=self.n_u,
                                 eta=eta,
-                                nu=nu * np.ones(T),
+                                nu=nu * np.ones(self.T),
                                 lamb=lamb * np.ones(self.n_u),
-                                T=T,
+                                T=self.T,
                                 u0=u0)
 
         self.policy = policy.to(device)
@@ -118,7 +118,7 @@ class GPS:
 
         # Buffer's instances.
         self.batch_size = batch_size
-        self.buffer = iLQR_Rollouts(N, M, T,
+        self.buffer = iLQR_Rollouts(N, M, self.T,
                                     self.n_u,
                                     self.policy.state_dim,
                                     time_step=time_step)
