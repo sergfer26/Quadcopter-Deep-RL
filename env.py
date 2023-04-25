@@ -201,7 +201,7 @@ class QuadcopterEnv(gym.Env):
         time_max: tiempo de simulación (float).
         '''
         self.dt = dt
-        self.time_max = dt * steps
+        self.time_max = int(dt * steps)
         self.steps = steps
         self.time = np.linspace(0, self.time_max, self.steps + 1)
 
