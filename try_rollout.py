@@ -1,10 +1,3 @@
-
-
-# Crear la lista especial del main
-# Hacer una fución extendida que reciba la lista especial y los parametros de rollout
-# Llamar estas dos partes
-
-import time
 import glob
 import pathlib
 from GPS.policy import Policy
@@ -55,8 +48,7 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
     init_states = np.empty((num_workers, sims, env.state.shape[0]))
     for i in range(num_workers):
         env.observation_space = spaces.Box(
-            low=state_space[0, i], high=state_space[1, i], dtype=np.float64
-        )
+            low=state_space[0, i], high=state_space[1, i], dtype=np.float64)
         init_states[i] = np.array(
             [env.observation_space.sample() for _ in range(sims)])
         init_state = init_states[i]
@@ -107,7 +99,7 @@ if __name__ == '__main__':
     pathlib.Path(policy_path).mkdir(parents=True, exist_ok=True)
     pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
 
-    sims = int(1e4)
+    sims = int(1e1)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
@@ -130,12 +122,12 @@ if __name__ == '__main__':
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
     high = np.array([
         # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [10., 0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 10., 0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 10., 0., 0., 2., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., .1, 0., 0., 0., 0., np.pi/4],
-        [0., 0., 0., 0., 0., 0., 0., .1, 0., 0., np.pi/4, 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., .1, np.pi/4, 0., 0.]
+        [10., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 10., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 10., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 0., 0., 0., 0., .01, 0., 0., 0., 0., np.pi/8],
+        [0., 0., 0., 0., 0., 0., 0., .01, 0., 0., np.pi/8, 0.],
+        [0., 0., 0., 0., 0., 0., 0., 0., .01, np.pi/8, 0., 0.]
     ])
 
     low = -high
@@ -151,12 +143,15 @@ if __name__ == '__main__':
         abs(x), y), -1, states[:, 0, 0], 0)
     mask2 = high > 0
     indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[0]
-                       for i in range(6)]).squeeze()
+                        for i in range(6)]).squeeze()
     states = states[indices]
     init_states = states[:, :, 0]
     # steps=int(t * env.dt))
     for t in list_steps:
-        bool_state = confidence_region(states[:, :, int(t)])
+        try:
+            bool_state = confidence_region(states[:, :, int(t)])
+        except:
+            breakpoint()
         cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(figsize=(14, 10), nrows=len(labels)//3,
                                  ncols=3, dpi=250, sharey=True)
@@ -192,7 +187,8 @@ if __name__ == '__main__':
     env.set_time(N, env.dt)
     for k in range(n_files):
         agent = DummyController(results_path, f'control_{k}.npz')
-        states = rollouts(agent, env, sims, state_space)
+        states = rollouts(agent, env, sims, state_space,
+                          init_states)
 
         bool_state = confidence_region(states[:, :, -1])
 
@@ -205,7 +201,7 @@ if __name__ == '__main__':
             abs(x), y), -1, states[:, 0, 0], 0)
         mask2 = high > 0
         indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
-                           0] for i in range(6)]).squeeze()
+            0] for i in range(6)]).squeeze()
         states = states[indices]
         init_states = states[:, :, 0]
         for i in range(init_states.shape[0]):
