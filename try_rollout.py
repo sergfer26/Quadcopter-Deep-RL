@@ -107,7 +107,7 @@ if __name__ == '__main__':
     pathlib.Path(policy_path).mkdir(parents=True, exist_ok=True)
     pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
 
-    sims = int(10)
+    sims = int(1e4)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
@@ -130,12 +130,12 @@ if __name__ == '__main__':
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
     high = np.array([
         # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [1., 0., 0., .1, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., .1, 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., .1, 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., .005, 0., 0., 0., 0., np.pi/64],
-        [0., 0., 0., 0., 0., 0., 0., .005, 0., 0., np.pi/64, 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., .005, np.pi/64, 0., 0.]
+        [10., 0., 0., 2., 0., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 10., 0., 0., 2., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 10., 0., 0., 2., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 0., 0., 0., 0., .1, 0., 0., 0., 0., np.pi/4],
+        [0., 0., 0., 0., 0., 0., 0., .1, 0., 0., np.pi/4, 0.],
+        [0., 0., 0., 0., 0., 0., 0., 0., .1, np.pi/4, 0., 0.]
     ])
 
     low = -high
@@ -215,6 +215,10 @@ if __name__ == '__main__':
                             cluster[i], x_label=label[0],
                             y_label=label[1], ax=axs[i]
                             )
+        np.savez(
+            control_path + f'states_{k}.npz',
+            states=states
+        )
 
         fig.suptitle(f'Control {k}')
         fig.savefig(control_path + f'samples_control_{k}.png')
