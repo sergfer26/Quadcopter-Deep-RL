@@ -8,7 +8,7 @@ import time
 import glob
 import pathlib
 from GPS.policy import Policy
-from params import PARAMS_DDPG
+from params import PARAMS_DDPG, STATE_NAMES
 from DDPG.utils import AgentEnv
 from gym import spaces
 from multiprocessing import Process
@@ -23,24 +23,30 @@ from send_email import send_email
 from matplotlib import pyplot as plt
 from ilqr.cost import FiniteDiffCost
 from dynamics import f, inv_transform_x, transform_x, penalty, terminal_penalty
+from utils import date_as_path
 
 
-def rollout4mp(agent, env, mp_list, n=1, states_init=None, steps=None,
-               dt=None):
-    if isinstance(steps, int):
-        dt = env.dt if not isinstance(dt, float) else dt
-        env.set_time(steps, dt)
+def rollout4mp(agent, env, mp_list, n=1, states_init=None):
+    '''
+    states : (n, env.steps, env.observation_space.shape[0])
+    '''
     states = n_rollouts(agent, env, n=n, states_init=states_init)[0]
-    mp_list.append(states[:, -1])
+    mp_list.append(states)
 
 
 def rollouts(agent, env, sims, state_space, num_workers=None,
-             inv_transform_x=None, transform_x=None, steps=None,
-             dt=None):
+             inv_transform_x=None, transform_x=None):
+    '''
+    Retorno
+    --------
+    states : (np.ndarray)
+        dimensión -> (state_space.shape[0], sims, env.steps,
+                        env.observation_space.shape[0])
+    '''
     if not isinstance(num_workers, int):
         num_workers = state_space.shape[1]
 
-    final_states = mp.Manager().list()
+    states = mp.Manager().list()
     process_list = list()
     if hasattr(agent, 'env'):
         other_env = agent.env
@@ -57,8 +63,7 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
         if callable(transform_x):
             init_state = np.apply_along_axis(transform_x, -1, init_state)
         p = Process(target=rollout4mp, args=(
-            agent, other_env, final_states, sims, init_state,
-            steps, dt
+            agent, other_env, states, sims, init_state
         )
         )
         process_list.append(p)
@@ -67,24 +72,24 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
     for p in process_list:
         p.join()
 
-    final_states = np.array(list(final_states))
+    states = np.array(list(states))
     if callable(inv_transform_x):
-        final_states = np.apply_along_axis(inv_transform_x, -1, final_states)
+        states = np.apply_along_axis(inv_transform_x, -1, states)
 
-    return init_states, final_states
+    return states
 
 
-def classifier(state, goal_state=None, c=1e-1):
+def classifier(state, goal_state=None, c=5e-1):
     if not isinstance(goal_state, np.ndarray):
         goal_state = np.zeros_like(state)
     return np.apply_along_axis(criterion, 0, state, goal_state, c=c).all()
 
 
-def criterion(x, y=0, c=1e-1):
+def criterion(x, y=0, c=5e-1):
     return abs(x - y) < c
 
 
-def confidence_region(states, goal_states=None, c=1e-1):
+def confidence_region(states, goal_states=None, c=5e-1):
     if not isinstance(goal_states, np.ndarray):
         goal_states = np.zeros_like(states)
     return np.apply_along_axis(classifier, -1, states, goal_states, c)
@@ -95,12 +100,14 @@ def get_color(bools):
 
 
 if __name__ == '__main__':
-    plt.style.use("fivethirtyeight")
     PATH = 'results_gps/23_04_13_14_57/'
     results_path = PATH + 'buffer/'
-    sims_path = PATH + 'sims/'
-    pathlib.Path(sims_path).mkdir(parents=True, exist_ok=True)
-    sims = int(1e1)
+    policy_path = PATH + 'rollouts/' + date_as_path() + '/policy/'
+    control_path = PATH + 'rollouts/' + date_as_path() + '/control/'
+    pathlib.Path(policy_path).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
+
+    sims = int(10)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
@@ -109,6 +116,8 @@ if __name__ == '__main__':
 
     # 1. Setup
     env = QuadcopterEnv()
+    T = int(60 / env.dt)
+    list_steps = np.array([5, 10, 30, 60]) / env.dt
     time_max = env.time_max
     other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
     other_env.noise_on = False
@@ -121,9 +130,9 @@ if __name__ == '__main__':
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
     high = np.array([
         # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [1., 0., 0., .2, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., .2, 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., .2, 0., 0., 0., 0., 0., 0.],
+        [1., 0., 0., .1, 0., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 1., 0., 0., .1, 0., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 1., 0., 0., .1, 0., 0., 0., 0., 0., 0.],
         [0., 0., 0., 0., 0., 0., .005, 0., 0., 0., 0., np.pi/64],
         [0., 0., 0., 0., 0., 0., 0., .005, 0., 0., np.pi/64, 0.],
         [0., 0., 0., 0., 0., 0., 0., 0., .005, np.pi/64, 0., 0.]
@@ -133,6 +142,49 @@ if __name__ == '__main__':
 
     state_space = np.stack([low, high])
 
+    env.set_time(T, env.dt)
+    # 3. Policy's simulations
+    states = rollouts(policy, env, sims, state_space,
+                      inv_transform_x=inv_transform_x,
+                      transform_x=transform_x)
+    mask1 = np.apply_along_axis(lambda x, y: np.greater(
+        abs(x), y), -1, states[:, 0, 0], 0)
+    mask2 = high > 0
+    indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[0]
+                       for i in range(6)]).squeeze()
+    states = states[indices]
+    init_states = states[:, :, 0]
+    # steps=int(t * env.dt))
+    for t in list_steps:
+        bool_state = confidence_region(states[:, :, int(t)])
+        cluster = np.apply_along_axis(get_color, -1, bool_state)
+        fig, axes = plt.subplots(figsize=(14, 10), nrows=len(labels)//3,
+                                 ncols=3, dpi=250, sharey=True)
+        axs = axes.flatten()
+        for i in range(init_states.shape[0]):
+            mask = abs(init_states[i, 0]) > 0
+            label = np.array(STATE_NAMES)[mask]
+            plot_classifier(
+                init_states[i, :, mask],
+                cluster[i], x_label=label[0],
+                y_label=label[1],
+                ax=axs[i])
+        fig.suptitle(f'Política, tiempo: {t * env.dt}')
+        fig.savefig(policy_path + f'samples_policy_{int(t * env.dt)}.png')
+
+    np.savez(
+        policy_path + f'states_{int(env.time_max)}.npz',
+        states=states,
+        high=high
+    )
+
+    send_email(credentials_path='credentials.txt',
+               subject='Termino de simulaciones de política: ' + policy_path,
+               reciever='sfernandezm97@ciencias.unam.mx',
+               message=f'T={env.steps} \n time_max={env.dt * T} \n sims={sims}',
+               path2images=policy_path
+               )
+
     # 2. iLQR controls' simulations
     filelist = glob.glob(results_path + 'control_*')
     n_files = len(filelist)
@@ -140,64 +192,36 @@ if __name__ == '__main__':
     env.set_time(N, env.dt)
     for k in range(n_files):
         agent = DummyController(results_path, f'control_{k}.npz')
-        init_states, final_states = rollouts(agent, env, sims, state_space)
+        states = rollouts(agent, env, sims, state_space)
 
-        bool_state = confidence_region(final_states)
+        bool_state = confidence_region(states[:, :, -1])
 
         cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(
             figsize=(14, 10), nrows=high.shape[0]//3, ncols=3, dpi=250,
             sharey=True)
         axs = axes.flatten()
-        for label, i in zip(labels, range(high.shape[0])):
-            states = init_states[i, :, high[i] > 0]
-            plot_classifier(states, cluster[i], x_label=label[0],
-                            y_label=label[1], ax=axs[i])
+        mask1 = np.apply_along_axis(lambda x, y: np.greater(
+            abs(x), y), -1, states[:, 0, 0], 0)
+        mask2 = high > 0
+        indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
+                           0] for i in range(6)]).squeeze()
+        states = states[indices]
+        init_states = states[:, :, 0]
+        for i in range(init_states.shape[0]):
+            mask = abs(init_states[i, 0]) > 0
+            label = np.array(STATE_NAMES)[mask]
+            plot_classifier(init_states[i, :, mask],
+                            cluster[i], x_label=label[0],
+                            y_label=label[1], ax=axs[i]
+                            )
 
         fig.suptitle(f'Control {k}')
-        fig.savefig(sims_path + f'samples_control_{k}.png')
-
-    # policy.env.env.set_time(T, env.dt)
-    # 3. Policy's simulations
-    init_states, final_states = rollouts(policy, env, sims, state_space,
-                                         inv_transform_x=inv_transform_x,
-                                         transform_x=transform_x)
-    # steps=int(t * env.dt))
-    bool_state = confidence_region(final_states)
-    cluster = np.apply_along_axis(get_color, -1, bool_state)
-    labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
-              ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
-              ('$r$', '$\psi$')
-              ]
-    fig, axes = plt.subplots(
-        figsize=(14, 10), nrows=high.shape[0]//3, ncols=3, dpi=250,
-        sharey=True)
-    axs = axes.flatten()
-    for label, i in zip(labels, range(high.shape[0])):
-        states = init_states[i, :, high[i] > 0]
-        plot_classifier(
-            states, cluster[i], x_label=label[0], y_label=label[1], ax=axs[i])
-    fig.suptitle(f'Política, tiempo: {T * env.dt}')
-    fig.savefig(sims_path + f'samples_policy_{T}.png')
-    np.savez(
-        sims_path + f'states_{T}.npz',
-        init=init_states,
-        final=final_states,
-        high=high
-    )
+        fig.savefig(control_path + f'samples_control_{k}.png')
 
     send_email(credentials_path='credentials.txt',
-               subject='Termino de simulaciones' + sims_path,
+               subject='Termino de simulaciones de control: ' + control_path,
                reciever='sfernandezm97@ciencias.unam.mx',
-               message=f'T={env.steps} \n time_max={time_max} \n sims={sims}',
-               path2images=sims_path
+               message=f'T={env.steps} \n time_max={env.time_max} \n sims={sims}',
+               path2images=control_path
                )
-
-    # fig, _ = plot_rollouts(np.array(init_states),
-    #                        np.arange(0, 100, 1), STATE_NAMES)
-    # fig.suptitle('Estados iniciales')
-    # plt.show()
-    # fig, _ = plot_rollouts(np.array(final_states),
-    #                        np.arange(0, 100, 1), STATE_NAMES)
-    # fig.suptitle('Estados finales')
-    # plt.show()
