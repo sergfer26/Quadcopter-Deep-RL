@@ -31,7 +31,7 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train(agent, env, episodes=EPISODES):
+def train(policy, env, behavior_policy=None, episodes=EPISODES):
     '''
     Argumentos
     ----------
@@ -54,17 +54,16 @@ def train(agent, env, episodes=EPISODES):
             state = env.reset()
             episode_reward = 0
             while True:
-                action = agent.get_action(state)
+                if behavior_policy is None:
+                    action = policy.get_action(state)
+                else:
+                    action = behavior_policy.get_action(state)
                 new_state, reward, done, info = env.step(action)
                 episode_reward += reward
                 action = info['action']
-                agent.memory.push(state, action, reward, new_state, done)
+                policy.memory.push(state, action, reward, new_state, done)
                 u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
                 pbar.set_postfix(R='{:.2f}'.format(episode_reward),
-                                 # w='{:.2f}'.format(w), v='{:.2f}'.format(v),
-                                 # u='{:.2f}'.format(u),
-                                 # p='{:.2f}'.format(p), q='{:2f}'.format(q),
-                                 # r='{:.2f}'.format(r),
                                  psi='{:.2f}'.format(rem(psi, TAU)),
                                  theta='{:.2f}'.format(rem(theta, TAU)),
                                  phi='{:.2f}'.format(rem(phi, TAU)),
@@ -72,8 +71,8 @@ def train(agent, env, episodes=EPISODES):
                                  y='{:.2f}'.format(y),
                                  x='{:.2f}'.format(x))
                 pbar.update(1)
-                if len(agent.memory) > BATCH_SIZE:
-                    policy_loss, critic_loss = agent.update(BATCH_SIZE)
+                if len(policy.memory) > BATCH_SIZE:
+                    policy_loss, critic_loss = policy.update(BATCH_SIZE)
                     performance['policy'] = -policy_loss
                     performance['critic'] = critic_loss
                 if done:
@@ -137,6 +136,8 @@ def main(path):
                      path=subpath
                      )
     agent.save(path)
+    # keys: rewards, policy, critic
+    np.savez(path + 'performance.npz', performance)
     return path
 
 
