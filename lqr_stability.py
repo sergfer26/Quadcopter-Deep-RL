@@ -86,6 +86,7 @@ def get_color(bools):
 
 
 if __name__ == '__main__':
+    plt.style.use("fivethirtyeight")
     env = QuadcopterEnv()
     control_path = f'models/'
     PATH = f'results_lqr/stability_analysis/T_{env.steps}/'
