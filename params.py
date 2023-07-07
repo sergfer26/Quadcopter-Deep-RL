@@ -1,5 +1,5 @@
 
-PARAMS_ENV = {'dt': 0.04, 'STEPS': 250, 'omega0_per': 0.60,
+PARAMS_ENV = {'dt': 0.04, 'STEPS': 325, 'omega0_per': 0.60,
               'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '.5'}
 # Si es false los vuelos pueden terminar
 
@@ -12,8 +12,8 @@ PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 3, 'M': 400,
                     'policy_updates': 3}
 
 PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
-              '$x$': '4', '$y$': '4', '$z$': '4',
-              '$p$': '0.0', '$q$': '0.0', '$r$': '0.0',
+              '$x$': '5', '$y$': '5', '$z$': '5',
+              '$p$': '0.00', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
               '$\phi$': 'np.pi/64'}
 
