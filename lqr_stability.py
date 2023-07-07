@@ -90,7 +90,7 @@ if __name__ == '__main__':
     control_path = f'models/'
     PATH = f'results_lqr/stability_analysis/T_{env.steps}/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(5e3)
+    sims = int(1e4)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
@@ -136,7 +136,7 @@ if __name__ == '__main__':
                         )
     np.savez(
         PATH + 'stability_region.npz',
-        states=states[:, :, [0, env.steps + 1]],
+        states=states[:, :, [0, env.steps]],
         bounds=high
     )
 
