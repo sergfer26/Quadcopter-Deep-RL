@@ -90,7 +90,7 @@ if __name__ == '__main__':
     control_path = f'models/'
     PATH = f'results_lqr/stability_analysis/T_{env.steps}/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(1e4)
+    sims = int(5e3)
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
