@@ -89,7 +89,7 @@ if __name__ == '__main__':
     plt.style.use("fivethirtyeight")
     env = QuadcopterEnv()
     control_path = f'models/'
-    PATH = f'results_lqr/stability_analysis/T_{env.steps}/'
+    PATH = f'results_ilqr/stability_analysis/T_{env.steps}/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
     sims = int(1e4)
 
