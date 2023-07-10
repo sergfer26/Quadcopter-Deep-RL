@@ -1,7 +1,7 @@
 
 import numpy as np
 
-PARAMS_ENV = {'dt': 0.04, 'STEPS': 325, 'omega0_per': 0.60,
+PARAMS_ENV = {'dt': 0.04, 'STEPS': 375, 'omega0_per': 0.60,
               'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '.5'}
 # Si es false los vuelos pueden terminar
 
