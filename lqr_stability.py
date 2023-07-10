@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 from ilqr.cost import FiniteDiffCost
 from dynamics import f, inv_transform_x, transform_x, penalty, terminal_penalty
 from utils import date_as_path
+from params import state_space
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -25,7 +26,7 @@ def rollout4mp(agent, env, mp_list, n=1, states_init=None):
     mp_list.append(states)
 
 
-def rollouts(agent, env, sims, state_space, num_workers=None,
+def rollouts(agent, env, sims, state_space, x0=None, num_workers=None,
              inv_transform_x=None, transform_x=None):
     '''
     Retorno
@@ -36,6 +37,9 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
     '''
     if not isinstance(num_workers, int):
         num_workers = state_space.shape[1]
+
+    if not isinstance(x0, np.ndarray):
+        x0 = np.zeros_like(state_space[0, 0])
 
     states = mp.Manager().list()
     process_list = list()
@@ -62,36 +66,34 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
     for p in process_list:
         p.join()
 
-    states = np.array(list(states))
+    states = np.array(list(states))  # (6, sims, T, n_x)
+    # Ordenar indices
+    aux = list(map(lambda i: (np.nonzero(states[i, 0, 0])[
+               0][0], i), list(range(num_workers))))
+    aux.sort(key=lambda x: x[0])
+    indices = [x for _, x in aux]
+    states = states[indices]
     if callable(inv_transform_x):
         states = np.apply_along_axis(inv_transform_x, -1, states)
 
     return states
 
 
-def classifier(state, goal_state=None, c=5e-1):
-    if not isinstance(goal_state, np.ndarray):
-        goal_state = np.zeros_like(state)
-    return np.linalg.norm(state-goal_state) < c
-
-
-def confidence_region(states, goal_states=None, c=5e-1):
+def confidence_region(states, goal_states=None, c=1e-1):
     if not isinstance(goal_states, np.ndarray):
         goal_states = np.zeros_like(states)
-    return np.apply_along_axis(classifier, -1, states, goal_states, c)
-
-
-def get_color(bools):
-    return np.array(['b' if b else 'r' for b in bools])
+    return np.apply_along_axis(lambda x: np.linalg.norm(x-goal_states) <= c,
+                               -1, states)
 
 
 if __name__ == '__main__':
     plt.style.use("fivethirtyeight")
     env = QuadcopterEnv()
-    control_path = f'models/'
-    PATH = f'results_ilqr/stability_analysis/T_{env.steps}/'
+    control_path = 'models/'
+    PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(1e4)
+    sims = int(1e2)
+    eps = 4e-1
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
               ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
@@ -103,46 +105,37 @@ if __name__ == '__main__':
     n_x = env.observation_space.shape[0]
     dynamics = ContinuousDynamics(f, n_x, n_u, dt=env.dt)
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
-    high = np.array([
-        # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 7., 0., 0., 10., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., .0, .02, 0., 0., 0., np.pi/8],
-        [0., 0., 0., 0., 0., 0., 0., .02, 0., 0., np.pi/8, 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., .02, np.pi/8, 0., 0.]
-    ])
-
-    low = -high
-    state_space = np.stack([low, high])
 
     agent = DummyController(control_path, f'ilqr_control_{env.steps}.npz')
     states = rollouts(agent, env, sims, state_space)
-    bool_state = confidence_region(states[:, :, -2], c=1.0)
-    cluster = np.apply_along_axis(get_color, -1, bool_state)
+
+    bool_state = np.apply_along_axis(
+        lambda x: np.linalg.norm(x) < eps, -1, states[:, :, -1])
     fig, axes = plt.subplots(
-        figsize=(14, 10), nrows=high.shape[0]//3, ncols=3, dpi=250,
-        sharey=True)
+        figsize=(12, 10), nrows=state_space.shape[1]//3, ncols=3, dpi=250)
     axs = axes.flatten()
     mask1 = np.apply_along_axis(lambda x, y: np.greater(
         abs(x), y), -1, states[:, 0, 0], 0)
-    mask2 = high > 0
+    mask2 = state_space[1] > 0
     init_states = states[:, :, 0]
+    sc = list()
     for i in range(init_states.shape[0]):
         mask = abs(init_states[i, 0]) > 0
         label = np.array(STATE_NAMES)[mask]
-        plot_classifier(init_states[i, :, mask],
-                        cluster[i], x_label=label[0],
-                        y_label=label[1], ax=axs[i]
-                        )
+        aux = plot_classifier(init_states[i, :, mask],
+                              bool_state[i], x_label=label[0],
+                              y_label=label[1], ax=axs[i],
+                              )[1]
+        sc.append(aux)
+
+    fig.suptitle(f'Control iLQR \\ $\eps=${eps}')
+    fig.savefig(PATH + 'stability_region.png')
+
     np.savez(
         PATH + 'stability_region.npz',
         states=states[:, :, [0, env.steps]],
-        bounds=high
+        bounds=state_space[1]
     )
-
-    fig.suptitle('Control iLQR')
-    fig.savefig(PATH + 'stability_region.png')
 
     send_email(credentials_path='credentials.txt',
                subject='Termino de simulaciones de control: ' + PATH,
