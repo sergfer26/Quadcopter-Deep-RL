@@ -9,6 +9,7 @@ from mycolorpy import colorlist as mcp
 from matplotlib.pyplot import cm
 from matplotlib import pyplot as plt
 from datetime import datetime
+import matplotlib as mpl
 # from simulation import n_rollouts
 
 
@@ -152,14 +153,20 @@ def violin_plot(x_name='x', y_name='y', hue=None, split=True, ax=None,
 def plot_classifier(states, cluster, x_label='x', y_label='y',
                     figsize=(6, 6), dpi=300, ax=None,
                     style="seaborn-whitegrid"):
+    cmap = None
     plt.style.use(style)
     if not isinstance(ax, plt.Axes):
         ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
+    if cluster.all():
+        cluster = 'blue'
+    else:
+        cmap = mpl.colors.ListedColormap(['red', 'blue'])
 
-    ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2)
+    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
+                    cmap=cmap)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    return ax
+    return ax, sc
 
 
 def classifier(state, goal_state=None, c=1e-2):

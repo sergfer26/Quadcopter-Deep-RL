@@ -1,4 +1,6 @@
 
+import numpy as np
+
 PARAMS_ENV = {'dt': 0.04, 'STEPS': 325, 'omega0_per': 0.60,
               'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '.5'}
 # Si es false los vuelos pueden terminar
@@ -27,6 +29,19 @@ STATE_NAMES = list(PARAMS_OBS.keys())
 ACTION_NAMES = [f'$a_{i}$' for i in range(1, 5)]
 
 REWARD_NAMES = ['$r_t$', r'$\sum r_t$']
+
+high = np.array([
+    # u, v, w, x, y, z, p, q, r, psi, theta, phi
+    [5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0., 0.],
+    [0., 5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0.],
+    [0., 0., 9., 0., 0., 14., 0., 0., 0., 0., 0., 0.],
+    [0., 0., 0., 0., 0., 0., .0, .1, 0., 0., 0., .2],
+    [0., 0., 0., 0., 0., 0., 0., 0., .1, 0., .2, 0.],
+    [0., 0., 0., 0., 0., 0., 0., 0., .1, np.pi/4, 0., 0.]
+])
+
+low = -high
+state_space = np.stack([low, high])
 
 
 # N es el numero de vuelos hechos con el control lineal
