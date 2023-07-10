@@ -91,7 +91,7 @@ if __name__ == '__main__':
     control_path = 'models/'
     PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(1e2)
+    sims = int(1e4)
     eps = 4e-1
 
     labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
@@ -127,7 +127,7 @@ if __name__ == '__main__':
                               )[1]
         sc.append(aux)
 
-    fig.suptitle(f'Control iLQR \\ $\eps=${eps}')
+    fig.suptitle(f'Control iLQR \n $\epsilon=${eps}')
     fig.savefig(PATH + 'stability_region.png')
 
     np.savez(
