@@ -49,7 +49,8 @@ def rollouts(agent, env, sims, state_space, x0=None, num_workers=None,
     init_states = np.empty((num_workers, sims, env.state.shape[0]))
     for i in range(num_workers):
         env.observation_space = spaces.Box(
-            low=state_space[0, i], high=state_space[1, i], dtype=np.float64)
+            low=state_space[0, i]+x0, high=state_space[1, i]+x0,
+            dtype=np.float64)
         init_states[i] = np.array(
             [env.observation_space.sample() for _ in range(sims)])
         init_state = init_states[i]
@@ -67,7 +68,7 @@ def rollouts(agent, env, sims, state_space, x0=None, num_workers=None,
 
     states = np.array(list(states))  # (6, sims, T, n_x)
     # Ordenar indices
-    aux = list(map(lambda i: (np.nonzero(states[i, 0, 0])[
+    aux = list(map(lambda i: (np.nonzero(states[i, 0, 0] - x0)[
                0][0], i), list(range(num_workers))))
     aux.sort(key=lambda x: x[0])
     indices = [x for _, x in aux]
@@ -78,67 +79,53 @@ def rollouts(agent, env, sims, state_space, x0=None, num_workers=None,
     return states
 
 
-def confidence_region(states, goal_states=None, c=1e-1):
-    if not isinstance(goal_states, np.ndarray):
-        goal_states = np.zeros_like(states)
-    return np.apply_along_axis(lambda x: np.linalg.norm(x-goal_states) <= c,
-                               -1, states)
-
-
-if __name__ == '__main__':
+def stability(path, file_name, save_path, save_name='stability_region',
+              eps=4e-1, with_x0=False, sims=int(1e4)):
     plt.style.use("fivethirtyeight")
+    agent = DummyController(path, file_name)
     env = QuadcopterEnv()
-    control_path = 'models/'
-    PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
-    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(1e4)
-    eps = 4e-1
-
-    labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
-              ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
-              ('$r$', '$\psi$')
-              ]
-
-    # 1. Setup
-    n_u = env.action_space.shape[0]
-    n_x = env.observation_space.shape[0]
-    dynamics = ContinuousDynamics(f, n_x, n_u, dt=env.dt)
-    cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
-
-    agent = DummyController(control_path, f'ilqr_control_{env.steps}.npz')
-    states = rollouts(agent, env, sims, state_space)
-
+    x0 = np.zeros_like(env.state)
+    if with_x0:
+        x0 = agent._nominal_xs[0]
+    states = rollouts(agent, env, sims, state_space, x0=x0)
     bool_state = np.apply_along_axis(
         lambda x: np.linalg.norm(x) < eps, -1, states[:, :, -1])
     fig, axes = plt.subplots(
-        figsize=(12, 10), nrows=state_space.shape[1]//3, ncols=3, dpi=250)
+        figsize=(14, 10), nrows=state_space.shape[1]//3, ncols=3, dpi=300)
     axs = axes.flatten()
-    mask1 = np.apply_along_axis(lambda x, y: np.greater(
-        abs(x), y), -1, states[:, 0, 0], 0)
-    mask2 = state_space[1] > 0
     init_states = states[:, :, 0]
-    sc = list()
+    # sc = list()
     for i in range(init_states.shape[0]):
-        mask = abs(init_states[i, 0]) > 0
+        mask = abs(init_states[i, 0] - x0) > 0
         label = np.array(STATE_NAMES)[mask]
-        aux = plot_classifier(init_states[i, :, mask],
-                              bool_state[i], x_label=label[0],
-                              y_label=label[1], ax=axs[i],
-                              )[1]
-        sc.append(aux)
+        plot_classifier(init_states[i, :, mask],
+                        bool_state[i], x_label=label[0],
+                        y_label=label[1], ax=axs[i],
+                        )[1]
+    #    sc.append(aux)
 
     fig.suptitle(f'Control iLQR \n $\epsilon=${eps}')
-    fig.savefig(PATH + 'stability_region.png')
+    fig.savefig(save_path + save_name + '.png')
 
     np.savez(
-        PATH + 'stability_region.npz',
+        save_path + save_name + '.npz',
         states=states[:, :, [0, env.steps]],
         bounds=state_space[1]
     )
 
+
+if __name__ == '__main__':
+    control_path = 'models/'
+    PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
+    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
+    sims = int(1e1)
+    eps = 4e-1
+    T = 750
+    stability(control_path, f'ilqr_control_{T}.npz', PATH, eps=eps, sims=sims)
+
     send_email(credentials_path='credentials.txt',
                subject='Termino de simulaciones de control: ' + PATH,
                reciever='sfernandezm97@ciencias.unam.mx',
-               message=f'T={env.steps} \n time_max={env.time_max} \n sims={sims}',
+               message=f'T={T} \n eps={eps} \n sims={sims}',
                path2images=PATH
                )
