@@ -104,7 +104,7 @@ def stability(path, file_name, save_path, save_name='stability_region',
                         )[1]
     #    sc.append(aux)
 
-    fig.suptitle(f'Control iLQR \n $\epsilon=${eps}')
+    fig.suptitle(f'Control iLQR \n $\epsilon=${eps}, T={env.steps}')
     fig.savefig(save_path + save_name + '.png')
 
     np.savez(
