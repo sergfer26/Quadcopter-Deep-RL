@@ -7,7 +7,7 @@ from send_email import send_email
 
 if __name__ == '__main__':
     path = 'results_gps/23_04_22_02_26/buffer/'
-    save_path = 'results_gps/23_04_22_02_26/rollouts/'+date_as_path()+'/control/'
+    save_path = 'results_gps/23_04_22_02_26/stability/'+date_as_path()+'/control/'
     pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
     processes = list()
     sims = int(1e4)
