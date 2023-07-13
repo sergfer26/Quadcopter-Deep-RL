@@ -171,7 +171,7 @@ def stability(path, file_name, save_path, save_name='stability_region',
     fig.suptitle(f'Control iLQR \n $\epsilon=${eps}, T={env.steps}')
     fig.savefig(save_path + save_name + '.png')
     np.savez(
-        PATH + save_name + '.npz',
+        save_path + save_name + '.npz',
         states=states[:, :, [0, env.steps]],
         bounds=state_space[1]
     )
