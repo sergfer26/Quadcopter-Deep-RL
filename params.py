@@ -1,7 +1,7 @@
 
 import numpy as np
 
-PARAMS_ENV = {'dt': 0.04, 'STEPS': 375, 'omega0_per': 0.60,
+PARAMS_ENV = {'dt': 0.04, 'STEPS': 500, 'omega0_per': 0.60,
               'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '.5'}
 # Si es false los vuelos pueden terminar
 
@@ -17,7 +17,7 @@ PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
               '$x$': '5', '$y$': '5', '$z$': '5',
               '$p$': '0.00', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/64', r'$\theta$': 'np.pi/64',
-              '$\phi$': 'np.pi/64'}
+              '$\\varphi$': 'np.pi/64'}
 
 PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-2',
                'critic_learning_rate': 1e-4, 'gamma': 0.98, 'tau': 0.125,
@@ -26,7 +26,7 @@ PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-2',
 # Etiquetas
 STATE_NAMES = list(PARAMS_OBS.keys())
 
-ACTION_NAMES = [f'$a_{i}$' for i in range(1, 5)]
+ACTION_NAMES = [r'u^{(1)}', r'u^{(2)}', r'u^{(3)}', r'u^{(4)}']
 
 REWARD_NAMES = ['$r_t$', r'$\sum r_t$']
 
@@ -35,8 +35,8 @@ high = np.array([
     [5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0., 0.],
     [0., 5., 0., 0., 10., 0., 0., 0., 0., 0., 0., 0.],
     [0., 0., 9., 0., 0., 14., 0., 0., 0., 0., 0., 0.],
-    [0., 0., 0., 0., 0., 0., .0, .1, 0., 0., 0., .2],
-    [0., 0., 0., 0., 0., 0., 0., 0., .1, 0., .2, 0.],
+    [0., 0., 0., 0., 0., 0., .1, .0, 0., 0., 0., .2],
+    [0., 0., 0., 0., 0., 0., 0., .1, 0., 0., .2, 0.],
     [0., 0., 0., 0., 0., 0., 0., 0., .1, np.pi/4, 0., 0.]
 ])
 
