@@ -86,7 +86,6 @@ def n_rollouts(agent, env, n, flag=False, states_init=None, t_x=None, t_u=None):
 
 
 def n_rollouts3d(n, agent, env, path, show=False):
-    flag = True
     n_states, _, _ = n_rollouts(agent, env, n)
     plot_nSim3D(n_states, path, show)
 
