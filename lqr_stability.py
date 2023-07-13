@@ -1,20 +1,77 @@
 import pathlib
-from params import STATE_NAMES
-from gym import spaces
-from multiprocessing import Process
-import multiprocessing as mp
 import numpy as np
-from simulation import n_rollouts
-from GPS.controller import DummyController
-from GPS.utils import ContinuousDynamics
+import multiprocessing as mp
+from gym import spaces
 from env import QuadcopterEnv
-from utils import plot_classifier
-from send_email import send_email
-from matplotlib import pyplot as plt
-from ilqr.cost import FiniteDiffCost
-from dynamics import f, penalty, terminal_penalty
 from utils import date_as_path
 from params import state_space
+from utils import plot_classifier
+from send_email import send_email
+from multiprocessing import Process
+from scipy.spatial import ConvexHull
+from matplotlib import pyplot as plt
+from animation import create_animation
+from GPS.controller import DummyController
+from simulation import plot_rollouts, n_rollouts
+from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
+
+
+def in_hull(point, hull, tolerance=1e-12):
+    return all(
+        (np.dot(eq[:-1], point) + eq[-1] <= tolerance)
+        for eq in hull.equations)
+
+
+class ConvexRegion(object):
+    '''
+    [1] https://es.wikipedia.org/wiki/Envolvente_convexa
+    [2] https://stackoverflow.com/questions/59073952/how-to-get-uniformly-distributed-points-in-convex-hull
+    [3] https://stackoverflow.com/questions/59073952/how-to-get-uniformly-distributed-points-in-convex-hull
+    '''
+
+    def __init__(self, region, eps, x0=None):
+        self.x0 = x0
+        self.hull = list()
+        self.hull_path = list()
+        self.set_convex_hull(region, eps)
+
+    def set_convex_hull(self, region, eps):
+        '''
+        region : `np.ndarray`
+            (n_x/2, sims, 2, n_x)
+        '''
+        bool_state = np.apply_along_axis(
+            lambda x: np.linalg.norm(x) < eps, -1, region[:, :, -1])
+        init_states = region[:, :, 0]
+        self.indices = np.apply_along_axis(
+            np.where, -1, init_states[:, 0]).flatten()
+        for i in range(region.shape[0]):
+            pos = init_states[i][bool_state[i]]
+            self.hull.append(
+                ConvexHull(pos[:, self.indices[2 * i: 2 * i + 2]])
+            )
+        self.min_bound = np.hstack(
+            [self.hull[i].min_bound for i in range(region.shape[0])]
+        )
+        self.max_bound = np.hstack(
+            [self.hull[i].max_bound for i in range(region.shape[0])]
+        )
+
+    def _sample_pair(self, i):
+        while True:
+            x = np.random.uniform(low=self.min_bound[2 * i: 2 * i + 2],
+                                  high=self.max_bound[2 * i: 2 * i + 2])
+            if in_hull(x, self.hull[i]):
+                break
+        return x
+
+    def sample(self):
+        aux = list()
+        for i in range(self.min_bound.shape[0] // 2):
+            aux.append(
+                self._sample_pair(i)
+            )
+        return np.hstack(aux)
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -80,7 +137,7 @@ def rollouts(agent, env, sims, state_space, x0=None, num_workers=None,
 
 
 def stability(path, file_name, save_path, save_name='stability_region',
-              eps=4e-1, with_x0=False, sims=int(1e4)):
+              eps=4e-1, with_x0=False, sims=int(1e4), convex_hull=False):
     plt.style.use("fivethirtyeight")
     agent = DummyController(path, file_name)
     env = QuadcopterEnv()
@@ -91,7 +148,7 @@ def stability(path, file_name, save_path, save_name='stability_region',
     bool_state = np.apply_along_axis(
         lambda x: np.linalg.norm(x) < eps, -1, states[:, :, -1])
     fig, axes = plt.subplots(
-        figsize=(14, 10), nrows=state_space.shape[1]//3, ncols=3, dpi=300)
+        figsize=(15, 10), nrows=state_space.shape[1]//3, ncols=3, dpi=300)
     axs = axes.flatten()
     init_states = states[:, :, 0]
     # sc = list()
@@ -102,29 +159,67 @@ def stability(path, file_name, save_path, save_name='stability_region',
                         bool_state[i], x_label=label[0],
                         y_label=label[1], ax=axs[i],
                         )[1]
+        if convex_hull:
+            pos = init_states[i][bool_state[i]]
+            hull = ConvexHull(pos[:, mask])
+            for simplex in hull.simplices:
+                axs[i].plot(hull.points[simplex, 0],
+                            hull.points[simplex, 1], '-k')
+
     #    sc.append(aux)
 
     fig.suptitle(f'Control iLQR \n $\epsilon=${eps}, T={env.steps}')
     fig.savefig(save_path + save_name + '.png')
-
     np.savez(
-        save_path + save_name + '.npz',
+        PATH + save_name + '.npz',
         states=states[:, :, [0, env.steps]],
         bounds=state_space[1]
     )
+    return states[:, :, [0, env.steps]]
 
 
 if __name__ == '__main__':
     control_path = 'models/'
     PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
-    pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
-    sims = int(1e1)
+    pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
+    env = QuadcopterEnv()
+    sims = int(3)
     eps = 4e-1
-    T = 750
-    stability(control_path, f'ilqr_control_{T}.npz', PATH, eps=eps, sims=sims)
+    T = env.steps
+    # 1. Stability analysis
+    region = stability(
+        control_path, f'ilqr_control_{T}.npz', PATH, eps=eps, sims=sims)
+    agent = DummyController(control_path, f'ilqr_control_{T}.npz')
+    convex_region = ConvexRegion(region, eps=4e-1)
+
+    agent.reset()
+    # 2. Test over stable regions
+    init_states = np.vstack([convex_region.sample() for i in range(100)])
+    states, actions, scores = n_rollouts(
+        agent, env, n=100, states_init=init_states)
+
+    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
+    fig1.savefig(PATH + 'state_rollouts.png')
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
+    fig2.savefig(PATH + 'action_rollouts.png')
+    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
+    fig3.savefig(PATH + 'score_rollouts.png')
+
+    # 3. Samples' animation
+    sample_indices = np.random.randint(states.shape[0], size=3)
+    states_samples = states[sample_indices]
+    actions_samples = actions[sample_indices]
+    scores_samples = scores[sample_indices]
+    create_animation(states_samples, actions_samples, env.time,
+                     scores=scores_samples,
+                     state_labels=STATE_NAMES,
+                     action_labels=ACTION_NAMES,
+                     score_labels=REWARD_NAMES,
+                     file_name='flight',
+                     path=PATH + 'sample_rollouts/')
 
     send_email(credentials_path='credentials.txt',
-               subject='Termino de simulaciones de control: ' + PATH,
+               subject='Termino de analisis de estabilidad: ' + PATH,
                reciever='sfernandezm97@ciencias.unam.mx',
                message=f'T={T} \n eps={eps} \n sims={sims}',
                path2images=PATH
