@@ -424,13 +424,13 @@ def nearestPD(A):
     """
 
     B = (A + A.T) / 2
-    _, s, V=np.linalg.svd(B)
+    _, s, V = np.linalg.svd(B)
 
-    H=np.dot(V.T, np.dot(np.diag(s), V))
+    H = np.dot(V.T, np.dot(np.diag(s), V))
 
-    A2=(B + H) / 2
+    A2 = (B + H) / 2
 
-    A3=(A2 + A2.T) / 2
+    A3 = (A2 + A2.T) / 2
 
     if isPD(A3):
         return A3
@@ -462,3 +462,83 @@ def isPD(B):
         return True
     except np.linalg.LinAlgError:
         return False
+
+
+def n_rollouts(agent, env, n, flag=False, states_init=None, t_x=None, t_u=None):
+    n_states = np.zeros((n, env.steps + 1, env.observation_space.shape[0]))
+    n_actions = np.zeros((n, env.steps, env.action_space.shape[0]))
+    n_scores = np.zeros((n, env.steps, 2))
+    state_init = None
+    for k in range(n):  # for k in progressbar(range(n)):
+        if isinstance(states_init, np.ndarray):
+            if len(states_init.shape) == 2:
+                state_init = states_init[k, :]
+            else:
+                state_init = states_init
+        states, actions, scores = rollout(
+            agent, env, flag=flag, state_init=state_init)
+        n_states[k] = states
+        n_actions[k] = actions
+        n_scores[k] = scores
+    if callable(t_x):
+        n_states = np.apply_along_axis(t_x, -1, n_states)
+    if callable(t_u):
+        n_actions = np.apply_along_axis(t_u, -1, n_actions)
+    return n_states, n_actions, n_scores
+
+
+def rollout(agent, env, flag=False, state_init=None):
+    '''
+    Simulación de interacción entorno-agente
+
+    Argumentos
+    ----------
+    agent : `(DDPG.DDPGAgent, Linear.Agent, GPS.iLQRAgent)`
+        Instancia que representa al agente que toma acciones 
+        en la simulación.
+    env : `gym.Env`
+        Entorno de simualción de gym.
+    flag : bool
+        ...
+    state_init : `np.ndarray`
+        Arreglo que representa el estado inicial de la simulación.
+
+    Retornos
+    --------
+    states : `np.ndarray`
+        Trayectoria de estados en la simulación con dimensión (env.steps, n_x).
+    acciones : `np.ndarray`
+        Trayectoria de acciones en la simulación con dimensión 
+        (env.steps -1, n_u).
+    scores : `np.ndarray`
+        Trayectoria de puntajes (incluye reward) en la simulación con
+        dimensión (env.steps -1, ?).
+    '''
+    # t = env.time
+    env.flag = flag
+    state = env.reset()
+    if hasattr(agent, 'reset') and callable(getattr(agent, 'reset')):
+        agent.reset()
+    if isinstance(state_init, np.ndarray):
+        env.state = state_init
+        state = state_init
+    states = np.zeros((env.steps + 1, env.observation_space.shape[0]))
+    actions = np.zeros((env.steps, env.action_space.shape[0]))
+    scores = np.zeros((env.steps, 2))  # r_t, Cr_t
+    states[0] = state
+    episode_reward = 0
+    i = 0
+    while True:
+        action = agent.get_action(state)
+        new_state, reward, done, info = env.step(action)
+        episode_reward += reward
+        states[i + 1] = state
+        if isinstance(info, dict) and ('real_action' in info.keys()):
+            action = info['real_action']  # env.action(action)
+        actions[i] = action
+        scores[i] = np.array([reward, episode_reward])
+        state = new_state
+        if done:
+            break
+        i += 1
+    return states, actions, scores
