@@ -191,7 +191,7 @@ class QuadcopterEnv(gym.Env):
             regresa el estado actual del drone.
         '''
         self.i = 0
-        self.state = self.observation_space.sample()
+        self.state = self.sample()
         return self.state
 
     def set_time(self, steps, dt):
@@ -210,3 +210,6 @@ class QuadcopterEnv(gym.Env):
             render hace una simulación visual del drone.
         '''
         pass
+
+    def sample(self):
+        return self.observation_space.sample()
