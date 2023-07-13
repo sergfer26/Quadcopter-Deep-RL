@@ -183,7 +183,7 @@ if __name__ == '__main__':
     PATH = 'results_ilqr/stability_analysis/'+date_as_path()+'/'
     pathlib.Path(PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
     env = QuadcopterEnv()
-    sims = int(3)
+    sims = int(1e4)
     eps = 4e-1
     T = env.steps
     # 1. Stability analysis
@@ -192,7 +192,6 @@ if __name__ == '__main__':
     agent = DummyController(control_path, f'ilqr_control_{T}.npz')
     convex_region = ConvexRegion(region, eps=4e-1)
 
-    agent.reset()
     # 2. Test over stable regions
     init_states = np.vstack([convex_region.sample() for i in range(100)])
     states, actions, scores = n_rollouts(
