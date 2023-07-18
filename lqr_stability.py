@@ -185,7 +185,7 @@ def stability(agent, state_space, state_names, save_path,
 if __name__ == '__main__':
     control_type = 'linear'
     env = QuadcopterEnv()
-    sims = int(1e1)
+    sims = int(1e4)
     T = env.steps
 
     if control_type == 'ilqr':
