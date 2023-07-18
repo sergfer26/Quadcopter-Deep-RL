@@ -26,7 +26,7 @@ PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-2',
 # Etiquetas
 STATE_NAMES = list(PARAMS_OBS.keys())
 
-ACTION_NAMES = [f'\\omega_{i}' for i in range(1, 5)]
+ACTION_NAMES = [f'$\\omega_{i}$' for i in range(1, 5)]
 
 REWARD_NAMES = ['$r_t$', r'$\sum r_t$']
 
