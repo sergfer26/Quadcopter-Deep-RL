@@ -4,6 +4,8 @@ from lqr_stability import stability
 from multiprocessing import Process
 from utils import date_as_path
 from send_email import send_email
+from GPS.controller import DummyController
+from params import STATE_NAMES, state_space
 
 if __name__ == '__main__':
     path = 'results_gps/23_04_22_02_26/buffer/'
@@ -14,15 +16,16 @@ if __name__ == '__main__':
     eps = 4e-1
     with_x0 = True
     for i in range(7):
-        file_name = f'control_{i}.npz'
         save_name = f'stability_{i}'
-        p = Process(target=stability, args=(path,
-                                            file_name,
+        agent = DummyController(path, f'control_{i}.npz')
+        p = Process(target=stability, args=(agent,
+                                            state_space,
+                                            STATE_NAMES,
                                             save_path,
                                             save_name,
                                             eps,
                                             with_x0,
-                                            sims
+                                            sims,
                                             ))
         processes.append(p)
         p.start()
