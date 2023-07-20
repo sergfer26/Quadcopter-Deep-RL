@@ -88,7 +88,16 @@ def main(path):
 
     env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
     agent = DDPGagent(env)
-    performance = train(agent, env)
+    if PARAMS_TRAIN_DDPG['behavior_policy']:
+        from GPS.policy import Policy
+        from params import PARAMS_DDPG
+        hidden_sizes = PARAMS_DDPG['hidden_sizes']
+        behavior_policy = Policy(env, hidden_sizes)
+        behavior_path = PARAMS_TRAIN_DDPG['behavior_path']
+        behavior_policy.load(behavior_path)
+    else:
+        behavior_policy = None
+    performance = train(agent, env, behavior_policy=behavior_policy)
     env.noise_on = False
     agent.save(path)
     smth_rewards = smooth(performance['rewards'], 30)
@@ -113,9 +122,9 @@ def main(path):
         fig.savefig(path + 'train_performance.png')  # , bbox_inches='tight')
 
     states, actions, scores = n_rollouts(agent, env, n, t_x=inv_transform_x)
-    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES)
-    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES)
-    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES)
+    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
+    fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
+    fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
 
     if SHOW:
         plt.show()
