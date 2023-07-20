@@ -1,12 +1,15 @@
 
 import numpy as np
 
-PARAMS_ENV = {'dt': 0.04, 'STEPS': 500, 'omega0_per': 0.60,
+PARAMS_ENV = {'dt': 0.04, 'STEPS': 750, 'omega0_per': 0.60,
               'K1': '10', 'K11': '10', 'K2': '100', 'K21': '10', 'K3': '.5'}
 # Si es false los vuelos pueden terminar
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
-                     'EPISODES': 1000, 'n': 5, 'SHOW': True}
+                     'EPISODES': 2, 'n': 2, 'SHOW': False,
+                     'behavior_policy': True,
+                     'behavior_path': 'results_gps/23_04_22_02_26/'
+                     }
 
 PARAMS_TRAIN_GPS = {'UPDATES': 5, 'N': 3, 'M': 400,
                     'SHOW': True, 'is_stochastic': False, 'samples': 3,
