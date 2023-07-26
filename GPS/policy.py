@@ -32,6 +32,7 @@ class Policy(nn.Module):
             self.hidden.append(nn.Linear(h_sizes[k], h_sizes[k+1]))
 
         self.out = nn.Linear(h_sizes[-1], action_dim)
+        self._C = 1e-1 * np.identity(action_dim)
 
     def forward(self, state):
         """
