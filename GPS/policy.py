@@ -33,6 +33,7 @@ class Policy(nn.Module):
 
         self.out = nn.Linear(h_sizes[-1], action_dim)
         self._C = 1e-1 * np.identity(action_dim)
+        self.is_stochastic = False
 
     def forward(self, state):
         """
@@ -58,7 +59,10 @@ class Policy(nn.Module):
     def get_action(self, state):
         state = Variable(torch.from_numpy(state).float())
         action = self.forward(state.to(device))
-        return action.detach().cpu().numpy()
+        action = action.detach().cpu().numpy()
+        if self.is_stochastic:
+            action = multivariate_normal.rvs(action, self._C, 1)
+        return action
 
     def save(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
