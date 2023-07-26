@@ -448,7 +448,8 @@ class OfflineController(iLQG):
                  us_old=self._us,
                  alpha=self.alpha,
                  eta=self.cost.eta,
-                 div=self.div
+                 div=self.div,
+                 nu=self.cost.nu
                  )
 
     def load(self, path, file_name='ilqr_control.npz'):
