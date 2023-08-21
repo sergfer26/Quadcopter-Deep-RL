@@ -139,6 +139,15 @@ def stability(agent, state_space, state_names, save_path,
               save_name='stability',
               eps=4e-1, with_x0=False, sims=int(1e4), convex_hull=False,
               n_cols=3, mask=None):
+    '''
+    Llama a rollouts (función multiprocessing)
+    Argumentos
+    ----------
+    with_x0 : bool
+        Determina si se toma x0 = agent._nominal_xs[0]
+    sims : int
+        Número de simulaciones 
+    '''
     plt.style.use("fivethirtyeight")
     env = QuadcopterEnv()
     x0 = np.zeros_like(env.state)
