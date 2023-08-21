@@ -57,7 +57,7 @@ if __name__ == '__main__':
         if i > 0:
             x0 = env.observation_space.sample()
             us_init = rollout(agents[0], env, state_init=x0)[1]
-        fit_agent(agents[i], x0, us_init, i=0, path=PATH)
+        fit_agent(agents[i], x0, us_init, i=i, path=PATH)
 
     # 3. Analize stability of every agent
     processes = list()
