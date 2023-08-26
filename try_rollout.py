@@ -92,7 +92,7 @@ def get_color(bools):
 
 
 if __name__ == '__main__':
-    PATH = 'results_gps/23_04_13_14_57/'
+    PATH = 'results_gps/23_07_31_12_15/'  # 'results_gps/23_04_13_14_57/'
     results_path = PATH + 'buffer/'
     policy_path = PATH + 'rollouts/' + date_as_path() + '/policy/'
     control_path = PATH + 'rollouts/' + date_as_path() + '/control/'
@@ -122,12 +122,12 @@ if __name__ == '__main__':
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
     high = np.array([
         # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [10., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 10., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 10., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., .01, 0., 0., 0., 0., np.pi/8],
-        [0., 0., 0., 0., 0., 0., 0., .01, 0., 0., np.pi/8, 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., .01, np.pi/8, 0., 0.]
+        [10., 0., 0., 20., 0., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 10., 0., 0., 20., 0., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 10., 0., 0., 20., 0., 0., 0., 0., 0., 0.],
+        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., np.pi/2],
+        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., np.pi/2, 0.],
+        [0., 0., 0., 0., 0., 0., 0., 0., 1., np.pi/2, 0., 0.]
     ])
 
     low = -high
@@ -148,10 +148,7 @@ if __name__ == '__main__':
     init_states = states[:, :, 0]
     # steps=int(t * env.dt))
     for t in list_steps:
-        try:
-            bool_state = confidence_region(states[:, :, int(t)])
-        except:
-            breakpoint()
+        bool_state = confidence_region(states[:, :, int(t)])
         cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(figsize=(14, 10), nrows=len(labels)//3,
                                  ncols=3, dpi=250, sharey=True)
