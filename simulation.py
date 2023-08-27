@@ -62,7 +62,21 @@ def rollout(agent, env, flag=False, state_init=None):
     return states, actions, scores
 
 
-def n_rollouts(agent, env, n, flag=False, states_init=None, t_x=None, t_u=None):
+def n_rollouts(agent, env, n, flag=False, states_init=None,
+               t_x=None, t_u=None):
+    '''
+    Retornos
+    --------
+    n_states: `np.ndarray`
+        Colección de `n` trayectoria de estados en la simulación con dimensión 
+        `(n, env.steps, n_x)`.
+    n_actions: 
+        Colección de `n` trayectoria de acciones en la simulación con dimensión 
+        `(n, env.steps -1, n_u)`.
+    n_scores:
+        Colección de `n` trayectoria de puntajes (incluye reward) en la simulación con
+        dimensión `(n, env.steps -1, ?)`.
+    '''
     n_states = np.zeros((n, env.steps + 1, env.observation_space.shape[0]))
     n_actions = np.zeros((n, env.steps, env.action_space.shape[0]))
     n_scores = np.zeros((n, env.steps, 2))
@@ -114,7 +128,23 @@ def plot_nSim3D(n_states):
 
 
 def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
-                  ax=None, subplots=True, dpi=150, colors=None, alpha=0.4):
+                  ax=None, subplots=True, dpi=150, colors=None, alpha=0.4,
+                  ylims=None, cmap=None):
+    '''
+    array : `np.ndarray`
+        ...
+    time : `np.ndarray`
+        ...
+    columns : `list`
+        ...
+    ax : ...
+        ...
+    dpi : `int`
+        ...
+    ylims : `np.ndarray`
+        Valores limites de los ejes `ax`. Si `subplots=True` (n_x, 2), 
+        en otro caso (2,).
+    '''
     if len(array.shape) == 2:
         array = array.reshape(1, array.shape[0], array.shape[1])
     if not isinstance(colors, list):
@@ -127,6 +157,7 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
         else:
             fig, ax = plt.subplots(dpi=dpi)
     for k in range(samples):
+
         data = pd.DataFrame(array[k, :, :], columns=columns)
         data['$t (s)$'] = time[0: steps]
         if k == 0:
@@ -135,7 +166,17 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
             legend = False
 
         data.plot(x='$t (s)$', subplots=subplots,
-                  ax=ax, legend=legend, alpha=alpha)
+                  ax=ax, legend=legend, alpha=alpha,
+                  colormap=cmap
+                  )
+
+    if isinstance(ylims, np.ndarray):
+        if subplots:
+            axes = ax.flatten()
+            for e, a in enumerate(axes):
+                a.set_ylim(ymin=ylims[e, 1], ymax=ylims[e, 0])
+        else:
+            ax.set_ylim(ymin=ylims[0], ymax=ylims[1])
 
     if not pd.isna(fig):
         fig.set_size_inches(18.5, 10.5)
