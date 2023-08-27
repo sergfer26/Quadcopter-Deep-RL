@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 from ilqr.cost import FiniteDiffCost
 from dynamics import f, inv_transform_x, transform_x, penalty, terminal_penalty
 from utils import date_as_path
+from params import state_space as STATE_SPACE
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -120,28 +121,15 @@ if __name__ == '__main__':
     n_x = env.observation_space.shape[0]
     dynamics = ContinuousDynamics(f, n_x, n_u, dt=env.dt)
     cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
-    high = np.array([
-        # u, v, w, x, y, z, p, q, r, psi, theta, phi
-        [10., 0., 0., 20., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 10., 0., 0., 20., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 10., 0., 0., 20., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., np.pi/2],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., np.pi/2, 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., np.pi/2, 0., 0.]
-    ])
-
-    low = -high
-
-    state_space = np.stack([low, high])
 
     env.set_time(T, env.dt)
     # 3. Policy's simulations
-    states = rollouts(policy, env, sims, state_space,
+    states = rollouts(policy, env, sims, STATE_SPACE,
                       inv_transform_x=inv_transform_x,
                       transform_x=transform_x)
     mask1 = np.apply_along_axis(lambda x, y: np.greater(
         abs(x), y), -1, states[:, 0, 0], 0)
-    mask2 = high > 0
+    mask2 = STATE_SPACE[1] > 0
     indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[0]
                         for i in range(6)]).squeeze()
     states = states[indices]
@@ -149,7 +137,7 @@ if __name__ == '__main__':
     # steps=int(t * env.dt))
     for t in list_steps:
         bool_state = confidence_region(states[:, :, int(t)])
-        cluster = np.apply_along_axis(get_color, -1, bool_state)
+        # cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(figsize=(14, 10), nrows=len(labels)//3,
                                  ncols=3, dpi=250, sharey=True)
         axs = axes.flatten()
@@ -158,7 +146,7 @@ if __name__ == '__main__':
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(
                 init_states[i, :, mask],
-                cluster[i], x_label=label[0],
+                bool_state[i], x_label=label[0],
                 y_label=label[1],
                 ax=axs[i])
         fig.suptitle(f'Política, tiempo: {t * env.dt}')
@@ -167,7 +155,7 @@ if __name__ == '__main__':
     np.savez(
         policy_path + f'states_{int(env.time_max)}.npz',
         states=states,
-        high=high
+        high=STATE_SPACE[1]
     )
 
     send_email(credentials_path='credentials.txt',
@@ -184,19 +172,19 @@ if __name__ == '__main__':
     env.set_time(N, env.dt)
     for k in range(n_files):
         agent = DummyController(results_path, f'control_{k}.npz')
-        states = rollouts(agent, env, sims, state_space,
+        states = rollouts(agent, env, sims, STATE_SPACE,
                           init_states)
 
         bool_state = confidence_region(states[:, :, -1])
 
-        cluster = np.apply_along_axis(get_color, -1, bool_state)
+        # cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(
-            figsize=(14, 10), nrows=high.shape[0]//3, ncols=3, dpi=250,
+            figsize=(14, 10), nrows=len(labels)//3, ncols=3, dpi=250,
             sharey=True)
         axs = axes.flatten()
         mask1 = np.apply_along_axis(lambda x, y: np.greater(
             abs(x), y), -1, states[:, 0, 0], 0)
-        mask2 = high > 0
+        mask2 = STATE_SPACE[1] > 0
         indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
             0] for i in range(6)]).squeeze()
         states = states[indices]
@@ -205,7 +193,7 @@ if __name__ == '__main__':
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(init_states[i, :, mask],
-                            cluster[i], x_label=label[0],
+                            bool_state[i], x_label=label[0],
                             y_label=label[1], ax=axs[i]
                             )
         np.savez(
