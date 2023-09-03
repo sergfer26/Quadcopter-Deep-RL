@@ -138,7 +138,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
     if method == 'ddpg':
         add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
-        add_table(pdf, PARAMS_TRAIN_DDPG, 100, 600)
+        add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
 
     elif method == 'gps':
         add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 780)
@@ -198,6 +198,26 @@ def create_report(path, title=None, subtitle='', file_name=None,
                       'cost_updates.png', 30, -10, 500, 500)
 
     pdf.save()
+
+
+def report_noise(path, title=None, subtitle='', file_name=None):
+    if not isinstance(file_name, str):
+        file_name = 'reporte.pdf'
+    if not isinstance(title, str):
+        title = 'Reporte de entrenamiento'
+    file_name = path + file_name
+
+    pdf = canvas.Canvas(file_name)
+    pdf.drawCentredString(300, 800, title)
+    pdf.setFillColorRGB(0, 0, 255)
+    pdf.setFont("Courier-Bold", 26)
+    pdf.drawCentredString(290, 760, subtitle)
+
+    add_text(pdf, ['Espacio de', 'observación'], 100, 750)
+    add_table(pdf, PARAMS_OBS, 100, 480)
+
+    add_text(pdf, ['Parámetros del', 'ambiente'], 100, 450)
+    add_table(pdf, PARAMS_ENV, 100, 250)
 
 
 if __name__ == '__main__':
