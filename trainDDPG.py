@@ -15,6 +15,7 @@ from utils import smooth, date_as_path
 from animation import create_animation
 from simulation import n_rollouts, plot_rollouts
 from dynamics import inv_transform_x, transform_x
+from scipy.stats import multivariate_normal
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 
 # from depricated_files.correo import send_correo
@@ -31,7 +32,8 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train(policy, env, behavior_policy=None, episodes=EPISODES):
+def train(policy: DDPGagent, env: QuadcopterEnv, behavior_policy=None,
+          episodes=EPISODES):
     '''
     Argumentos
     ----------
@@ -73,8 +75,8 @@ def train(policy, env, behavior_policy=None, episodes=EPISODES):
                 pbar.update(1)
                 if len(policy.memory) > BATCH_SIZE:
                     policy_loss, critic_loss = policy.update(BATCH_SIZE)
-                    performance['policy'] = -policy_loss
-                    performance['critic'] = critic_loss
+                    performance['policy'].append(-policy_loss)
+                    performance['critic'].append(critic_loss)
                 if done:
                     break
                 state = new_state
