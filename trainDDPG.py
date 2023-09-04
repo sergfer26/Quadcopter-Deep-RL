@@ -91,12 +91,16 @@ def main(path):
     env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
     agent = DDPGagent(env)
     if PARAMS_TRAIN_DDPG['behavior_policy']:
+        import torch
         from GPS.policy import Policy
         from params import PARAMS_DDPG
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         hidden_sizes = PARAMS_DDPG['hidden_sizes']
         behavior_policy = Policy(env, hidden_sizes)
         behavior_path = PARAMS_TRAIN_DDPG['behavior_path']
         behavior_policy.load(behavior_path)
+        agent.actor.load_state_dict(torch.load(
+            PARAMS_TRAIN_DDPG['behavior_path'], map_location=device))
     else:
         behavior_policy = None
     performance = train(agent, env, behavior_policy=behavior_policy)
