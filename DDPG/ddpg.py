@@ -17,7 +17,7 @@ if torch.cuda.is_available():
 
 
 class DDPGagent:
-    def __init__(self, env, hidden_sizes=[64, 64],
+    def __init__(self, env, hidden_sizes=[128, 128],
                  actor_learning_rate=1e-3,
                  critic_learning_rate=1e-4,
                  gamma=0.98, tau=0.125,
