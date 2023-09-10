@@ -17,6 +17,7 @@ from simulation import n_rollouts, plot_rollouts
 from dynamics import inv_transform_x, transform_x
 from scipy.stats import multivariate_normal
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
+from params import PARAMS_DDPG
 
 # from depricated_files.correo import send_correo
 
@@ -85,11 +86,18 @@ def train(policy: DDPGagent, env: QuadcopterEnv, behavior_policy=None,
     return performance
 
 
-def main(path):
+def main(path, params_ddpg):
     plt.style.use("fivethirtyeight")
 
     env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
-    agent = DDPGagent(env)
+    agent = DDPGagent(env, hidden_sizes=params_ddpg['hidden_sizes'],
+                      actor_learning_rate=eval(
+                          params_ddpg['actor_learning_rate']),
+                      critic_learning_rate=params_ddpg['critic_learning_rate'],
+                      gamma=params_ddpg['gamma'],
+                      tau=params_ddpg['tau'],
+                      max_memory_size=params_ddpg['max_memory_size'])
+
     if PARAMS_TRAIN_DDPG['behavior_policy']:
         import torch
         from GPS.policy import Policy
@@ -99,10 +107,12 @@ def main(path):
         behavior_policy = Policy(env, hidden_sizes)
         behavior_path = PARAMS_TRAIN_DDPG['behavior_path']
         behavior_policy.load(behavior_path)
-        agent.actor.load_state_dict(torch.load(
-            PARAMS_TRAIN_DDPG['behavior_path'], map_location=device))
     else:
         behavior_policy = None
+    if PARAMS_TRAIN_DDPG['pre-trained']:
+        agent.actor.load_state_dict(torch.load(
+            PARAMS_TRAIN_DDPG['behavior_path'] + 'policy',
+            map_location=device))
     performance = train(agent, env, behavior_policy=behavior_policy)
     env.noise_on = False
     agent.save(path)
@@ -160,6 +170,6 @@ if __name__ == "__main__":
     PATH = 'results_ddpg/' + date_as_path() + '/'
     pathlib.Path(PATH).mkdir(parents=True, exist_ok=True)
     if not SHOW:
-        send_email.report_sender(main, args=[PATH])
+        send_email.report_sender(main, args=[PATH, PARAMS_DDPG])
     else:
-        main(PATH)
+        main(PATH, PARAMS_DDPG)
