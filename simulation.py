@@ -129,7 +129,7 @@ def plot_nSim3D(n_states):
 
 def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
                   ax=None, subplots=True, dpi=150, colors=None, alpha=0.4,
-                  ylims=None, cmap=None):
+                  ylims=None, cmap=None, style="fivethirtyeight"):
     '''
     array : `np.ndarray`
         ...
@@ -145,6 +145,7 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
         Valores limites de los ejes `ax`. Si `subplots=True` (n_x, 2), 
         en otro caso (2,).
     '''
+    plt.style.use(style)
     if len(array.shape) == 2:
         array = array.reshape(1, array.shape[0], array.shape[1])
     if not isinstance(colors, list):
@@ -153,7 +154,7 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
     fig = None
     if not isinstance(ax, np.ndarray) and not isinstance(ax, plt.Axes):
         if subplots:
-            fig, ax = plt.subplots(n_var // 2, 2, dpi=dpi)
+            fig, ax = plt.subplots(n_var // 2, 2, dpi=dpi, sharex=True)
         else:
             fig, ax = plt.subplots(dpi=dpi)
     for k in range(samples):
