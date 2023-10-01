@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GPS
-from params import PARAMS_OBS, PARAMS_DDPG
+from params import PARAMS_OBS, PARAMS_DDPG, WEIGHTS
 from DDPG.params import PARAMS_UTILS
 from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
 # from PPO.params import PARAMS_PPO
@@ -161,6 +161,10 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
         add_text(pdf, ['Parámetros de', '"Online control"'], 350, 140)
         add_table(pdf, PARAMS_ONLINE, 350, 20)
+
+    if method == 'ddpg':
+        add_text(pdf, ['Pesos de', 'recompensa'], 350, 370)
+        add_table(pdf, WEIGHTS, 350, 150)
 
     elif method is None:
         pass
