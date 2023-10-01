@@ -2,24 +2,22 @@ import pathlib
 import send_email
 import numpy as np
 import matplotlib.pyplot as plt
-
+from ilqr import iLQR
 from tqdm import tqdm
-
+from numpy import remainder
+from GPS.policy import Policy
 from env import QuadcopterEnv
 from DDPG.utils import AgentEnv
 from DDPG.ddpg import DDPGagent
-from numpy import remainder as rem
+from dynamics import ReferenceReward
 from utils import plot_performance
 from get_report import create_report
 from utils import smooth, date_as_path
 from animation import create_animation
-from simulation import n_rollouts, plot_rollouts
 from dynamics import inv_transform_x, transform_x
-from scipy.stats import multivariate_normal
+from simulation import n_rollouts, plot_rollouts, rollout
+from params import PARAMS_DDPG, WEIGHTS
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
-from params import PARAMS_DDPG
-
-# from depricated_files.correo import send_correo
 
 
 BATCH_SIZE = PARAMS_TRAIN_DDPG['BATCH_SIZE']
@@ -33,8 +31,9 @@ if not SHOW:
     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-def train(policy: DDPGagent, env: QuadcopterEnv, behavior_policy=None,
-          episodes=EPISODES):
+def train(policy: DDPGagent, env: QuadcopterEnv,
+          behavior_policy: iLQR or Policy = None,
+          episodes: int = EPISODES, weights: dict = None):
     '''
     Argumentos
     ----------
@@ -51,25 +50,30 @@ def train(policy: DDPGagent, env: QuadcopterEnv, behavior_policy=None,
         keys: rewards, policy, critic
     '''
     performance = {k: list() for k in ['rewards', 'policy', 'critic']}
+    if isinstance(behavior_policy, Policy) or isinstance(behavior_policy, iLQR):
+        env.reward = ReferenceReward(**weights)
+
     for episode in range(episodes):
         with tqdm(total=env.steps) as pbar:
             pbar.set_description(f'Ep {episode + 1}/'+str(episodes))
             state = env.reset()
             episode_reward = 0
+            if isinstance(behavior_policy, Policy) or isinstance(behavior_policy, iLQR):
+                refernces_states = rollout(
+                    behavior_policy, env, state_init=state)[0]
+                env.reward.set_reference_states(refernces_states)
+
             while True:
-                if behavior_policy is None:
-                    action = policy.get_action(state)
-                else:
-                    action = behavior_policy.get_action(state)
+                action = policy.get_action(state)
                 new_state, reward, done, info = env.step(action)
                 episode_reward += reward
                 action = info['action']
                 policy.memory.push(state, action, reward, new_state, done)
                 u, v, w, x, y, z, p, q, r, psi, theta, phi = env.state
                 pbar.set_postfix(R='{:.2f}'.format(episode_reward),
-                                 psi='{:.2f}'.format(rem(psi, TAU)),
-                                 theta='{:.2f}'.format(rem(theta, TAU)),
-                                 phi='{:.2f}'.format(rem(phi, TAU)),
+                                 psi='{:.2f}'.format(remainder(psi, TAU)),
+                                 theta='{:.2f}'.format(remainder(theta, TAU)),
+                                 phi='{:.2f}'.format(remainder(phi, TAU)),
                                  z='{:.2f}'.format(z),
                                  y='{:.2f}'.format(y),
                                  x='{:.2f}'.format(x))
@@ -100,20 +104,21 @@ def main(path, params_ddpg):
 
     if PARAMS_TRAIN_DDPG['behavior_policy']:
         import torch
-        from GPS.policy import Policy
         from params import PARAMS_DDPG
+
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         hidden_sizes = PARAMS_DDPG['hidden_sizes']
         behavior_policy = Policy(env, hidden_sizes)
         behavior_path = PARAMS_TRAIN_DDPG['behavior_path']
         behavior_policy.load(behavior_path)
+        weights = WEIGHTS
     else:
         behavior_policy = None
-    if PARAMS_TRAIN_DDPG['pre-trained']:
-        agent.actor.load_state_dict(torch.load(
-            PARAMS_TRAIN_DDPG['behavior_path'] + 'policy',
-            map_location=device))
-    performance = train(agent, env, behavior_policy=behavior_policy)
+        weights = None
+
+    performance = train(agent, env,
+                        behavior_policy=behavior_policy,
+                        weights=weights)
     env.noise_on = False
     agent.save(path)
     smth_rewards = smooth(performance['rewards'], 30)
@@ -161,7 +166,6 @@ def main(path, params_ddpg):
                      path=subpath
                      )
     agent.save(path)
-    # keys: rewards, policy, critic
     np.savez(path + 'performance.npz', performance)
     return path
 
