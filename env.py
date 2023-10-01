@@ -1,13 +1,13 @@
-import numpy as np
 import gym
 import numba
-from Linear.equations import f, jac_f, angles2rotation, W0
-from Linear.constants import CONSTANTS, omega_0, F, C
+import numpy as np
 from numba import cuda
 from gym import spaces
-from numpy.linalg import norm
+from dynamics import penalty
 from scipy.integrate import odeint
 from params import PARAMS_ENV, PARAMS_OBS
+from Linear.equations import f, jac_f, W0
+from Linear.constants import CONSTANTS, omega_0, F, C
 
 
 DT = PARAMS_ENV['dt']
@@ -46,7 +46,12 @@ class QuadcopterEnv(gym.Env):
     '''Quadcopter Environment that follows gym interface'''
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, u0=None, low=LOW_OBS, high=HIGH_OBS):
+    def __init__(self,
+                 u0: np.ndarray = None,
+                 low: np.ndarray = LOW_OBS,
+                 high: np.ndarray = HIGH_OBS,
+                 reward: callable = lambda x, a, i: - penalty(x, a, i)
+                 ):
         self.action_space = spaces.Box(
             low=VEL_MIN * np.ones(4), high=VEL_MAX * np.ones(4),
             dtype=np.float64)
@@ -57,6 +62,7 @@ class QuadcopterEnv(gym.Env):
         self.flag = False
         self.is_cuda_available()
         self.W0 = W0 if not isinstance(u0, np.ndarray) else u0
+        self.reward = reward
 
     def set_obs_space(self, low, high):
         self.observation_space = spaces.Box(
@@ -123,17 +129,6 @@ class QuadcopterEnv(gym.Env):
                 score1 = 1
         return score1, score2
 
-    def get_reward(self, state, action):
-        '''
-        falta
-        '''
-        # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
-        penalty = K1 * norm(state[3:6])
-        mat = angles2rotation(state[9:], flatten=False)
-        penalty += K2 * norm(np.identity(3) - mat)
-        penalty += K3 * norm(action)
-        return - penalty
-
     def is_done(self):
         '''
             is_done verifica si el drone ya termino de hacer su tarea;
@@ -178,7 +173,9 @@ class QuadcopterEnv(gym.Env):
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
         self.state = y_dot
-        reward = self.get_reward(y_dot, action)
+        indices = np.array([-3, -2, -1])
+        y_dot[indices] = np.remainder(y_dot[indices], 2 * np.pi)
+        reward = self.reward(y_dot, action, self.i)
         done = self.is_done()
         self.i += 1
         info = {'real_action': action}
