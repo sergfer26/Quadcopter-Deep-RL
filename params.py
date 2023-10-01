@@ -3,16 +3,15 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 
-PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 16,
-                     'EPISODES': 5, 'n': 100, 'SHOW': True,
+PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
+                     'EPISODES': 100, 'n': 50, 'SHOW': True,
                      'behavior_policy': True,
-                     'behavior_path': 'results_gps/23_07_31_12_15/',
-                     'pretrained': True
+                     'behavior_path': 'results_gps/23_07_31_12_15/'
                      }
 
 
 PARAMS_DDPG = {'hidden_sizes': [128, 128], 'actor_learning_rate': '1e-2',
-               'critic_learning_rate': 1e-4, 'gamma': 0.98, 'tau': 0.125,
+               'critic_learning_rate': 1e-2, 'gamma': 0.98, 'tau': 0.125,
                'max_memory_size': int(1e4)
                }
 
@@ -22,6 +21,12 @@ PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
               '$p$': '0.00', '$q$': '0.0', '$r$': '0.0',
               '$\psi$': 'np.pi/32', r'$\theta$': 'np.pi/32',
               '$\\varphi$': 'np.pi/32'}
+
+WEIGHTS = dict(u=0.02, v=0.02, w=0.02,
+               x=0.2, y=0.2, z=0.2,
+               p=0.01, q=0.01, r=0.01,
+               psi=0.01, theta=0.1, phi=0.1
+               )
 
 
 PARAMS_ENV = {'dt': 0.04, 'STEPS': 750, 'omega0_per': 0.60,
