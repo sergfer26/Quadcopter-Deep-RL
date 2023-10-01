@@ -1,6 +1,7 @@
 '''
  Quadrotor dynamics
 '''
+from typing import Any
 import numpy as np
 import torch
 from numpy.linalg import norm
@@ -29,6 +30,36 @@ K3 = eval(PARAMS_ENV['K3'])
 omega0_per = .60
 VEL_MAX = omega_0 * omega0_per  # 60 #Velocidad maxima de los motores 150
 VEL_MIN = - omega_0 * omega0_per
+
+
+class ReferenceReward(object):
+
+    def __init__(self, **kwargs) -> None:
+        '''
+        Parameters
+        ----------
+        kwarg : `dict`
+            Each keyword argument represents the weight value of corresponding 
+            variable.
+            - lamb_x : `float`
+                weight for variable x 
+        '''
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self.weights = np.array(list(vars(self).values()))
+        self._states = None
+
+    def set_reference_states(self, states: np.ndarray):
+        cond_shape = states.shape[-1] == len(vars(self)) - 1
+        assert cond_shape, f"states doesn't have the right shape {states.shape}"
+        indices_to_apply_remainder = np.array([-3, -2, -1])
+        states = np.remainder(states[indices_to_apply_remainder], 2 * np.pi)
+
+        self._states = states
+
+    def __call__(self, state: np.ndarray, action: np.ndarray, i: int):
+
+        return (self.weights * (self._states[i] - state)).sum()
 
 
 # Quadcopter dynamics
@@ -139,7 +170,7 @@ def terminal_cost(state, i):
     return penalty
 
 
-def penalty(state, action, i):
+def penalty(state, action, i=None):
     '''
     falta
     '''
@@ -147,7 +178,7 @@ def penalty(state, action, i):
     return terminal_penalty(state, i) + K3 * norm(action)
 
 
-def terminal_penalty(state, i):
+def terminal_penalty(state, i=None):
     # u, v, w, x, y, z, p, q, r, psi, theta, phi = state
     penalty = K1 * norm(state[3:6])
     penalty += K11 * norm(state[:3])
