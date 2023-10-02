@@ -4,7 +4,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 128,
-                     'EPISODES': 100, 'n': 50, 'SHOW': True,
+                     'EPISODES': 10, 'n': 5, 'SHOW': True,
                      'behavior_policy': True,
                      'behavior_path': 'results_gps/23_07_31_12_15/'
                      }
@@ -22,10 +22,10 @@ PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
               '$\psi$': 'np.pi/32', r'$\theta$': 'np.pi/32',
               '$\\varphi$': 'np.pi/32'}
 
-WEIGHTS = dict(u=0.02, v=0.02, w=0.02,
-               x=0.2, y=0.2, z=0.2,
-               p=0.01, q=0.01, r=0.01,
-               psi=0.01, theta=0.1, phi=0.1
+WEIGHTS = dict(u=1e-1, v=1e-1, w=1e-1,
+               x=1e-2, y=1e-2, z=1e-2,
+               p=2e-2, q=2e-2, r=1e-3,
+               psi=5e-4, theta=1e-3, phi=1e-3
                )
 
 
