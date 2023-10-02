@@ -11,6 +11,7 @@ from params import PARAMS_ENV
 # from ilqr.containers import Dynamics, Cost
 from scipy.spatial.transform import Rotation
 from Linear.equations import rotation2angles, angles2rotation
+from utils import wrap_angle
 
 
 G = 9.81
@@ -34,7 +35,7 @@ VEL_MIN = - omega_0 * omega0_per
 
 class ReferenceReward(object):
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, mask=None, **kwargs) -> None:
         '''
         Parameters
         ----------
@@ -48,18 +49,22 @@ class ReferenceReward(object):
             setattr(self, key, value)
         self.weights = np.array(list(vars(self).values()))
         self._states = None
+        self._mask = mask
 
     def set_reference_states(self, states: np.ndarray):
-        cond_shape = states.shape[-1] == len(vars(self)) - 1
-        assert cond_shape, f"states doesn't have the right shape {states.shape}"
-        indices_to_apply_remainder = np.array([-3, -2, -1])
-        states = np.remainder(states[indices_to_apply_remainder], 2 * np.pi)
-
+        indices = np.array([-3, -2, -1])
+        states[indices] = wrap_angle(states[indices])
         self._states = states
 
     def __call__(self, state: np.ndarray, action: np.ndarray, i: int):
-
-        return (self.weights * (self._states[i] - state)).sum()
+        indices = np.array([-3, -2, -1])
+        state[indices] = wrap_angle(state[indices])
+        if isinstance(self._mask, np.ndarray) or isinstance(self._mask, list):
+            out = (self.weights *
+                   (self._states[i][self._mask] - state[self._mask])).sum()
+        else:
+            out = (self.weights * (self._states[i] - state)).sum()
+        return out
 
 
 # Quadcopter dynamics
