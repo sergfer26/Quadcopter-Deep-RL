@@ -63,10 +63,7 @@ class NormalizedEnv(gym.ActionWrapper):
 
         act_k = (high - low) / 2.
         act_b = (high + low) / 2.
-        try:
-            aux = act_k * action + act_b
-        except:
-            breakpoint()
+        aux = act_k * action + act_b
         return aux
 
     def reverse_action(self, action):
@@ -124,6 +121,8 @@ class AgentEnv(NormalizedEnv):
 
     def reset(self):
         state = super().reset()
+        if self.noise_on:
+            self.noise.reset()
         return self.observation(state)
 
 

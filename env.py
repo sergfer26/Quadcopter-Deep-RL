@@ -173,8 +173,6 @@ class QuadcopterEnv(gym.Env):
         y_dot = odeint(self.f, self.state, t, args=(w1, w2, w3, w4))[
             1]  # , Dfun=self.jac)[1]
         self.state = y_dot
-        indices = np.array([-3, -2, -1])
-        y_dot[indices] = np.remainder(y_dot[indices], 2 * np.pi)
         reward = self.reward(y_dot, action, self.i)
         done = self.is_done()
         self.i += 1

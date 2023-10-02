@@ -13,6 +13,10 @@ import matplotlib as mpl
 # from simulation import n_rollouts
 
 
+def wrap_angle(angle: float) -> float:
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+
 def smooth(y, box_pts):
     box = np.ones(box_pts)/box_pts
     y_smooth = np.convolve(y, box, mode='same')
