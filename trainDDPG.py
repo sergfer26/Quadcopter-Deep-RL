@@ -15,7 +15,7 @@ from get_report import create_report
 from utils import smooth, date_as_path
 from animation import create_animation
 from dynamics import inv_transform_x, transform_x
-from simulation import n_rollouts, plot_rollouts, rollout
+from simulation import n_rollouts, plot_rollouts
 from params import PARAMS_DDPG, WEIGHTS
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 
@@ -59,9 +59,15 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
             state = env.reset()
             episode_reward = 0
             if isinstance(behavior_policy, Policy) or isinstance(behavior_policy, iLQR):
-                refernces_states = rollout(
-                    behavior_policy, env, state_init=state)[0]
-                env.reward.set_reference_states(refernces_states)
+                env.noise_on = False
+                reference_states = n_rollouts(
+                    behavior_policy, env, n=1, states_init=state,
+                    t_x=inv_transform_x)[0]
+                env.reward.set_reference_states(reference_states[0])
+
+                env.reset()
+                env.state = inv_transform_x(state)
+                env.noise_on = True
 
             while True:
                 action = policy.get_action(state)
