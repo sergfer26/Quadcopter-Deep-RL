@@ -179,7 +179,14 @@ def main(path, params_ddpg):
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
     print('Termino de simualcion...')
-    create_animation(states, actions, env.time, scores=scores,
+    sample_indices = np.random.randint(states.shape[0], size=3)
+    states_samples = states[sample_indices]
+    actions_samples = actions[sample_indices]
+    scores_samples = scores[sample_indices]
+
+    create_animation(states_samples,
+                     actions_samples, env.time,
+                     scores=scores_samples,
                      state_labels=STATE_NAMES,
                      action_labels=ACTION_NAMES,
                      score_labels=REWARD_NAMES,
