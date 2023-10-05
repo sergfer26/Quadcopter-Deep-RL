@@ -138,7 +138,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
     if method == 'ddpg':
         add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
-        add_table(pdf, PARAMS_TRAIN_DDPG, 350, 600)
+        add_table(pdf, PARAMS_TRAIN_DDPG, 350, 590)
 
     elif method == 'gps':
         add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 780)
@@ -150,7 +150,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
 
     if extra_method == 'noise':
         add_text(pdf, ['Parámetros de', 'ruido'], 350, 550)
-        add_table(pdf, PARAMS_UTILS, 350, 340)
+        add_table(pdf, PARAMS_UTILS, 350, 360)
 
     elif extra_method == 'ilqr':
         add_text(pdf, ['Parámetros de', 'iLQR'], 350, 530)
@@ -163,8 +163,8 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_ONLINE, 350, 20)
 
     if method == 'ddpg':
-        add_text(pdf, ['Pesos de', 'recompensa'], 350, 370)
-        add_table(pdf, WEIGHTS, 350, 150)
+        add_text(pdf, ['Pesos de', 'recompensa'], 350, 340)
+        add_table(pdf, WEIGHTS, 350, 120)
 
     elif method is None:
         pass
