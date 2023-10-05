@@ -107,7 +107,8 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
 def main(path, params_ddpg):
     plt.style.use("fivethirtyeight")
 
-    env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
+    env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x,
+                   reset_noise=PARAMS_TRAIN_DDPG['reset_noise'])
     agent = DDPGagent(env, hidden_sizes=params_ddpg['hidden_sizes'],
                       actor_learning_rate=eval(
                           params_ddpg['actor_learning_rate']),

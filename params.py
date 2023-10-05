@@ -5,6 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 256,
                      'EPISODES': 5, 'n': 2, 'SHOW': True,
+                     'reset_noise': True,
                      'behavior_policy': 'ilqr',  # 'ilqr' # None
                      'behavior_path': 'models/ilqr_control_750.npz'  # 'results_gps/23_07_31_12_15/'
                      }

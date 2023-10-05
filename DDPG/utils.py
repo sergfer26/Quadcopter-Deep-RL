@@ -80,7 +80,8 @@ class NormalizedEnv(gym.ActionWrapper):
 
 class AgentEnv(NormalizedEnv):
 
-    def __init__(self, env, tx=None, inv_tx=None, noise=None, noise_on=True):
+    def __init__(self, env, tx=None, inv_tx=None, noise=None, noise_on=True,
+                 reset_noise=True):
         super().__init__(env)
         if noise is None:
             self.noise = OUNoise(env.action_space)
@@ -94,6 +95,7 @@ class AgentEnv(NormalizedEnv):
         self.observation_space = gym.spaces.Box(
             low=low, high=high, dtype=np.float32)
         self.i = 0
+        self.reset_noise = reset_noise
 
     def action(self, action):
         action = super().action(action)
@@ -121,7 +123,7 @@ class AgentEnv(NormalizedEnv):
 
     def reset(self):
         state = super().reset()
-        if self.noise_on:
+        if self.noise_on and self.reset_noise:
             self.noise.reset()
         return self.observation(state)
 
