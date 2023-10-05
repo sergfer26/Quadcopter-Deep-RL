@@ -17,6 +17,7 @@ from animation import create_animation
 from dynamics import inv_transform_x, transform_x
 from simulation import n_rollouts, plot_rollouts
 from params import PARAMS_DDPG, WEIGHTS
+from GPS import DummyController
 from params import PARAMS_TRAIN_DDPG, STATE_NAMES, ACTION_NAMES, REWARD_NAMES
 
 
@@ -58,16 +59,23 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
             pbar.set_description(f'Ep {episode + 1}/'+str(episodes))
             state = env.reset()
             episode_reward = 0
-            if isinstance(behavior_policy, Policy) or isinstance(behavior_policy, iLQR):
+            if isinstance(behavior_policy, Policy):
                 env.noise_on = False
                 reference_states = n_rollouts(
                     behavior_policy, env, n=1, states_init=state,
                     t_x=inv_transform_x)[0]
                 env.reward.set_reference_states(reference_states[0])
-
+                env.noise_on = True
                 env.reset()
                 env.state = inv_transform_x(state)
-                env.noise_on = True
+            elif isinstance(behavior_policy, iLQR):
+                reference_states = n_rollouts(
+                    behavior_policy, env, n=1,
+                    states_init=inv_transform_x(state)[0]
+                )
+                env.reward.set_reference_states(reference_states[0])
+                env.reset()
+                env.state = inv_transform_x(state)
 
             while True:
                 action = policy.get_action(state)
@@ -108,7 +116,7 @@ def main(path, params_ddpg):
                       tau=params_ddpg['tau'],
                       max_memory_size=params_ddpg['max_memory_size'])
 
-    if PARAMS_TRAIN_DDPG['behavior_policy']:
+    if PARAMS_TRAIN_DDPG['behavior_policy'] == 'gps':
         import torch
         from params import PARAMS_DDPG
 
@@ -117,6 +125,12 @@ def main(path, params_ddpg):
         behavior_policy = Policy(env, hidden_sizes)
         behavior_path = PARAMS_TRAIN_DDPG['behavior_path']
         behavior_policy.load(behavior_path)
+        weights = WEIGHTS
+    elif PARAMS_TRAIN_DDPG['behavior_policy'] == 'ilqr':
+        path2file = PARAMS_TRAIN_DDPG['behavior_path'].split('/')[-2] + '/'
+        file_name = PARAMS_TRAIN_DDPG['behavior_path'].split('/')[-1]
+        behavior_policy = DummyController(path2file, file_name)
+        behavior_policy.is_stochastic = False
         weights = WEIGHTS
     else:
         behavior_policy = None
