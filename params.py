@@ -3,17 +3,24 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 
+PARAMS_TRAIN_RMDDPG = {'BATCH_SIZE': 256,
+                       'EPISODES': 5, 'n': 2, 'SHOW': True,
+                       'reset_noise': True,
+                       'behavior_policy': 'ilqr',  # 'ilqr' # None
+                       'behavior_path': 'models/ilqr_control_750.npz'  # 'results_gps/23_07_31_12_15/'
+                       }
+
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 256,
-                     'EPISODES': 5, 'n': 2, 'SHOW': True,
-                     'reset_noise': True,
-                     'behavior_policy': 'ilqr',  # 'ilqr' # None
-                     'behavior_path': 'models/ilqr_control_750.npz'  # 'results_gps/23_07_31_12_15/'
+                     'EPISODES': 1000, 'n': 100, 'SHOW': False,
+                     'behavior_policy': True,
+                     'behavior_path': 'results_gps/23_07_31_12_15/',
+                     'pretrained': True
                      }
 
 
 PARAMS_DDPG = {'hidden_sizes': [128, 128], 'actor_learning_rate': '1e-3',
                'critic_learning_rate': 3e-3, 'gamma': 0.99, 'tau': 2e-3,
-               'max_memory_size': int(1e5)
+               'max_memory_size': int(1e4)
                }
 
 
