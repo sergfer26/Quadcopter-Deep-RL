@@ -81,7 +81,7 @@ class NormalizedEnv(gym.ActionWrapper):
 class AgentEnv(NormalizedEnv):
 
     def __init__(self, env, tx=None, inv_tx=None, noise=None, noise_on=True,
-                 reset_noise=True):
+                 reset_noise=PARAMS_UTILS['reset_noise']):
         super().__init__(env)
         if noise is None:
             self.noise = OUNoise(env.action_space)
