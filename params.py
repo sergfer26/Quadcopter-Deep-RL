@@ -11,10 +11,10 @@ PARAMS_TRAIN_RMDDPG = {'BATCH_SIZE': 256,
                        }
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 256,
-                     'EPISODES': 1000, 'n': 100, 'SHOW': False,
+                     'EPISODES': 5, 'n': 2, 'SHOW': True,
                      'behavior_policy': True,
                      'behavior_path': 'results_gps/23_07_31_12_15/',
-                     'pretrained': True
+                     'pre-trained': True
                      }
 
 
