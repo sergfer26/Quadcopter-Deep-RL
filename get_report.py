@@ -142,7 +142,7 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 590)
 
     elif method == 'rmddpg':
-        add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
+        add_text(pdf, ['Parámetros de', 'entrenamiento RM-DDPG'], 350, 750)
         add_table(pdf, PARAMS_TRAIN_RMDDPG, 350, 590)
 
     elif method == 'gps':
