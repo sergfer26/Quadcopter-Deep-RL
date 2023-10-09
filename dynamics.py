@@ -35,7 +35,7 @@ VEL_MIN = - omega_0 * omega0_per
 
 class ReferenceReward(object):
 
-    def __init__(self, mask=None, **kwargs) -> None:
+    def __init__(self, mask=None, action_weight=1e-1, **kwargs) -> None:
         '''
         Parameters
         ----------
@@ -48,13 +48,16 @@ class ReferenceReward(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.weights = np.array(list(vars(self).values()))
+        self.action_weight = action_weight
         self._states = None
+        self._actions = None
         self._mask = mask
 
-    def set_reference_states(self, states: np.ndarray):
+    def set_reference(self, states: np.ndarray, actions: np.ndarray):
         indices = np.array([-3, -2, -1])
         states[indices] = wrap_angle(states[indices])
         self._states = states
+        self._actions = actions
 
     def __call__(self, state: np.ndarray, action: np.ndarray, i: int):
         indices = np.array([-3, -2, -1])
@@ -64,7 +67,9 @@ class ReferenceReward(object):
                    (self._states[i][self._mask] - state[self._mask])).sum()
         else:
             out = (self.weights * (self._states[i] - state)).sum()
-        return out
+
+        out_action = self.action_weight * (self._actions[i] - action).sum()
+        return out + out_action
 
 
 # Quadcopter dynamics
