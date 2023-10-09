@@ -62,9 +62,9 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
             episode_reward = 0
             if isinstance(behavior_policy, Policy):
                 env.noise_on = False
-                reference_states, reference_actions = n_rollouts(
+                reference_states, reference_actions, _ = n_rollouts(
                     behavior_policy, env, n=1, states_init=state,
-                    t_x=inv_transform_x)[0, 1]
+                    t_x=inv_transform_x)
                 env.reward.set_reference(
                     reference_states[0], reference_actions[0])
                 env.noise_on = True
