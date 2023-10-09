@@ -52,7 +52,8 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
     '''
     performance = {k: list() for k in ['rewards', 'policy', 'critic']}
     if isinstance(behavior_policy, Policy) or isinstance(behavior_policy, iLQR):
-        env.reward = ReferenceReward(**weights)
+        env.reward = ReferenceReward(
+            action_weight=PARAMS_TRAIN_RMDDPG['action_weight'], **weights)
 
     for episode in range(episodes):
         with tqdm(total=env.steps) as pbar:
@@ -61,10 +62,11 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
             episode_reward = 0
             if isinstance(behavior_policy, Policy):
                 env.noise_on = False
-                reference_states = n_rollouts(
+                reference_states, reference_actions = n_rollouts(
                     behavior_policy, env, n=1, states_init=state,
-                    t_x=inv_transform_x)[0]
-                env.reward.set_reference_states(reference_states[0])
+                    t_x=inv_transform_x)[0, 1]
+                env.reward.set_reference(
+                    reference_states[0], reference_actions[0])
                 env.noise_on = True
                 env.reset()
                 env.state = inv_transform_x(state)
@@ -107,8 +109,7 @@ def train(policy: DDPGagent, env: QuadcopterEnv,
 def main(path, params_ddpg):
     plt.style.use("fivethirtyeight")
 
-    env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x,
-                   reset_noise=PARAMS_TRAIN_RMDDPG['reset_noise'])
+    env = AgentEnv(QuadcopterEnv(), tx=transform_x, inv_tx=inv_transform_x)
     agent = DDPGagent(env, hidden_sizes=params_ddpg['hidden_sizes'],
                       actor_learning_rate=eval(
                           params_ddpg['actor_learning_rate']),
