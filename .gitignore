@@ -35,4 +35,5 @@ results_offline/
 results_sims/
 results_linear/
 test_noise/
+results_rmddpg
 
