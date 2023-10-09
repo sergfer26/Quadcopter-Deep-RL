@@ -3,18 +3,18 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 
-PARAMS_TRAIN_RMDDPG = {'BATCH_SIZE': 256,
+PARAMS_TRAIN_RMDDPG = {'BATCH_SIZE': 16,
                        'EPISODES': 5, 'n': 2, 'SHOW': True,
-                       'reset_noise': True,
-                       'behavior_policy': 'ilqr',  # 'ilqr' # None
-                       'behavior_path': 'models/ilqr_control_750.npz'  # 'results_gps/23_07_31_12_15/'
+                       'behavior_policy': 'gps',  # 'ilqr' # None
+                       'behavior_path': 'results_gps/23_07_31_12_15/',  # 'models/ilqr_control_750.npz'
+                       'action_weight': 1e-1
                        }
 
 PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 256,
                      'EPISODES': 5, 'n': 2, 'SHOW': True,
                      'behavior_policy': True,
                      'behavior_path': 'results_gps/23_07_31_12_15/',
-                     'pre-trained': True
+                     'pre-trained': True,
                      }
 
 
@@ -30,10 +30,10 @@ PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
               '$\psi$': 'np.pi/32', r'$\theta$': 'np.pi/32',
               '$\\varphi$': 'np.pi/32'}
 
-WEIGHTS = dict(u=1e-2, v=1e-2, w=1e-2,
+WEIGHTS = dict(u=2e-1, v=2e-1, w=2e-1,
                x=1e-3, y=1e-3, z=1e-3,
-               p=2e-2, q=2e-2, r=1e-2,
-               psi=5e-2, theta=1e-1, phi=1e-1
+               p=1e-1, q=1e-1, r=1e-4,
+               psi=5e-5, theta=1e-4, phi=1e-4
                )
 
 
