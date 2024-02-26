@@ -18,7 +18,8 @@ from dynamics import penalty, terminal_penalty
 from params import PARAMS_TRAIN_GPS as PARAMS
 from params import PARAMS_DDPG
 from GPS.params import PARAMS_OFFLINE
-from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
+from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES, state_cmap
+from params import PARAMS_OBS
 from simulation import plot_rollouts, n_rollouts, rollout
 from animation import create_animation
 from get_report import create_report
@@ -219,7 +220,22 @@ def main(path):
     except:
         print('error en cuentas de estados')
 
-    fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
+    state_names = ['$x$', '$u$',
+                   '$y$', '$v$',
+                   '$z$', '$w$',
+                   '$\\varphi$', '$p$',
+                   r'$\theta$',  '$q$',
+                   '$\psi$', '$r$']
+    eps = 0.25
+    indices = [state_names.index(label) for label in STATE_NAMES]
+    params_obs = {k: eval(PARAMS_OBS[k]) for k in state_names}
+    state_ylims = np.array([
+        [val + eps, - val - eps] if abs(val) > 1 else [1, -1]
+        for val in params_obs.values()
+    ])
+    fig1, _ = plot_rollouts(
+        states[:, :, indices], env.time, state_names, alpha=0.05,
+        cmap=state_cmap, ylims=state_ylims)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
     fig1.savefig(path + 'state_rollouts.png')
@@ -240,8 +256,10 @@ def main(path):
         file = np.load(path + f'buffer/rollouts_{i}.npz')
         states_control[i] = file['xs']
         actions_control[i] = file['us']
-    fig1, _ = plot_rollouts(states_control.reshape((N * M, T + 1, n_x)),
-                            env.time, STATE_NAMES, alpha=0.005)
+    states_control = states_control.reshape((N * M, T + 1, n_x))
+    fig1, _ = plot_rollouts(states_control[:, :, indices],
+                            env.time, state_names, alpha=0.005,
+                            cmap=state_cmap, ylims=state_ylims)
     fig2, _ = plot_rollouts(actions_control.reshape((N * M, T, n_u)),
                             env.time, ACTION_NAMES, alpha=0.005)
     fig1.savefig(path + 'buffer/state_rollouts.png')
@@ -269,7 +287,8 @@ def main(path):
                     control=result.control_cost.T,
                     x_name='iteraciones',
                     y_name='$c(\\tau)$',
-                    hue='cost', ax=ax)
+                    hue='cost', ax=ax
+                    )
         fig.savefig(path + 'cost_updates.png')
     except:
         print('fallo cost_updates.png')

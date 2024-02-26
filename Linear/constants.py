@@ -18,7 +18,7 @@ G, Ixx, Iyy, Izz, B, M, L, K = CONSTANTS.values()
 
 omega_0 = np.sqrt((G * M)/(4 * K))
 
-W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
+# W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
 
 F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # control z
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # control yaw

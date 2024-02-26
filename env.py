@@ -1,7 +1,5 @@
 import gym
-import numba
 import numpy as np
-from numba import cuda
 from gym import spaces
 from dynamics import penalty
 from scipy.integrate import odeint
@@ -60,9 +58,11 @@ class QuadcopterEnv(gym.Env):
         self.state = self.reset()  # estado interno del ambiente
         self.set_time(STEPS, DT)
         self.flag = False
-        self.is_cuda_available()
+        # self.is_cuda_available()
         self.W0 = W0 if not isinstance(u0, np.ndarray) else u0
         self.reward = reward
+        self.f = f
+        self.jac = jac_f
 
     def set_obs_space(self, low, high):
         self.observation_space = spaces.Box(

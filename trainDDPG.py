@@ -149,7 +149,7 @@ def main(path, params_ddpg):
         fig3.savefig(path + 'score_rollouts.png')
 
     if not SHOW:
-        create_report(path)
+        create_report(path, method='ddpg')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
     print('Termino de simualcion...')

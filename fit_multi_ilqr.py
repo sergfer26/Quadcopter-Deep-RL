@@ -11,7 +11,7 @@ from params import STATE_NAMES, state_space  # , SCORE_NAMES
 from utils import date_as_path
 from dynamics import penalty, terminal_penalty
 from multiprocessing import Process
-from lqr_stability import stability
+from stability import stability
 from send_email import send_email
 from GPS.controller import DummyController
 
