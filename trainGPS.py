@@ -290,6 +290,9 @@ def main(path):
                     hue='cost', ax=ax
                     )
         fig.savefig(path + 'cost_updates.png')
+        np.savez(path + 'cost_updates.npz',
+                 policy_cost=result.policy_cost,
+                 control_cost=result.control_cost)
     except:
         print('fallo cost_updates.png')
 
