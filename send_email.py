@@ -112,7 +112,7 @@ def send_email(credentials_path='credentials.txt',
         print('el archivo de credenciales no existe')
 
 
-def report_sender(func, args=[], reciever='sfernandezm97@ciencias.unam.mx'):
+def report_sender(func, args=[], reciever='sfernandezm97@gmail.com'):
     """Evalua la funcion func y guarda registro de lo que se imprime en
         pantalla durante esta evaluación. func DEBE devolver dos cadenas,
         la primera (path_) indica la ruta donde se guardará un reporte con todo
