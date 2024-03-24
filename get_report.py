@@ -6,7 +6,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import TableStyle
 
 from params import PARAMS_ENV, PARAMS_TRAIN_DDPG, PARAMS_TRAIN_GPS
-from params import PARAMS_TRAIN_RMDDPG
+# from params import PARAMS_TRAIN_RMDDPG
 from params import PARAMS_OBS, PARAMS_DDPG, WEIGHTS
 from DDPG.params import PARAMS_UTILS
 from GPS.params import PARAMS_LQG, PARAMS_OFFLINE, PARAMS_ONLINE
@@ -141,9 +141,9 @@ def create_report(path, title=None, subtitle='', file_name=None,
         add_text(pdf, ['Parámetros de', 'entrenamiento DDPG'], 350, 750)
         add_table(pdf, PARAMS_TRAIN_DDPG, 350, 590)
 
-    elif method == 'rmddpg':
-        add_text(pdf, ['Parámetros de', 'entrenamiento RM-DDPG'], 350, 750)
-        add_table(pdf, PARAMS_TRAIN_RMDDPG, 350, 590)
+    # elif method == 'rmddpg':
+    #     add_text(pdf, ['Parámetros de', 'entrenamiento RM-DDPG'], 350, 750)
+    #     add_table(pdf, PARAMS_TRAIN_RMDDPG, 350, 590)
 
     elif method == 'gps':
         add_text(pdf, ['Parámetros de', 'entrenamiento GPS'], 350, 780)
