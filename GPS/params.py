@@ -8,9 +8,9 @@ PARAMS_LQG = {
 }
 PARAMS_OFFLINE = {
     'lamb': '1e-20',
-    'alpha_lamb': '5e-2',
-    'nu': '5e-3',
-    'kl_step': 800,
+    'alpha_lamb': '1e-2',
+    'nu': '1e-3',
+    'kl_step': 3000,
     'per_kl': .0,
     'adaptive_kl': False,
     'min_eta': '1',
