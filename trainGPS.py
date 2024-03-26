@@ -43,6 +43,8 @@ class GPSResult:
     control_div: np.ndarray
     policy_cost: np.ndarray
     control_cost: np.ndarray
+    policy_states: np.ndarray
+    control_states: np.ndarray
 
 
 def train_gps(gps: GPS, K, path, per_kl=0.1,
@@ -57,7 +59,9 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     # Inicializa x0s
     gps.init_x0()
     policy_cost = np.empty((K, gps.M))
+    policy_states = np.empty((K, gps.M, gps.n_x))
     control_cost = np.empty((K, gps.M))
+    control_states = np.empty((K, gps.M, gps.n_x))
     dynamics = ContinuousDynamics(**gps.dynamics_kwargs)
     control = iLQG(dynamics, None, gps.T)
     with tqdm(total=K) as pbar:
@@ -79,25 +83,29 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
             gps.kl_step = gps.kl_step * (1 - per_kl)
             # Validación de modelos
             x0, indices = select_x0(gps, gps.M, return_indices=True)
-            control_cost[k] = rewards_lqr(
+            control_cost[k], control_states[k] = lqr_rollouts(
                 x0, indices, control, gps.env, path + 'buffer/')
 
             x0 = np.apply_along_axis(gps.t_x, -1, x0)
-            policy_cost[k] = n_rollouts(gps.policy, gps.policy.env,
-                                        gps.M, t_x=gps.inv_t_x,
-                                        states_init=x0)[2][:, -1, 1]
-
+            states, _, scores = n_rollouts(gps.policy, gps.policy.env,
+                                           gps.M, t_x=gps.inv_t_x,
+                                           states_init=x0)
+            policy_states[k] = states[:, -1]
+            policy_cost[k] = scores[:, -1, 1]
     return GPSResult(loss, nu, eta, lamb, policy_div, control_div,
-                     policy_cost, control_cost)
+                     policy_cost, control_cost, policy_states, control_states)
 
 
-def rewards_lqr(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
+def lqr_rollouts(x0: np.ndarray, indices: np.ndarray, control: iLQG, env, path):
     n = len(indices)
     episode_rewards = np.empty(n)
+    last_states = np.empty((n, x0.shape[-1]))
     for e, i in enumerate(indices):
         control.load(path, file_name=f'control_{i}.npz')
-        episode_rewards[e] = rollout(control, env, state_init=x0[e])[2][-1, 1]
-    return episode_rewards
+        states, _, scores = rollout(control, env, state_init=x0[e])
+        episode_rewards[e] = scores[-1, 1]
+        last_states = states[-1]
+    return episode_rewards, last_states
 
 
 def select_x0(gps: GPS, n, return_indices=False):
@@ -163,6 +171,15 @@ def main(path):
     result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],
                        shuffle_batches=PARAMS['shuffle_batches'],
                        policy_updates=PARAMS['policy_updates'])
+    np.savez(path + 'results.npz',
+             policy_div=result.policy_div,
+             control_div=result.policy_div,
+             policy_cost=result.policy_cost,
+             control_cost=result.control_cost,
+             policy_states=result.policy_states,
+             control_states=result.control_states
+             )
+
     tf = time.time()
     print(f'tiempo de ajuste de política por GPS: {tf - ti}')
     policy.save(path)
@@ -189,7 +206,7 @@ def main(path):
     LAMB_NAMES = [f'$\lambda_{i}$' for i in range(1, n_u+1)]
     ax = np.array([ax41, ax42, ax43, ax44])
     plot_rollouts(np.mean(result.lamb, axis=(1, 2)),
-                  env.time, LAMB_NAMES, ax=ax)
+                  env.time, LAMB_NAMES, axes=ax)
     fig.savefig(path + 'train_performance.png')
 
     # 3.4 Policy's simulations
@@ -290,9 +307,6 @@ def main(path):
                     hue='cost', ax=ax
                     )
         fig.savefig(path + 'cost_updates.png')
-        np.savez(path + 'cost_updates.npz',
-                 policy_cost=result.policy_cost,
-                 control_cost=result.control_cost)
     except:
         print('fallo cost_updates.png')
 
