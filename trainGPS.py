@@ -49,7 +49,7 @@ class GPSResult:
 
 def train_gps(gps: GPS, K, path, per_kl=0.1,
               constrained_actions=False,
-              shuffle_batches=True, policy_updates=2):
+              shuffle_batches=True, policy_updates=2, x0=None):
     loss = np.empty(K)
     nu = np.empty((K, gps.N, gps.T))
     eta = np.empty(K)
@@ -57,7 +57,10 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     policy_div = np.empty((K, gps.N, gps.M))
     control_div = np.empty((K, gps.N))
     # Inicializa x0s
-    gps.init_x0()
+    if isinstance(x0, np.ndarray):
+        gps.x0 = x0
+    else:
+        gps.init_x0()
     policy_cost = np.empty((K, gps.M))
     policy_states = np.empty((K, gps.M, gps.n_x))
     control_cost = np.empty((K, gps.M))
@@ -170,7 +173,8 @@ def main(path):
     # 2. Training
     result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],
                        shuffle_batches=PARAMS['shuffle_batches'],
-                       policy_updates=PARAMS['policy_updates'])
+                       policy_updates=PARAMS['policy_updates'],
+                       x0=np.load('states_init.npz')['states_init'])
     np.savez(path + 'results.npz',
              policy_div=result.policy_div,
              control_div=result.policy_div,
@@ -252,7 +256,7 @@ def main(path):
     ])
     fig1, _ = plot_rollouts(
         states[:, :, indices], env.time, state_names, alpha=0.05,
-        cmap=state_cmap, ylims=state_ylims)
+        ylims=state_ylims)
     fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
     fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
     fig1.savefig(path + 'state_rollouts.png')
@@ -276,7 +280,7 @@ def main(path):
     states_control = states_control.reshape((N * M, T + 1, n_x))
     fig1, _ = plot_rollouts(states_control[:, :, indices],
                             env.time, state_names, alpha=0.005,
-                            cmap=state_cmap, ylims=state_ylims)
+                            ylims=state_ylims)
     fig2, _ = plot_rollouts(actions_control.reshape((N * M, T, n_u)),
                             env.time, ACTION_NAMES, alpha=0.005)
     fig1.savefig(path + 'buffer/state_rollouts.png')
