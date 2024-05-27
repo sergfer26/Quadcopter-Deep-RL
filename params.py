@@ -11,7 +11,7 @@ PARAMS_TRAIN_DDPG = {'BATCH_SIZE': 256,
                      }
 
 
-PARAMS_DDPG = {'hidden_sizes': [128, 128], 'actor_learning_rate': '1e-2',
+PARAMS_DDPG = {'hidden_sizes': [64, 64], 'actor_learning_rate': '1e-2',
                'critic_learning_rate': 3e-3, 'gamma': 0.98, 'tau': 2e-3,
                'max_memory_size': int(1e4)
                }
