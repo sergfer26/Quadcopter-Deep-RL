@@ -96,4 +96,4 @@ if __name__ == '__main__':
         fig_path = policy_path + f'samples-{int(t * dt)}-th_{th}.png'
         fig.savefig(fig_path)
 
-    print(' ==> Figures succesfully saved at policy_path')
+    print(f' ==> Figures succesfully saved at {policy_path}')
