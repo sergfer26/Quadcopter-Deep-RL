@@ -93,4 +93,7 @@ if __name__ == '__main__':
                 style=args.style)
         fig.suptitle(f'Política, tiempo: {t * dt}')
         th = str(args.threshold).replace('.', '_')
-        fig.savefig(policy_path + f'samples-{int(t * dt)}-th_{th}.png')
+        fig_path = policy_path + f'samples-{int(t * dt)}-th_{th}.png'
+        fig.savefig(fig_path)
+
+    print(' ==> Figures succesfully saved at policy_path')
