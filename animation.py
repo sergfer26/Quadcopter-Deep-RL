@@ -146,9 +146,9 @@ def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
         ax1 = fig.add_subplot(gs[-2, 1])
         ax2 = fig.add_subplot(gs[-1, 1])
         plot_rollouts(states[:i+1, 3:6], time[:i+1],
-                      state_labels[3:6], ax=ax1, subplots=False)
+                      state_labels[3:6], axes=ax1, subplots=False)
         plot_rollouts(states[:i+1, 9:12], time[:i+1],
-                      state_labels[9:12], ax=ax2, subplots=False,
+                      state_labels[9:12], axes=ax2, subplots=False,
                       colors=['darkorange'])
         ax_3d = fig.add_subplot(gs[0:4, 1], projection='3d')
         _quadcopter_frame(states[:i+1], goal, state_bounds, ax=ax_3d)
