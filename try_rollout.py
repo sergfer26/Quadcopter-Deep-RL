@@ -104,16 +104,17 @@ if __name__ == '__main__':
     parser.add_argument('--sims', type=int, default=int(1e1))
     parser.add_argument('--send-mail', action='store_true',
                         default=False, help='Enable sending mail')
+    parser.add_argument('--ilqr', action='store_true',
+                        default=False, help='Enable simulating with iLQR controls')
     parser.add_argument('--threshold', default=1, type=float)
     args = parser.parse_args()
 
     PATH = args.gps_path
+    dateAsPath = date_as_path()
     results_path = f'{PATH}/buffer/'
-    policy_path = f'{PATH}/rollouts/{date_as_path()}/policy'
-    control_path = f'{PATH}/rollouts/{date_as_path()}/control'
+    policy_path = f'{PATH}/rollouts/{dateAsPath}/policy'
 
     pathlib.Path(policy_path).mkdir(parents=True, exist_ok=True)
-    pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
 
     sims = args.sims
 
@@ -187,51 +188,54 @@ if __name__ == '__main__':
                    message=f'T={env.steps} \n time_max={env.dt * T} \n sims={sims}',
                    path2images=policy_path
                    )
+    if args.ilqr:
+        control_path = f'{PATH}/rollouts/{dateAsPath}/control'
+        pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
+        # 2. iLQR controls' simulations
+        filelist = glob.glob(results_path + 'control_*')
+        n_files = len(filelist)
+        N = np.load(filelist[0])['K'].shape[0]
+        env.set_time(N, env.dt)
+        for k in range(n_files):
+            agent = DummyController(results_path, f'control_{k}.npz')
+            states = rollouts(agent, env, sims, STATE_SPACE,
+                              init_states)
 
-    # 2. iLQR controls' simulations
-    filelist = glob.glob(results_path + 'control_*')
-    n_files = len(filelist)
-    N = np.load(filelist[0])['K'].shape[0]
-    env.set_time(N, env.dt)
-    for k in range(n_files):
-        agent = DummyController(results_path, f'control_{k}.npz')
-        states = rollouts(agent, env, sims, STATE_SPACE,
-                          init_states)
+            bool_state = confidence_region(
+                states[:, :, -1],
+                c=args.threshold,
+                mask=state_mask
+            )
 
-        bool_state = confidence_region(
-            states[:, :, -1],
-            c=args.threshold,
-            mask=state_mask
-        )
+            # cluster = np.apply_along_axis(get_color, -1, bool_state)
+            fig, axes = plt.subplots(
+                figsize=(14, 10), nrows=len(labels)//3, ncols=3, dpi=250,
+                sharey=True)
+            axs = axes.flatten()
+            mask1 = np.apply_along_axis(lambda x, y: np.greater(
+                abs(x), y), -1, states[:, 0, 0], 0)
+            mask2 = STATE_SPACE[1] > 0
+            indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
+                0] for i in range(6)]).squeeze()
+            states = states[indices]
+            init_states = states[:, :, 0]
+            for i in range(init_states.shape[0]):
+                mask = abs(init_states[i, 0]) > 0
+                label = np.array(STATE_NAMES)[mask]
+                plot_classifier(init_states[i, :, mask],
+                                bool_state[i], x_label=label[0],
+                                y_label=label[1], ax=axs[i]
+                                )
+            np.savez(
+                control_path + f'states_{k}.npz',
+                states=states
+            )
 
-        # cluster = np.apply_along_axis(get_color, -1, bool_state)
-        fig, axes = plt.subplots(
-            figsize=(14, 10), nrows=len(labels)//3, ncols=3, dpi=250,
-            sharey=True)
-        axs = axes.flatten()
-        mask1 = np.apply_along_axis(lambda x, y: np.greater(
-            abs(x), y), -1, states[:, 0, 0], 0)
-        mask2 = STATE_SPACE[1] > 0
-        indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
-            0] for i in range(6)]).squeeze()
-        states = states[indices]
-        init_states = states[:, :, 0]
-        for i in range(init_states.shape[0]):
-            mask = abs(init_states[i, 0]) > 0
-            label = np.array(STATE_NAMES)[mask]
-            plot_classifier(init_states[i, :, mask],
-                            bool_state[i], x_label=label[0],
-                            y_label=label[1], ax=axs[i]
-                            )
-        np.savez(
-            control_path + f'states_{k}.npz',
-            states=states
-        )
-
-        fig.suptitle(f'Control {k}')
-        fig.savefig(control_path + f'samples_control_{k}.png')
+            fig.suptitle(f'Control {k}')
+            fig.savefig(control_path + f'samples_control_{k}.png')
 
     if args.send_email:
+
         send_email(credentials_path='credentials.txt',
                    subject='Termino de simulaciones de control: ' + control_path,
                    reciever='sfernandezm97@gmail.com',
