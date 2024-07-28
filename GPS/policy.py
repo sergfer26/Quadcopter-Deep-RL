@@ -70,4 +70,4 @@ class Policy(nn.Module):
 
     def load(self, path):
         self.load_state_dict(torch.load(
-            path + "policy", map_location=device))
+            f"{path}/policy", map_location=device))
