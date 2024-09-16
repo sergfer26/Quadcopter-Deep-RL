@@ -42,8 +42,19 @@ def plot_classifier(states, cluster, x_label='x', y_label='y',
     else:
         cmap = mpl.colors.ListedColormap(['red', 'blue'])
 
-    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
-                    cmap=cmap)
+    # sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
+    #                cmap=cmap)
+    x_class0 = states[0, ~cluster]
+    y_class0 = states[1, ~cluster]
+
+    x_class1 = states[0, cluster]
+    y_class1 = states[1, cluster]
+
+    sc = ax.scatter(x_class0, y_class0, color='red',
+                    alpha=0.3)  # Lower alpha for class 0
+    sc = ax.scatter(x_class1, y_class1, color='blue',
+                    alpha=0.7)   # Full alpha for class 1
+
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     return ax, sc
@@ -115,5 +126,7 @@ if __name__ == "__main__":
                         )
         plt.tight_layout()
 
-        fig.savefig(
-            f'{save_path}/samples_control_{label[0]}-{label[1]}_th-{th_str}.png'.replace('$', '').replace('\\', ''))
+        file_path = f'{save_path}/samples_control_{label[0]}-{label[1]}_th-{th_str}.png'.replace(
+            '$', '').replace('\\', '')
+        fig.savefig(file_path)
+        print(f'  ==> file {file_path} saved.')
