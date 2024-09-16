@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 import matplotlib as mpl
 import numpy as np
 from tqdm import tqdm
+import argparse
 
 
 high = np.array([
@@ -84,49 +85,62 @@ def get_color(bools):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--name', type=str, default='distance')
+    parser.add_argument('--file-array', type=str, default=None)
+    parser.add_argument('--times', nargs='+', type=int,
+                        help='A list of values', default=[15, 30, 60])
+    parser.add_argument('--threshold', type=float, default=0.5)
+    args = parser.parse_args()
     # path = "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz"
-    path = "results_gps/23_04_22_02_26/rollouts/24_05_26_21_25/policystates_60.npz"
+
+    if isinstance(args.file_array, str):
+        path = args.file_array
+    else:
+        path = "results_gps/23_04_22_02_26/rollouts/24_05_26_21_25/policystates_60.npz"
+
     save_path = '/'.join(path.split('/')[:-1])
     array = np.load(path)
     states = array['states']
     num_experiments = states.shape[0]
-    th = 0.8
+    th = args.threshold
 
     init_states = states[:, :, 0]
     state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    for t in args.times:
+        index = int(t * 25.00) + 1
+        print('Getting confidence region...')
+        bool_state = confidence_region(
+            states[:, :, t],
+            c=th,
+            mask=state_mask
+        )
+        print('Confidence region setted...')
 
-    print('Getting confidence region...')
-    bool_state = confidence_region(
-        states[:, :, -1],
-        c=th,
-        mask=state_mask
-    )
-    print('Confidence region setted...')
+        mask1 = np.apply_along_axis(lambda x, y: np.greater(
+            abs(x), y), -1, states[:, 0, 0], 0)
+        mask2 = STATE_SPACE[1] > 0
+        mask2 = mask2[-num_experiments:]
+        indices = np.array([
+            np.where(np.all(mask1 == mask2[i], axis=1))[0] for i in range(num_experiments)
+        ]).squeeze()
+        states = states[indices]
+        init_states = states[:, :, 0]
+        style = "seaborn-v0_8-whitegrid"
+        plt.style.use(style)
 
-    mask1 = np.apply_along_axis(lambda x, y: np.greater(
-        abs(x), y), -1, states[:, 0, 0], 0)
-    mask2 = STATE_SPACE[1] > 0
-    mask2 = mask2[-num_experiments:]
-    indices = np.array([
-        np.where(np.all(mask1 == mask2[i], axis=1))[0] for i in range(num_experiments)
-    ]).squeeze()
-    states = states[indices]
-    init_states = states[:, :, 0]
-    style = "seaborn-v0_8-whitegrid"
-    plt.style.use(style)
+        th_str = str(th).replace('.', '_')
+        for i in tqdm(range(init_states.shape[0])):
+            fig, ax = plt.subplots(dpi=250)
+            mask = abs(init_states[i, 0]) > 0
+            label = np.array(STATE_NAMES)[mask]
+            plot_classifier(init_states[i, :, mask],
+                            bool_state[i], x_label=label[0],
+                            y_label=label[1], ax=ax
+                            )
+            plt.tight_layout()
 
-    th_str = str(th).replace('.', '_')
-    for i in tqdm(range(init_states.shape[0])):
-        fig, ax = plt.subplots(dpi=250)
-        mask = abs(init_states[i, 0]) > 0
-        label = np.array(STATE_NAMES)[mask]
-        plot_classifier(init_states[i, :, mask],
-                        bool_state[i], x_label=label[0],
-                        y_label=label[1], ax=ax
-                        )
-        plt.tight_layout()
-
-        file_path = f'{save_path}/samples_control_{label[0]}-{label[1]}_th-{th_str}.png'.replace(
-            '$', '').replace('\\', '')
-        fig.savefig(file_path)
-        print(f'  ==> file {file_path} saved.')
+            file_path = f'{save_path}/stability_{label[0]}-{label[1]}_th-{th_str}_t-{t}.png'.replace(
+                '$', '').replace('\\', '')
+            fig.savefig(file_path)
+            print(f'  ==> file {file_path} saved.')
