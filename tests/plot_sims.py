@@ -136,7 +136,8 @@ if __name__ == "__main__":
         if args.one_figure:
             fig, axes = plt.subplots(dpi=250)
 
-        for i in tqdm(range(init_states.shape[0])):
+        step = args.times.index(t) + 1
+        for i in tqdm(range(init_states.shape[0]), desc=f"step {t}/{len(args.times)}"):
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
