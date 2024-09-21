@@ -35,17 +35,16 @@ labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
 
 def plot_classifier(states, cluster, x_label='x', y_label='y',
                     figsize=(6, 6), dpi=300, ax=None):
-    cmap = None
+    # cmap = None
     if not isinstance(ax, plt.Axes):
         ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
-    if cluster.all():
-        cluster = 'blue'
-    else:
-        cmap = mpl.colors.ListedColormap(['red', 'blue'])
+    # if cluster.all():
+    #     cluster = 'blue'
+    # else:
+    #     cmap = mpl.colors.ListedColormap(['red', 'blue'])
 
     # sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
     #                cmap=cmap)
-    breakpoint()
     x_class0 = states[0, ~cluster]
     y_class0 = states[1, ~cluster]
 
@@ -138,7 +137,7 @@ if __name__ == "__main__":
                 dpi=250, nrows=2, ncols=init_states.shape[0] // 2)
 
         step = args.times.index(t) + 1
-        for i in tqdm(range(init_states.shape[0]), desc=f"step {t}/{len(args.times)}"):
+        for i in tqdm(range(init_states.shape[0]), desc=f"step {step}/{len(args.times)}"):
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
@@ -146,8 +145,10 @@ if __name__ == "__main__":
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(init_states[i, :, mask],
-                            bool_state[i], x_label=label[0],
-                            y_label=label[1], ax=ax
+                            bool_state[i],
+                            x_label=label[0],
+                            y_label=label[1],
+                            ax=ax
                             )
             plt.tight_layout()
 
