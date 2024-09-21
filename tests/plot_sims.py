@@ -53,8 +53,8 @@ def plot_classifier(states, cluster, x_label='x', y_label='y',
 
     sc = ax.scatter(x_class0, y_class0, color='red',
                     alpha=0.3)  # Lower alpha for class 0
-    sc = ax.scatter(x_class1, y_class1, color='blue',
-                    alpha=0.7)   # Full alpha for class 1
+    sc = ax.scatter(x_class1, y_class1, color='blue', edgecolor='black',
+                    alpha=0.6)   # Full alpha for class 1
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -134,14 +134,14 @@ if __name__ == "__main__":
 
         if args.one_figure:
             fig, axes = plt.subplots(
-                dpi=250, nrows=2, ncols=init_states.shape[0] // 2)
+                dpi=300, nrows=2, ncols=init_states.shape[0] // 2, figsize=(14, 10))
 
         step = args.times.index(t) + 1
         for i in tqdm(range(init_states.shape[0]), desc=f"step {step}/{len(args.times)}"):
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
-                fig, ax = plt.subplots(dpi=250)
+                fig, ax = plt.subplots(dpi=300)
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(init_states[i, :, mask],
