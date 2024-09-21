@@ -45,6 +45,7 @@ def plot_classifier(states, cluster, x_label='x', y_label='y',
 
     # sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
     #                cmap=cmap)
+    breakpoint()
     x_class0 = states[0, ~cluster]
     y_class0 = states[1, ~cluster]
 
