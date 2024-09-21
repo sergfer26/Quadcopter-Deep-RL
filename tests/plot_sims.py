@@ -90,6 +90,8 @@ if __name__ == "__main__":
     parser.add_argument('--file-array', type=str, default=None)
     parser.add_argument('--times', nargs='+', type=int,
                         help='A list of values', default=[15, 30, 60])
+    parser.add_argument('--one-figure', action='store_true',
+                        default=False, help='Enable saving one figure')
     parser.add_argument('--threshold', type=float, default=0.5)
     args = parser.parse_args()
     # path = "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz"
@@ -130,8 +132,15 @@ if __name__ == "__main__":
         plt.style.use(style)
 
         th_str = str(th).replace('.', '_')
+
+        if args.one_figure:
+            fig, axes = plt.subplots(dpi=250)
+
         for i in tqdm(range(init_states.shape[0])):
-            fig, ax = plt.subplots(dpi=250)
+            if args.one_figure:
+                ax = axes.flatten()[i]
+            else:
+                fig, ax = plt.subplots(dpi=250)
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(init_states[i, :, mask],
@@ -140,7 +149,13 @@ if __name__ == "__main__":
                             )
             plt.tight_layout()
 
-            file_path = f'{save_path}/stability_{label[0]}-{label[1]}_th-{th_str}_t-{t}.png'.replace(
-                '$', '').replace('\\', '')
+            if not args.one_figure:
+                file_path = f'{save_path}/stability_{label[0]}-{label[1]}_th-{th_str}_t-{t}.png'.replace(
+                    '$', '').replace('\\', '')
+                fig.savefig(file_path)
+                print(f'  ==> file {file_path} saved.')
+
+        if args.one_figure:
+            file_path = f'{save_path}/stability_state_th-{th_str}_t{t}.png'
             fig.savefig(file_path)
             print(f'  ==> file {file_path} saved.')
