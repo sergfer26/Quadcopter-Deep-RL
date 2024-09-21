@@ -53,7 +53,7 @@ def plot_classifier(states, cluster, x_label='x', y_label='y',
 
     sc = ax.scatter(x_class0, y_class0, color='red',
                     alpha=0.3)  # Lower alpha for class 0
-    sc = ax.scatter(x_class1, y_class1, color='blue', edgecolor='black',
+    sc = ax.scatter(x_class1, y_class1, color='blue',
                     alpha=0.6)   # Full alpha for class 1
 
     ax.set_xlabel(x_label)
