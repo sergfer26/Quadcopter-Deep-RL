@@ -86,7 +86,6 @@ def get_color(bools):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, default='distance')
     parser.add_argument('--file-array', type=str, default=None)
     parser.add_argument('--times', nargs='+', type=int,
                         help='A list of values', default=[15, 30, 60])
@@ -134,7 +133,8 @@ if __name__ == "__main__":
         th_str = str(th).replace('.', '_')
 
         if args.one_figure:
-            fig, axes = plt.subplots(dpi=250)
+            fig, axes = plt.subplots(
+                dpi=250, nrows=2, ncols=init_states.shape[0] // 2)
 
         step = args.times.index(t) + 1
         for i in tqdm(range(init_states.shape[0]), desc=f"step {t}/{len(args.times)}"):
