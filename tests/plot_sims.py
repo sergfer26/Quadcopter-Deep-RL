@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
         if args.one_figure:
             fig, axes = plt.subplots(
-                dpi=300, nrows=2, ncols=init_states.shape[0] // 2, figsize=(25, 10))
+                dpi=300, nrows=2, ncols=init_states.shape[0] // 2, figsize=(20, 10))
 
         step = args.times.index(t) + 1
         for i in tqdm(range(init_states.shape[0]), desc=f"step {step}/{len(args.times)}"):
