@@ -3,6 +3,7 @@ import matplotlib as mpl
 import numpy as np
 from tqdm import tqdm
 import argparse
+from typing import Union, Tuple
 
 
 high = np.array([
@@ -33,51 +34,51 @@ labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
           ]
 
 
-def plot_classifier(states, cluster, x_label='x', y_label='y',
+def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
                     figsize=(6, 6), dpi=300, ax=None):
     # cmap = None
     if not isinstance(ax, plt.Axes):
         ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
-    # if cluster.all():
-    #     cluster = 'blue'
-    # else:
-    #     cmap = mpl.colors.ListedColormap(['red', 'blue'])
+    if cluster.all():
+        cluster = 'blue'
+    else:
+        cmap = mpl.colors.ListedColormap(['red', 'blue'])
+    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
+                    cmap=cmap)
+    # x_class0 = states[0, ~cluster]
+    # y_class0 = states[1, ~cluster]
 
-    # sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
-    #                cmap=cmap)
-    x_class0 = states[0, ~cluster]
-    y_class0 = states[1, ~cluster]
+    # x_class1 = states[0, cluster]
+    # y_class1 = states[1, cluster#]
 
-    x_class1 = states[0, cluster]
-    y_class1 = states[1, cluster]
-
-    sc = ax.scatter(x_class0, y_class0, color='red',
-                    alpha=0.2)  # Lower alpha for class 0
-    sc = ax.scatter(x_class1, y_class1, color='blue',
-                    alpha=0.4)   # Full alpha for class 1
+    # sc = ax.scatter(x_class0, y_class0, color='red',
+    #             alpha=0.2)  # Lower alpha for class 0
+    # sc = ax.scatter(x_class1, y_class1, color='blue',
+    #                 alpha=0.3)   # Full alpha for class 1
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     return ax, sc
 
 
-def classifier(state, goal_state=None, c=5e-1, mask: np.ndarray = None):
-    if not isinstance(goal_state, np.ndarray):
-        goal_state = np.zeros_like(state)
-    return np.apply_along_axis(criterion, 0, state, goal_state, c, mask).all()
-
-
-def criterion(x, y=0, c=5e-1, mask: np.ndarray = None):
+def classifier(state: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
+               ord: Union[int, str] = 2) -> np.ndarray:
+    '''
+    ord : {int, str}
+    '''
+    if ord.isdigit():
+        ord = int(ord) if ord.isdigit() else np.inf
     if isinstance(mask, np.ndarray):
-        x = x[mask]
-        y = y[mask]
-    return abs(x - y) < c
+        state = state[mask]
+    return np.linalg.norm(state, ord=ord) < c
 
 
-def confidence_region(states, goal_states=None, c=5e-1, mask: np.ndarray = None):
-    if not isinstance(goal_states, np.ndarray):
-        goal_states = np.zeros_like(states)
-    return np.apply_along_axis(classifier, -1, states, goal_states, c, mask)
+def confidence_region(states: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
+                      ord: Union[int, float, str] = 2) -> np.ndarray:
+    '''
+    ord : {int, str: inf}
+    '''
+    return np.apply_along_axis(classifier, -1, states, c, mask, ord)
 
 
 def get_color(bools):
@@ -92,6 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--one-figure', action='store_true',
                         default=False, help='Enable saving one figure')
     parser.add_argument('--threshold', type=float, default=0.5)
+    parser.add_argument('--ord', type=str, default='2')
     args = parser.parse_args()
     # path = "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz"
 
@@ -114,12 +116,16 @@ if __name__ == "__main__":
         bool_state = confidence_region(
             states[:, :, t],
             c=th,
-            mask=state_mask
+            mask=state_mask,
+            ord=args.ord
         )
         print('Confidence region setted...')
 
+        # The mask for the current pertubation positions
         mask1 = np.apply_along_axis(lambda x, y: np.greater(
             abs(x), y), -1, states[:, 0, 0], 0)
+
+        # The mask for the number of pertubation settings
         mask2 = STATE_SPACE[1] > 0
         mask2 = mask2[-num_experiments:]
         indices = np.array([
@@ -159,6 +165,6 @@ if __name__ == "__main__":
                 print(f'  ==> file {file_path} saved.')
 
         if args.one_figure:
-            file_path = f'{save_path}/stability_state_th-{th_str}_t{t}.png'
+            file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}.png'
             fig.savefig(file_path)
             print(f'  ==> file {file_path} saved.')
