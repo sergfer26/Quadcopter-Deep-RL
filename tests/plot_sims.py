@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     init_states = states[:, :, 0]
     state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    for t in args.times:
+    for t in tqdm(args.times):
         index = int(t * 25.00) + 1
         print('Getting confidence region...')
         bool_state = confidence_region(
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                 dpi=300, nrows=2, ncols=init_states.shape[0] // 2, figsize=(20, 10))
 
         step = args.times.index(t) + 1
-        for i in tqdm(range(init_states.shape[0]), desc=f"step {step}/{len(args.times)}"):
+        for i in range(init_states.shape[0]):
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
