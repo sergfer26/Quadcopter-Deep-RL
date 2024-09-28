@@ -36,7 +36,7 @@ labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
 
 def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
                     figsize=(6, 6), dpi=300, ax=None):
-    # cmap = None
+    cmap = None
     if not isinstance(ax, plt.Axes):
         ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
     if cluster.all():
