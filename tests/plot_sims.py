@@ -66,8 +66,7 @@ def classifier(state: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
     '''
     ord : {int, str}
     '''
-    if ord.isdigit():
-        ord = int(ord) if ord.isdigit() else np.inf
+    ord = int(ord) if ord.isdigit() else np.inf
     if isinstance(mask, np.ndarray):
         state = state[mask]
     return np.linalg.norm(state, ord=ord) < c
