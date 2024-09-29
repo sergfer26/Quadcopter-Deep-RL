@@ -111,16 +111,25 @@ if __name__ == "__main__":
     state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     for t in tqdm(args.times):
         index = int(t * 25.00) + 1
-        print('Getting confidence region...')
+        print(f'Getting confidence region at {t} seconds...')
         bool_state = confidence_region(
             states[:, :, t],
             c=th,
             mask=state_mask,
             ord=args.ord
         )
-        print('Confidence region setted...')
+        # for i, label in enumerate(labels):
+        stability_rate_total = np.sum(bool_state, axis=(
+            0, 1)) / (bool_state.shape[-1] * bool_state.shape[0])
+        print(f" ==> total stability rate: {stability_rate_total:.2f}")
 
-        # The mask for the current pertubation positions
+        stability_rate_axis = np.sum(bool_state, axis=1) / bool_state.shape[-1]
+        for j, (l_x, l_y) in enumerate(labels):
+            print(
+                f"  ==> {l_x}-{l_y} stability rate: {stability_rate_axis[j]}"
+            )
+
+            # The mask for the current pertubation positions
         mask1 = np.apply_along_axis(lambda x, y: np.greater(
             abs(x), y), -1, states[:, 0, 0], 0)
 
