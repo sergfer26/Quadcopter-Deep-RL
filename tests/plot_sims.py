@@ -46,9 +46,9 @@ def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
     sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.3,
                     cmap=cmap)
 
-    ax.set_xlabel(x_label, fontsize=14)
-    ax.set_ylabel(y_label, fontsize=14)
-    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.set_xlabel(x_label, fontsize=18)
+    ax.set_ylabel(y_label, fontsize=18)
+    ax.tick_params(axis='both', which='major', labelsize=16)
     return ax, sc
 
 
