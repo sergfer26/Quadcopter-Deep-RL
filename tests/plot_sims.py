@@ -43,21 +43,12 @@ def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
         cluster = 'blue'
     else:
         cmap = mpl.colors.ListedColormap(['red', 'blue'])
-    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.2,
+    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.3,
                     cmap=cmap)
-    # x_class0 = states[0, ~cluster]
-    # y_class0 = states[1, ~cluster]
 
-    # x_class1 = states[0, cluster]
-    # y_class1 = states[1, cluster#]
-
-    # sc = ax.scatter(x_class0, y_class0, color='red',
-    #             alpha=0.2)  # Lower alpha for class 0
-    # sc = ax.scatter(x_class1, y_class1, color='blue',
-    #                 alpha=0.3)   # Full alpha for class 1
-
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    ax.set_xlabel(x_label, fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+    ax.tick_params(axis='both', which='major', labelsize=12)
     return ax, sc
 
 
