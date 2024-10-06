@@ -99,7 +99,7 @@ if __name__ == "__main__":
     th = args.threshold
 
     init_states = states[:, :, 0]
-    state_mask = None  # np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1], dtype=bool)
     for t in tqdm(args.times):
         index = -1 if t == -1 else int(t * 25.00) + 1
         print(f'Getting confidence region at {t} seconds...')
