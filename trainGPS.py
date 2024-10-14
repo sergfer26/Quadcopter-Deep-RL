@@ -28,9 +28,9 @@ from get_report import create_report
 
 SHOW = PARAMS['SHOW']
 
-if not SHOW:
-    from functools import partialmethod
-    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+# if not SHOW:
+#     from functools import partialmethod
+#     tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
 @dataclass
@@ -49,7 +49,7 @@ class GPSResult:
 
 def train_gps(gps: GPS, K, path, per_kl=0.1,
               constrained_actions=False,
-              shuffle_batches=True, policy_updates=2, x0=None):
+              shuffle_batches=True, policy_updates=2):  # , x0=None):
     loss = np.empty(K)
     nu = np.empty((K, gps.N, gps.T))
     eta = np.empty(K)
@@ -57,10 +57,11 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     policy_div = np.empty((K, gps.N, gps.M))
     control_div = np.empty((K, gps.N))
     # Inicializa x0s
-    if isinstance(x0, np.ndarray):
-        gps.x0 = x0
-    else:
-        gps.init_x0()
+    # if isinstance(x0, np.ndarray):
+    #     gps.x0 = x0
+    # else:
+    #     gps.init_x0()
+
     policy_cost = np.empty((K, gps.M))
     policy_states = np.empty((K, gps.M, gps.n_x))
     control_cost = np.empty((K, gps.M))
@@ -145,6 +146,8 @@ def main(path):
     high_range = np.array(
         [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
     low_range = - high_range
+    states = np.load(
+        "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz")['states']
     gps = GPS(env,
               policy,
               dynamics_kwargs,
@@ -167,8 +170,8 @@ def main(path):
               high_range=high_range,
               batch_size=PARAMS['batch_size'],
               is_stochastic=PARAMS['is_stochastic'],
-              time_step=PARAMS['time_step']
-              )
+              time_step=PARAMS['time_step'],
+              states=states)
     ti = time.time()
     # 2. Training
     result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],

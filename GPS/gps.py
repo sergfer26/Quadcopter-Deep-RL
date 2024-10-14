@@ -14,6 +14,8 @@ from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
 from torch.utils.data import DataLoader
+from convex_hull import ConvexSet, UniformSet, classifier, confidence_region
+from types import List, Union
 
 
 device = 'cpu'
@@ -28,12 +30,22 @@ class GPS:
                  cost, cost_terminal=None,
                  t_x=None, t_u=None,
                  inv_t_x=None, inv_t_u=None,
-                 N=3, M=2, eta=1e-3, nu=1e-4,
-                 lamb=1e-9, alpha_lamb=1e-8,
-                 learning_rate=0.01, kl_step=200,
-                 u0=None, init_sigma=1.0,
-                 low_range=None, high_range=None,
-                 batch_size=4, time_step=25, is_stochastic=True):
+                 N: int = 3, M: int = 2,
+                 eta: float = 1e-3,
+                 nu: float = 1e-4,
+                 lamb: float = 1e-9,
+                 alpha_lamb: float = 1e-8,
+                 learning_rate: float = 1e-2,
+                 kl_step: int = 200,
+                 u0: np.ndarray = None,
+                 init_sigma: float = 1.0,
+                 low_range: np.ndarray = None,
+                 high_range: np.ndarray = None,
+                 batch_size: int = 4, time_step: int = 25,
+                 is_stochastic: bool = True,
+                 states: np.ndarray = None,
+                 threashold: float = 4e-1
+                 ):
         '''
         env : `gym.Env`
             Entorno de simulación de gym.
@@ -122,6 +134,34 @@ class GPS:
                                     self.n_u,
                                     self.policy.state_dim,
                                     time_step=time_step)
+
+        self._regions, self.x0 = self._get_regions(states, threashold)
+
+    def _get_regions(self, states: np.ndarray = None, threashold: float = 4e-1) -> Union[List, np.ndarray]:
+        regions = list()
+        region = UniformSet(self.low_range, self.high_range)
+        regions += [region]
+        centroids = list()
+        centroids += [region.centroid]
+        if isinstance(states, np.ndarray):
+            mask = confidence_region(states[:, :, -1], c=threashold, ord='inf')
+            self.N = states.shape[0] + 1
+            for i in range(states.shape[0]):
+                selected_states = states[0, 0, 0] > 0.0
+                filtered_states = states[i][mask[i]]
+                filtered_start_states = filtered_states[:, 0]
+                coordinates = filtered_start_states[:, selected_states]
+                region = ConvexSet(coordinates, selected_states, self.n_x)
+                centroids += [region.centroid]
+                regions += [region]
+        else:
+            for i in range(self.N - 1):
+                centroid = self.env.observation_space.sample()
+                regions += [UniformSet(self.low_range,
+                                       self.high_range, centroid)]
+                centroids += [centroid]
+
+        return regions, np.array(centroids)
 
     def mean_control(self, xs, nominal_xs, nominal_us, K, k, alpha):
         '''
@@ -381,7 +421,8 @@ class GPS:
         if self.N > 1:
             processes = list()
             for i in range(self.N):
-                x0_samples = self._random_x0(self.x0[i], self.M)
+                # self._random_x0(self.x0[i], self.M)
+                x0_samples = self._regions[i].sample(self.M)
                 cost_kwargs = deepcopy(self.cost_kwargs)
                 cost_kwargs['lamb'] = self.lamb[i]
                 cost_kwargs['nu'] = self.nu[i]
@@ -414,7 +455,7 @@ class GPS:
             cost_kwargs = deepcopy(self.cost_kwargs)
             cost_kwargs['lamb'] = self.lamb[i]
             cost_kwargs['nu'] = self.nu[i]
-            x0_samples = self._random_x0(self.x0, self.M)
+            x0_samples = self._regions[0].sample(self.M)
             fit_ilqg(self.x0, self.kl_step, self.policy, cost_kwargs,
                      self.dynamics_kwargs, i, self.T, self.M, path,
                      self.t_x, self.inv_t_u, self.policy._sigma,
