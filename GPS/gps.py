@@ -14,7 +14,7 @@ from .controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
 from .utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
 from torch.utils.data import DataLoader
-from convex_hull import ConvexSet, UniformSet, classifier, confidence_region
+from .convex_hull import ConvexSet, UniformSet, classifier, confidence_region
 from types import List, Union
 
 
