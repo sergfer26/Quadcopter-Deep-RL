@@ -176,8 +176,9 @@ def main(path):
     # 2. Training
     result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],
                        shuffle_batches=PARAMS['shuffle_batches'],
-                       policy_updates=PARAMS['policy_updates'],
-                       x0=np.load('states_init.npz')['states_init'])
+                       policy_updates=PARAMS['policy_updates']
+                       )
+    # x0=np.load('states_init.npz')['states_init'])
     np.savez(path + 'results.npz',
              policy_div=result.policy_div,
              control_div=result.policy_div,
