@@ -61,6 +61,6 @@ class UniformSet:
             x0, np.ndarray) else np.zeros(low_range.shape[0])
 
     def sample(self, num_samples: int = 1):
-        size = (num_samples, self.range.shape[0])
+        size = (num_samples, self.low_range.shape[0])
         states = np.random.uniform(self.low_range, self.high_range, size)
         return states + self.centroid
