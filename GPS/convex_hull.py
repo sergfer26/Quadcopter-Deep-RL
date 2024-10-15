@@ -48,7 +48,7 @@ class ConvexSet:
             if self.polygon.contains(random_point):
                 points.append((random_point.x, random_point.y))
         states = np.zeros((num_samples, self._n_x))
-        states[: self._mask] = np.array(points)
+        states[:, self._mask] = np.array(points)
         return states
 
 
