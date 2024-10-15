@@ -147,7 +147,7 @@ class GPS:
             mask = confidence_region(states[:, :, -1], c=threashold, ord='inf')
             self.N = states.shape[0] + 1
             for i in range(states.shape[0]):
-                selected_states = states[0, 0, 0] > 0.0
+                selected_states = abs(states[i, 0, 0]) > 0.0
                 filtered_states = states[i][mask[i]]
                 filtered_start_states = filtered_states[:, 0]
                 coordinates = filtered_start_states[:, selected_states]
