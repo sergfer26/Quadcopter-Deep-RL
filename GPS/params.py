@@ -2,7 +2,7 @@ PARAMS_LQG = {
     'alphas': '0.5**np.arange(8)',  # '1.1**(-np.arange(10)**2)',
     'delta_0': 2.0,
     'tol': 1e-1,
-    'n_iterations': 4,
+    'n_iterations': 1,
     'is_stochastic': False,
     'cov_reg': 1e-4
 }
