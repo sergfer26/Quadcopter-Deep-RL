@@ -44,7 +44,7 @@ class GPS:
                  batch_size: int = 4, time_step: int = 25,
                  is_stochastic: bool = True,
                  states: np.ndarray = None,
-                 threashold: float = 4e-1
+                 threashold: float = 1e-1
                  ):
         '''
         env : `gym.Env`
@@ -137,7 +137,7 @@ class GPS:
 
         self._regions, self.x0 = self._get_regions(states, threashold)
 
-    def _get_regions(self, states: np.ndarray = None, threashold: float = 4e-1) -> Union[List, np.ndarray]:
+    def _get_regions(self, states: np.ndarray = None, threashold: float = 1e-1) -> Union[List, np.ndarray]:
         regions = list()
         region = UniformSet(self.low_range, self.high_range)
         regions += [region]
