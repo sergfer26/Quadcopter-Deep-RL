@@ -152,7 +152,7 @@ def main(path, params_ddpg):
         create_report(path, method='ddpg')
     subpath = path + 'sample_rollouts/'
     pathlib.Path(subpath).mkdir(parents=True, exist_ok=True)
-    print('Termino de simualcion...')
+    print('Termino de simualción...')
     sample_indices = np.random.randint(states.shape[0], size=3)
     states_samples = states[sample_indices]
     actions_samples = actions[sample_indices]
