@@ -29,8 +29,8 @@ PARAMS_ENV = {'dt': 0.04, 'STEPS': 750, 'omega0_per': 0.60,
 # Si es false los vuelos pueden terminar
 
 
-PARAMS_TRAIN_GPS = {'UPDATES': 2, 'N': 7, 'M': 10,
-                    'SHOW': True, 'is_stochastic': False, 'samples': 3,
+PARAMS_TRAIN_GPS = {'UPDATES': 2, 'N': 7, 'M': 800,
+                    'SHOW': True, 'is_stochastic': False, 'samples': 100,
                     'batch_size': 4, 'shuffle_batches': True, 'time_step': 1,
                     'policy_updates': 1}
 
