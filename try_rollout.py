@@ -20,6 +20,7 @@ from dynamics import f, inv_transform_x, transform_x, penalty, terminal_penalty
 from utils import date_as_path
 from params import state_space as STATE_SPACE
 import argparse
+from typing import Union
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -74,23 +75,23 @@ def rollouts(agent, env, sims, state_space, num_workers=None,
     return states
 
 
-def classifier(state, goal_state=None, c=5e-1, mask: np.ndarray = None):
-    if not isinstance(goal_state, np.ndarray):
-        goal_state = np.zeros_like(state)
-    return np.apply_along_axis(criterion, 0, state, goal_state, c, mask).all()
-
-
-def criterion(x, y=0, c=5e-1, mask: np.ndarray = None):
+def classifier(state: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
+               ord: Union[int, str] = 2) -> np.ndarray:
+    '''
+    ord : {int, str}
+    '''
+    ord = int(ord) if ord.isdigit() else np.inf
     if isinstance(mask, np.ndarray):
-        x = x[mask]
-        y = y[mask]
-    return abs(x - y) < c
+        state = state[mask]
+    return np.linalg.norm(state, ord=ord) < c
 
 
-def confidence_region(states, goal_states=None, c=5e-1, mask: np.ndarray = None):
-    if not isinstance(goal_states, np.ndarray):
-        goal_states = np.zeros_like(states)
-    return np.apply_along_axis(classifier, -1, states, goal_states, c, mask)
+def confidence_region(states: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
+                      ord: Union[int, float, str] = 2) -> np.ndarray:
+    '''
+    ord : {int, str: inf}
+    '''
+    return np.apply_along_axis(classifier, -1, states, c, mask, ord)
 
 
 def get_color(bools):
@@ -159,7 +160,7 @@ if __name__ == '__main__':
 
     init_states = states[:, :, 0]
     # steps=int(t * env.dt))
-    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1])
+    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=bool)
     for t in list_steps:
         bool_state = confidence_region(
             states[:, :, int(t)],
