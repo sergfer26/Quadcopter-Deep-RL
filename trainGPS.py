@@ -171,7 +171,9 @@ def main(path):
               batch_size=PARAMS['batch_size'],
               is_stochastic=PARAMS['is_stochastic'],
               time_step=PARAMS['time_step'],
-              states=states)
+              states=states,
+              threashold=PARAMS['threshold']
+              )
     ti = time.time()
     # 2. Training
     result = train_gps(gps, K, path, per_kl=PARAMS_OFFLINE['per_kl'],
