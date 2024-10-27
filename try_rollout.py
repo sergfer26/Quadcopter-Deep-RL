@@ -87,7 +87,7 @@ def classifier(state: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
 
 
 def confidence_region(states: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
-                      ord: Union[int, float, str] = 2) -> np.ndarray:
+                      ord: Union[int, float, str] = '2') -> np.ndarray:
     '''
     ord : {int, str: inf}
     '''
@@ -108,6 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('--ilqr', action='store_true',
                         default=False, help='Enable simulating with iLQR controls')
     parser.add_argument('--threshold', default=1, type=float)
+    parser.add_argument('--ord', default='inf', type=str)
     args = parser.parse_args()
 
     PATH = args.gps_path
@@ -165,7 +166,8 @@ if __name__ == '__main__':
         bool_state = confidence_region(
             states[:, :, int(t)],
             c=args.threshold,
-            mask=state_mask
+            mask=state_mask,
+            ord=args.ord
         )
         # cluster = np.apply_along_axis(get_color, -1, bool_state)
         fig, axes = plt.subplots(figsize=(14, 10), nrows=len(labels)//3,
