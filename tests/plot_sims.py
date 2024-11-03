@@ -232,8 +232,8 @@ if __name__ == "__main__":
                 fig.savefig(file_path)
                 print(f'  ==> file {file_path} saved.')
 
-                fig1, _ = plot_rollouts(states[:, :, indices], env.time, state_names, alpha=0.1,
-                                        ylims=state_ylims)
+                # fig1, _ = plot_rollouts(
+                #     states[:, :, indices], env.time, STATE_NAMES, alpha=0.1)
 
         if args.one_figure:
             file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}.png'
