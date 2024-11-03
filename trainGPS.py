@@ -1,4 +1,5 @@
 import time
+import json
 import pathlib
 import send_email
 import numpy as np
@@ -350,6 +351,7 @@ if __name__ == '__main__':
     PATH = 'results_gps/' + date_as_path() + '/'
     pathlib.Path(PATH + 'buffer/').mkdir(parents=True, exist_ok=True)
     print(f"  ==> Results will be saved at {PATH}")
+    print(json.dumps(PARAMS))
     if not SHOW:
         send_email.report_sender(main, args=[PATH])
     else:
