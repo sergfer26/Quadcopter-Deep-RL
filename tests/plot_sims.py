@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import argparse
 from typing import Union, Tuple
@@ -32,6 +33,74 @@ labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
           ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
           ('$r$', '$\psi$')
           ]
+
+
+def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
+                  axes=None, subplots: bool = True, dpi: int = 150, colors=None, alpha: float = 0.4,
+                  ylims=None, style: str = "fivethirtyeight"):
+    '''
+    array : `np.ndarray`
+        ...
+    time : `np.ndarray`
+        ...
+    columns : `list`
+        ...
+    ax : ...
+        ...
+    dpi : `int`
+        ...
+    ylims : `np.ndarray`
+        Valores limites de los ejes `ax`. Si `subplots=True` (n_x, 2), 
+        en otro caso (2,).
+    '''
+    plt.style.use(style)
+    if len(array.shape) == 2:
+        array = array.reshape(1, array.shape[0], array.shape[1])
+    samples, steps, n_var = array.shape
+    if not isinstance(colors, list):
+        # Use seaborn's "Set1" color palette
+        colors = plt.cm.jet(np.linspace(0, 1, len(columns)))
+    if len(colors) == 1:
+        colors *= array.shape[-1]
+
+    fig = None
+    if not isinstance(axes, np.ndarray) and not isinstance(axes, plt.Axes):
+        if subplots:
+            fig, axes = plt.subplots(n_var // 2, 2, dpi=dpi, sharex=True)
+        else:
+            fig, axes = plt.subplots(dpi=dpi)
+    for k in range(samples):
+
+        # data = pd.DataFrame(array[k, :, :], columns=columns)
+        data = array[k, :, :]
+        # data['$t (s)$'] = time[0: steps]
+        t = time[:steps]
+        if k == 0:
+            legend = True
+        else:
+            legend = False
+        if subplots:
+            for i, (ax, col) in enumerate(zip(axes.flatten(), columns)):
+                ax.plot(t, data[:, i], label=col, alpha=alpha, color=colors[i])
+                if legend:
+                    ax.legend()
+        else:
+            for i, col in enumerate(columns):
+                axes.plot(t, data[:, i], label=col,
+                          alpha=alpha, color=colors[i])
+                if legend:
+                    axes.legend()
+
+    if isinstance(ylims, np.ndarray):
+        if subplots:
+            for e, ax in enumerate(axes.flatten()):
+                ax.set_ylim(ymin=ylims[e, 1], ymax=ylims[e, 0])
+        else:
+            axes.set_ylim(ymin=ylims[0], ymax=ylims[1])
+
+    if not pd.isna(fig):
+        fig.set_size_inches(18.5, 10.5)
+    return fig, axes
 
 
 def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
@@ -99,7 +168,7 @@ if __name__ == "__main__":
     th = args.threshold
 
     init_states = states[:, :, 0]
-    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1], dtype=bool)
+    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=bool)
     for t in tqdm(args.times):
         index = -1 if t == -1 else int(t * 25.00) + 1
         print(f'Getting confidence region at {t} seconds...')
@@ -162,6 +231,9 @@ if __name__ == "__main__":
                     '$', '').replace('\\', '')
                 fig.savefig(file_path)
                 print(f'  ==> file {file_path} saved.')
+
+                fig1, _ = plot_rollouts(states[:, :, indices], env.time, state_names, alpha=0.1,
+                                        ylims=state_ylims)
 
         if args.one_figure:
             file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}.png'
