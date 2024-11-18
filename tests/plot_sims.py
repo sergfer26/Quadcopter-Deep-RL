@@ -169,16 +169,18 @@ if __name__ == "__main__":
 
     init_states = states[:, :, 0]
     state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=bool)
+    e = 0
     for t in tqdm(args.times):
         index = -1 if t == -1 else int(t * 25.00) + 1
         print(f'Getting confidence region at {t} seconds...')
         bool_state = confidence_region(
-            states[:, :, t],
+            states[:, :, e],
             c=th,
             mask=state_mask,
             ord=args.ord
         )
         # for i, label in enumerate(labels):
+        e += 1
         stability_rate_total = np.sum(bool_state, axis=(
             0, 1)) / (bool_state.shape[-1] * bool_state.shape[0])
         print(f" ==> total stability rate: {stability_rate_total:.2f}")
@@ -231,9 +233,6 @@ if __name__ == "__main__":
                     '$', '').replace('\\', '')
                 fig.savefig(file_path)
                 print(f'  ==> file {file_path} saved.')
-
-                # fig1, _ = plot_rollouts(
-                #     states[:, :, indices], env.time, STATE_NAMES, alpha=0.1)
 
         if args.one_figure:
             file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}.png'
