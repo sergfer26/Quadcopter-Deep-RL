@@ -180,6 +180,7 @@ if __name__ == "__main__":
     excluded_positions = None
     if isinstance(args.exclude_vars_norm, list):
         var_names = 'u, v, w, x, y, z, p, q, r, psi, theta, phi'.split(',')
+        breakpoint()
         excluded_positions = list()
         for var_name in args.exclude_vars_norm:
             excluded_positions.append(var_names.index(var_name))
