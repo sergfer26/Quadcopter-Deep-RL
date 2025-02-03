@@ -250,7 +250,7 @@ if __name__ == "__main__":
             plt.tight_layout()
 
             if not args.one_figure:
-                file_path = f'{save_path}/stability_{label[0]}-{label[1]}_th-{th_str}_t-{t}.png'.replace(
+                file_path = f'{save_path}/stability_{label[0]}-{label[1]}_th-{th_str}_t-{t}_ord-{args.ord}{excluded_tag}.png'.replace(
                     '$', '').replace('\\', '')
                 fig.savefig(file_path)
                 print(f'  ==> file {file_path} saved.')
