@@ -153,6 +153,13 @@ if __name__ == "__main__":
                         default=False, help='Enable saving one figure')
     parser.add_argument('--threshold', type=float, default=0.5)
     parser.add_argument('--ord', type=str, default='2')
+    parser.add_argument(
+        '--exclude-vars-norm',
+        type=str,
+        nargs='+',
+        help='A list of name variables to exclude from norm.',
+        default=None
+    )
     args = parser.parse_args()
     # path = "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz"
 
@@ -168,7 +175,21 @@ if __name__ == "__main__":
     th = args.threshold
 
     init_states = states[:, :, 0]
-    state_mask = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=bool)
+    state_mask = np.ones(12, dtype=bool)
+
+    excluded_positions = None
+    if isinstance(args.exclude_vars_norm, list):
+        var_names = 'u, v, w, x, y, z, p, q, r, psi, theta, phi'.split(',')
+        excluded_positions = list()
+        for var_name in args.exclude_vars_norm:
+            excluded_positions.append(var_names.index(var_name))
+
+        state_mask[excluded_positions] = False
+
+    excluded_tag = ''
+    if isinstance(excluded_positions, list):
+        excluded_tag = f"_ex-{''.join([str(p) for p in excluded_positions])}"
+
     e = 0
     for t in tqdm(args.times):
         index = -1 if t == -1 else int(t * 25.00) + 1
@@ -235,6 +256,6 @@ if __name__ == "__main__":
                 print(f'  ==> file {file_path} saved.')
 
         if args.one_figure:
-            file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}.png'
+            file_path = f'{save_path}/stability_th-{th_str}_t-{t}_ord-{args.ord}{excluded_tag}.png'
             fig.savefig(file_path)
             print(f'  ==> file {file_path} saved.')
