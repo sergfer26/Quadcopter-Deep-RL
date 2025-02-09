@@ -152,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument('--one-figure', action='store_true',
                         default=False, help='Enable saving one figure')
     parser.add_argument('--threshold', type=float, default=0.5)
-    parser.add_argument('--ord', type=str, default='2')
+    parser.add_argument('--ord', type=str, default='inf')
     parser.add_argument(
         '--exclude-vars-norm',
         type=str,
@@ -178,18 +178,16 @@ if __name__ == "__main__":
     state_mask = np.ones(12, dtype=bool)
 
     excluded_positions = None
+    excluded_tag = ''
     if isinstance(args.exclude_vars_norm, list):
-        var_names = 'u, v, w, x, y, z, p, q, r, psi, theta, phi'.split(',')
-        breakpoint()
+        var_names = 'u,v,w,x,y,z,p,q,r,psi,theta,phi'.split(',')
         excluded_positions = list()
         for var_name in args.exclude_vars_norm:
             excluded_positions.append(var_names.index(var_name))
 
         state_mask[excluded_positions] = False
 
-    excluded_tag = ''
-    if isinstance(excluded_positions, list):
-        excluded_tag = f"_ex-{''.join([str(p) for p in excluded_positions])}"
+        excluded_tag = f"_ex-{''.join([str(p) for p in args.exclude_vars_norm])}"
 
     e = 0
     for t in tqdm(args.times):
@@ -232,7 +230,7 @@ if __name__ == "__main__":
 
         if args.one_figure:
             fig, axes = plt.subplots(
-                dpi=300, nrows=2, ncols=init_states.shape[0] // 2, figsize=(15, 10))
+                dpi=200, nrows=2, ncols=init_states.shape[0] // 2, figsize=(15, 10))
 
         step = args.times.index(t) + 1
         for i in range(init_states.shape[0]):
