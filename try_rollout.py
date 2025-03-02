@@ -1,26 +1,56 @@
 import os
 import glob
 import pathlib
-from GPS.policy import Policy
-from params import PARAMS_DDPG, STATE_NAMES
-from DDPG.utils import AgentEnv
-from gym import spaces
-from multiprocessing import Process
-import multiprocessing as mp
+import argparse
 import numpy as np
-from simulation import n_rollouts
-from GPS.controller import DummyController
-from GPS.utils import ContinuousDynamics
+import matplotlib as mpl
+import multiprocessing as mp
+
+from gym import spaces
+from typing import Union
+from loguru import logger
+from multiprocessing import Process
+from matplotlib import pyplot as plt
+
+from GPS.policy import Policy
 from env import QuadcopterEnv
-from utils import plot_classifier
+from utils import date_as_path
+from DDPG.utils import AgentEnv
+from simulation import n_rollouts
 from send_email import send_email
 from matplotlib import pyplot as plt
 from ilqr.cost import FiniteDiffCost
-from dynamics import f, inv_transform_x, transform_x, penalty, terminal_penalty
-from utils import date_as_path
+from GPS.utils import ContinuousDynamics
+from GPS.controller import DummyController
+from params import PARAMS_DDPG, STATE_NAMES
 from params import state_space as STATE_SPACE
-import argparse
-from typing import Union
+from dynamics import (f,
+                      inv_transform_x,
+                      transform_x,
+                      penalty,
+                      terminal_penalty
+                      )
+
+
+def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
+                    figsize=(6, 6), dpi=300, ax=None,
+                    style: str = "fivethirtyeight"
+                    ):
+    cmap = None
+    plt.style.use(style)
+    if not isinstance(ax, plt.Axes):
+        ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
+    if cluster.all():
+        cluster = 'blue'
+    else:
+        cmap = mpl.colors.ListedColormap(['red', 'blue'])
+    sc = ax.scatter(states[0], states[1], c=cluster, s=10, alpha=0.3,
+                    cmap=cmap)
+
+    ax.set_xlabel(x_label, fontsize=18)
+    ax.set_ylabel(y_label, fontsize=18)
+    ax.tick_params(axis='both', which='major', labelsize=16)
+    return ax, sc
 
 
 def rollout4mp(agent, env, mp_list, n=1, states_init=None):
@@ -87,7 +117,7 @@ def classifier(state: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
 
 
 def confidence_region(states: np.ndarray, c: float = 5e-1, mask: np.ndarray = None,
-                      ord: Union[int, float, str] = '2') -> np.ndarray:
+                      ord: Union[int, float, str] = 2) -> np.ndarray:
     '''
     ord : {int, str: inf}
     '''
@@ -142,9 +172,11 @@ if __name__ == '__main__':
 
         env.set_time(T, env.dt)
         # 3. Policy's simulations
+        logger.info(f"Policy's {sims} simulations started.")
         states = rollouts(policy, env, sims, STATE_SPACE,
                           inv_transform_x=inv_transform_x,
                           transform_x=transform_x)
+        logger.info(f"Policy's simulations ended.")
         mask1 = np.apply_along_axis(lambda x, y: np.greater(
             abs(x), y), -1, states[:, 0, 0], 0)
         mask2 = STATE_SPACE[1] > 0
