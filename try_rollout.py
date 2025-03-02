@@ -223,6 +223,7 @@ if __name__ == '__main__':
                    message=f'T={env.steps} \n time_max={env.dt * T} \n sims={sims}',
                    path2images=policy_path
                    )
+        logger.info('Mail sended')
     if args.ilqr:
         control_path = f'{PATH}/rollouts/{dateAsPath}/control'
         pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
