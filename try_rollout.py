@@ -19,17 +19,13 @@ from DDPG.utils import AgentEnv
 from simulation import n_rollouts
 from send_email import send_email
 from matplotlib import pyplot as plt
-from ilqr.cost import FiniteDiffCost
-from GPS.utils import ContinuousDynamics
-from GPS.controller import DummyController
+# from GPS.controller import DummyController
 from params import PARAMS_DDPG, STATE_NAMES
 from params import state_space as STATE_SPACE
-from dynamics import (f,
-                      inv_transform_x,
-                      transform_x,
-                      penalty,
-                      terminal_penalty
-                      )
+from dynamics import (
+    inv_transform_x,
+    transform_x
+)
 
 
 def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
@@ -167,8 +163,8 @@ if __name__ == '__main__':
         policy.load(PATH)
         n_u = env.action_space.shape[0]
         n_x = env.observation_space.shape[0]
-        dynamics = ContinuousDynamics(f, n_x, n_u, dt=env.dt)
-        cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
+        # dynamics = ContinuousDynamics(f, n_x, n_u, dt=env.dt)
+        # cost = FiniteDiffCost(penalty, terminal_penalty, n_x, n_u)
 
         env.set_time(T, env.dt)
         # 3. Policy's simulations
@@ -224,57 +220,3 @@ if __name__ == '__main__':
                    path2images=policy_path
                    )
         logger.info('Mail sended')
-    if args.ilqr:
-        control_path = f'{PATH}/rollouts/{dateAsPath}/control'
-        pathlib.Path(control_path).mkdir(parents=True, exist_ok=True)
-        # 2. iLQR controls' simulations
-        filelist = glob.glob(results_path + 'control_*')
-        n_files = len(filelist)
-        N = np.load(filelist[0])['K'].shape[0]
-        env.set_time(N, env.dt)
-        for k in range(n_files):
-            agent = DummyController(results_path, f'control_{k}.npz')
-            states = rollouts(agent, env, sims, STATE_SPACE,
-                              init_states)
-
-            bool_state = confidence_region(
-                states[:, :, -1],
-                c=args.threshold,
-                mask=state_mask
-            )
-
-            # cluster = np.apply_along_axis(get_color, -1, bool_state)
-            fig, axes = plt.subplots(
-                figsize=(14, 10), nrows=len(labels)//3, ncols=3, dpi=250,
-                sharey=True)
-            axs = axes.flatten()
-            mask1 = np.apply_along_axis(lambda x, y: np.greater(
-                abs(x), y), -1, states[:, 0, 0], 0)
-            mask2 = STATE_SPACE[1] > 0
-            indices = np.array([np.where(np.all(mask1 == mask2[i], axis=1))[
-                0] for i in range(6)]).squeeze()
-            states = states[indices]
-            init_states = states[:, :, 0]
-            for i in range(init_states.shape[0]):
-                mask = abs(init_states[i, 0]) > 0
-                label = np.array(STATE_NAMES)[mask]
-                plot_classifier(init_states[i, :, mask],
-                                bool_state[i], x_label=label[0],
-                                y_label=label[1], ax=axs[i]
-                                )
-            np.savez(
-                control_path + f'states_{k}.npz',
-                states=states
-            )
-
-            fig.suptitle(f'Control {k}')
-            fig.savefig(control_path + f'samples_control_{k}.png')
-
-    if args.send_email:
-
-        send_email(credentials_path='credentials.txt',
-                   subject='Termino de simulaciones de control: ' + control_path,
-                   reciever='sfernandezm97@gmail.com',
-                   message=f'T={env.steps} \n time_max={env.time_max} \n sims={sims}',
-                   path2images=control_path
-                   )
