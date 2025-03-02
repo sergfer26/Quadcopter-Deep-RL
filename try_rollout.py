@@ -12,7 +12,7 @@ from loguru import logger
 from multiprocessing import Process
 from matplotlib import pyplot as plt
 
-from GPS.policy import Policy
+from policy import Policy
 from env import QuadcopterEnv
 from utils import date_as_path
 from DDPG.utils import AgentEnv
