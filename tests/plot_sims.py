@@ -166,7 +166,7 @@ if __name__ == "__main__":
     if isinstance(args.file_array, str):
         path = args.file_array
     else:
-        path = "results_gps/23_04_22_02_26/rollouts/24_05_26_21_25/policystates_60.npz"
+        path = "results_gps/23_04_22_02_26/stability/24_05_26_21_25/policystates_60.npz"
 
     save_path = '/'.join(path.split('/')[:-1])
     array = np.load(path)
@@ -189,18 +189,15 @@ if __name__ == "__main__":
 
         excluded_tag = f"_ex-{''.join([str(p) for p in args.exclude_vars_norm])}"
 
-    e = 0
     for t in tqdm(args.times):
         index = -1 if t == -1 else int(t * 25.00) + 1
         print(f'Getting confidence region at {t} seconds...')
         bool_state = confidence_region(
-            states[:, :, e],
+            states[:, :, index],
             c=th,
             mask=state_mask,
             ord=args.ord
         )
-        # for i, label in enumerate(labels):
-        e += 1
         stability_rate_total = np.sum(bool_state, axis=(
             0, 1)) / (bool_state.shape[-1] * bool_state.shape[0])
         print(f" ==> total stability rate: {stability_rate_total:.2f}")
@@ -221,6 +218,7 @@ if __name__ == "__main__":
         indices = np.array([
             np.where(np.all(mask1 == mask2[i], axis=1))[0] for i in range(num_experiments)
         ]).squeeze()
+        # indices [1, 2, 3, 4, 5]
         states = states[indices]
         init_states = states[:, :, 0]
         style = "seaborn-v0_8-whitegrid"
@@ -237,7 +235,7 @@ if __name__ == "__main__":
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
-                fig, ax = plt.subplots(dpi=300)
+                fig, ax = plt.subplots(dpi=200)
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
             plot_classifier(init_states[i, :, mask],
