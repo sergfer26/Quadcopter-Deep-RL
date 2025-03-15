@@ -190,7 +190,7 @@ if __name__ == "__main__":
         excluded_tag = f"_ex-{''.join([str(p) for p in args.exclude_vars_norm])}"
 
     for t in tqdm(args.times):
-        index = -1 if t == -1 else int(t * 25.00) + 1
+        index = -1 if t == -1 else int(t * 25.00)
         print(f'Getting confidence region at {t} seconds...')
         bool_state = confidence_region(
             states[:, :, index],
