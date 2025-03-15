@@ -104,7 +104,7 @@ def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
 
 
 def plot_classifier(states, cluster, x_label: str = 'x', y_label: str = 'y',
-                    figsize=(6, 6), dpi=300, ax=None):
+                    figsize=(10, 6), dpi=300, ax=None):
     cmap = None
     if not isinstance(ax, plt.Axes):
         ax = plt.subplots(figsize=figsize, dpi=dpi)[1]
@@ -153,6 +153,12 @@ if __name__ == "__main__":
                         default=False, help='Enable saving one figure')
     parser.add_argument('--threshold', type=float, default=0.5)
     parser.add_argument('--ord', type=str, default='inf')
+    parser.add_argument('--figsize',
+                        type=int,
+                        nargs='+',
+                        help='The fig size tuple.',
+                        default=[6, 10]
+                        )
     parser.add_argument(
         '--exclude-vars-norm',
         type=str,
@@ -230,7 +236,7 @@ if __name__ == "__main__":
             fig, axes = plt.subplots(
                 dpi=200, nrows=2, ncols=init_states.shape[0] // 2, figsize=(15, 10))
 
-        step = args.times.index(t) + 1
+        figsize = (args.figsize[0], args.figsize[1])
         for i in range(init_states.shape[0]):
             if args.one_figure:
                 ax = axes.flatten()[i]
