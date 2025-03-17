@@ -13,6 +13,7 @@ from animation import create_animation
 from GPS.controller import DummyController
 from simulation import plot_rollouts, n_rollouts
 from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES
+from loguru import logger
 
 
 def in_hull(point, hull, tolerance=1e-12):
@@ -203,6 +204,7 @@ def stability(agent, state_space, state_names, save_path,
         states=states,
         bounds=state_space[1]
     )
+    logger.debug(f'Results saved at: {save_path}')
     return states[:, :, [0, env.steps]]
 
 
@@ -235,9 +237,12 @@ if __name__ == '__main__':
 
     pathlib.Path(
         PATH + 'sample_rollouts/').mkdir(parents=True, exist_ok=True)
+    logger.debug(f'state space: {STATE_SPACE}')
+    logger.info('Simulations begin...')
     region = stability(agent, STATE_SPACE, STATE_NAMES,
                        PATH, eps=eps, sims=sims, n_cols=n_cols,
                        mask=mask)
+    logger.info('Simulations ended...')
     if control_type != 'linear':
         convex_region = ConvexRegion(region, eps=eps)
 
