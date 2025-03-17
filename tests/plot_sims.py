@@ -29,12 +29,6 @@ PARAMS_OBS = {'$u$': '0.0', '$v$': '0.0', '$w$': '0.0',
 STATE_NAMES = list(PARAMS_OBS.keys())
 
 
-labels = [('$u$', '$x$'), ('$v$', '$y$'), ('$w$', '$z$'),
-          ('$p$', '$\phi$'), ('$q$', '$\\theta$'),
-          ('$r$', '$\psi$')
-          ]
-
-
 def plot_rollouts(array: np.ndarray, time: np.ndarray, columns: list,
                   axes=None, subplots: bool = True, dpi: int = 150, colors=None, alpha: float = 0.4,
                   ylims=None, style: str = "fivethirtyeight"):
@@ -166,6 +160,19 @@ if __name__ == "__main__":
         help='A list of name variables to exclude from norm.',
         default=None
     )
+    parser.add_argument(
+        '--labels',
+        type=str,
+        nargs='+',
+        help='A list of labels',
+        default=['$u$,$x$',
+                 '$v$,$y$',
+                 '$w$,$z$',
+                 '$p$,$\phi$',
+                 '$q$,$\\theta$',
+                 '$r$,$\psi$'
+                 ]
+    )
     args = parser.parse_args()
     # path = "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz"
 
@@ -209,6 +216,9 @@ if __name__ == "__main__":
         print(f" ==> total stability rate: {stability_rate_total:.2f}")
 
         stability_rate_axis = np.sum(bool_state, axis=1) / bool_state.shape[-1]
+
+        labels = [(ls.split(',')[0], ls.split(',')[1]) for ls in args.labels]
+
         for j, (l_x, l_y) in enumerate(labels):
             print(
                 f"  ==> {l_x}-{l_y} stability rate: {stability_rate_axis[j]}"
