@@ -173,7 +173,7 @@ def stability(agent, state_space, state_names, save_path,
     if isinstance(mask, np.ndarray):
         end_states = end_states[:, :, mask]
     bool_state = np.apply_along_axis(
-        lambda x: np.linalg.norm(x, ord='inf') < eps, -1, end_states)
+        lambda x: np.linalg.norm(x, ord=np.inf) < eps, -1, end_states)
     fig, axes = plt.subplots(
         figsize=(15, 10), nrows=state_space.shape[1]//n_cols, ncols=n_cols,
         dpi=300)
@@ -219,7 +219,7 @@ if __name__ == '__main__':
         # 1. Stability analysis
         agent = DummyController(control_path, f'ilqr_control_{T}.npz')
         n_cols = 3
-        eps = 4e-1
+        eps = 5e-1
         mask = None
 
     elif control_type == 'linear':
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         PATH = 'results_linear/stability_analysis/' + date_as_path()+'/'
         agent = LinearAgent(env)
         n_cols = 2
-        eps = 3e-1
+        eps = 5e-1
         mask = np.array(
             [0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1], dtype='bool'
         )
