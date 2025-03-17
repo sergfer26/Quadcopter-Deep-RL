@@ -141,8 +141,8 @@ def plot_stability(states):
 
 def stability(agent, state_space, state_names, save_path,
               save_name='stability',
-              eps=4e-1, with_x0=False, sims=int(1e4), convex_hull=False,
-              n_cols=3, mask=None):
+              eps=1e-5, with_x0=False, sims=int(1e4), convex_hull=False,
+              n_cols=3, mask=None, suptitle: bool = False):
     '''
     Llama a rollouts (función multiprocessing)
     Argumentos
@@ -173,7 +173,7 @@ def stability(agent, state_space, state_names, save_path,
     if isinstance(mask, np.ndarray):
         end_states = end_states[:, :, mask]
     bool_state = np.apply_along_axis(
-        lambda x: np.linalg.norm(x) < eps, -1, end_states)
+        lambda x: np.linalg.norm(x, ord='inf') < eps, -1, end_states)
     fig, axes = plt.subplots(
         figsize=(15, 10), nrows=state_space.shape[1]//n_cols, ncols=n_cols,
         dpi=300)
@@ -195,12 +195,12 @@ def stability(agent, state_space, state_names, save_path,
                             hull.points[simplex, 1], '-k')
 
     #    sc.append(aux)
-
-    fig.suptitle(f'Control iLQR \n $\epsilon=${eps}, T={env.steps}')
+    if suptitle:
+        fig.suptitle(f'Control iLQR \n $\epsilon=${eps}, T={env.steps}')
     fig.savefig(save_path + save_name + '_'+f'{sims}.png')
     np.savez(
         save_path + save_name + '_'+f'{sims}.npz',
-        states=states[:, :, [0, env.steps]],
+        states=states,
         bounds=state_space[1]
     )
     return states[:, :, [0, env.steps]]
@@ -268,7 +268,7 @@ if __name__ == '__main__':
 
     send_email(credentials_path='credentials.txt',
                subject='Termino de analisis de estabilidad: ' + PATH,
-               reciever='sfernandezm97@ciencias.unam.mx',
+               reciever='sfernandezm97@gmail.com',
                message=f'T={T} \n eps={eps} \n sims={sims}',
                path2images=PATH
                )
