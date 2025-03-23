@@ -12,6 +12,7 @@ from params import STATE_NAMES, ACTION_NAMES, REWARD_NAMES  # , SCORE_NAMES
 from get_report import create_report
 from utils import date_as_path
 from dynamics import penalty, terminal_penalty
+from loguru import logger
 # import pandas as pd
 
 PATH = 'results_ilqr/' + date_as_path() + '/'
@@ -35,21 +36,21 @@ cost = FiniteDiffCost(l=penalty,
 
 N = env.steps
 agent = iLQG(dynamics, cost, N)
-expert = LinearAgent(env)
+# expert = LinearAgent(env)
 
 
 steps = env.steps
 x0 = np.zeros(n_x)
 
-us_init = rollout(expert, env, state_init=x0)[1]
+us_init = np.zeros((env.steps, n_u))  # rollout(expert, env, state_init=x0)[1]
 # us_init = np.apply_along_axis(
 #     constrain, -1, us_init, env.action_space.low, env.action_space.high)
 costs = list()  # np.zeros((EPISODES, env.steps - 1))
 xs, us, cost_trace = agent.fit_control(x0, us_init)
-print('ya acabo el ajuste del control')
+logger.info('[*] Ya acabo el ajuste del control.')
 costs.append(cost_trace)
 agent.save(PATH)
-print('los parametros del control fueron guardadados')
+logger.info('[*] Los parametros del control fueron guardadados.')
 
 plt.style.use("fivethirtyeight")
 fig, ax = plt.subplots(figsize=(10, 10), dpi=200)
@@ -57,12 +58,13 @@ ax.plot(costs[-1])
 ax.set_title('Costo')
 fig.savefig(PATH + 'train_performance.png')
 
+'''
 create_animation(xs, us, env.time,
                  state_labels=STATE_NAMES,
                  action_labels=ACTION_NAMES,
                  file_name='fitted',
                  path=PATH + 'sample_rollouts/')
-
+'''
 agent.reset()
 states, actions, scores = n_rollouts(
     agent, env, n=100)
@@ -73,18 +75,24 @@ fig2, _ = plot_rollouts(actions, env.time, ACTION_NAMES, alpha=0.05)
 fig2.savefig(PATH + 'action_rollouts.png')
 fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
 fig3.savefig(PATH + 'score_rollouts.png')
+# plt.show()
+
+logger.info(f"[*] Files were saved at {PATH}")
 
 
-create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
+# create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
 
 sample_indices = np.random.randint(states.shape[0], size=2)
 states_samples = states[sample_indices]
 actions_samples = actions[sample_indices]
 scores_samples = scores[sample_indices]
+
+'''
 create_animation(states_samples, actions_samples, env.time,
                  scores=scores_samples,
                  state_labels=STATE_NAMES,
                  action_labels=ACTION_NAMES,
                  score_labels=REWARD_NAMES,
                  file_name='flight',
-                 path=PATH + 'sample_rollouts/')
+                 path=PATH + 'sample_rollouts/')'
+'''
