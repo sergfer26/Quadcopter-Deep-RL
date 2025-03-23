@@ -78,10 +78,10 @@ def simulador(Y, Ze, T, tam, jac=None):
     Soluciona el sistema de EDO usando controles en el
     intervalo [0, T].
 
-    param Y: arreglo de la condición inicial del sistema
-    param Ze: arreglo de las posiciones estables de los 4 controles
-    param T: tiempo final
-    param tam: número de elementos de la partición de [0, T]
+    :param Y: arreglo de la condición inicial del sistema
+    :param Ze: arreglo de las posiciones estables de los 4 controles
+    :param T: tiempo final
+    :param tam: número de elementos de la partición de [0, T]
 
     regresa; arreglo de la posición final
     '''
