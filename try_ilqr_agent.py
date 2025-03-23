@@ -77,7 +77,7 @@ fig3, _ = plot_rollouts(scores, env.time, REWARD_NAMES, alpha=0.05)
 fig3.savefig(PATH + 'score_rollouts.png')
 # plt.show()
 
-logger.info(f"[*] Files were saved at {PATH}")
+logger.info(f"[*] iLQR results were saved at {PATH}")
 
 
 # create_report(PATH, 'Ajuste iLQR', method=None, extra_method='ilqr')
