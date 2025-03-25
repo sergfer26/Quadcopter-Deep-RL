@@ -64,7 +64,7 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     du = r * v - q * w - G * np.sin(theta)
     dv = p * w - r * u - G * np.cos(theta) * np.sin(phi)
     # - (K/M) * norm(W) ** 2
-    dw = q * u - p * v + G * np.cos(phi) * np.cos(theta) - (B/M) * norm(W) ** 2
+    dw = q * u - p * v + G * np.cos(phi) * np.cos(theta) - (K/M) * norm(W) ** 2
     # ((L * B) / Ixx)
     dp = ((L * K) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
     # ((L * B) / Iyy)
