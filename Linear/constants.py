@@ -25,7 +25,7 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 
 # W0 = np.array([1, 1, 1, 1]).reshape((4, 1)) * omega_0
 
-F1 = - np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # control z, w
+F1 = np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # control z, w
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # control yaw (psi, r)
 F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # control roll (phi, p)
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
