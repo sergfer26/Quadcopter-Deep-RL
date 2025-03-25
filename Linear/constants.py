@@ -27,14 +27,14 @@ omega_0 = np.sqrt((G * M)/(4 * K))
 
 F1 = - np.array([[0.25, 0.25, 0.25, 0.25], [1, 1, 1, 1]]).T  # control z, w
 F2 = np.array([[0.5, 0, 0.5, 0], [1, 0, 1, 0]]).T  # control yaw (psi, r)
-F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.25]]).T  # control roll (phi, p)
+F3 = np.array([[0, 1, 0, 0.75], [0, 0.5, 0, -0.5]]).T  # control roll (phi, p)
 F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
               ).T  # control pitch (theta, q)
 
 
 c1 = (((2 * K)/M) * omega_0) ** (-1)  # 1z
-c3 = (((2 * L * B) / Ixx) * omega_0) ** (-1)  # roll
-c4 = (((2 * L * B) / Iyy) * omega_0) ** (-1)  # pitch
+c3 = (((L * B) / Ixx) * omega_0) ** (-1)  # roll
+c4 = (((L * B) / Iyy) * omega_0) ** (-1)  # pitch
 c2 = (((2 * B) / Izz) * omega_0) ** (-1)  # yaw
 
 C = np.array([c1, c2, c3, c4])
