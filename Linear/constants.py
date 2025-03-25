@@ -32,10 +32,10 @@ F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
               ).T  # control pitch (theta, q)
 
 
-c1 = (((2 * K)/M) * omega_0)  # **(-1)  # 1z
-c3 = (((2 * L * K) / Ixx) * omega_0)  # **(-1)  # roll
-c4 = (((2 * L * K) / Iyy) * omega_0)  # **(-1)  # pitch
-c2 = (((2 * B) / Izz) * omega_0)  # **(-1)  # yaw
+c1 = (((2 * K)/M) * omega_0) ** (-1)  # 1z
+c3 = (((2 * L * K) / Ixx) * omega_0) ** (-1)  # roll
+c4 = (((2 * L * K) / Iyy) * omega_0) ** (-1)  # pitch
+c2 = (((2 * B) / Izz) * omega_0) ** (-1)  # yaw
 
 C = np.array([c1, c2, c3, c4])
 F = np.array([F1, F2, F3, F4])
