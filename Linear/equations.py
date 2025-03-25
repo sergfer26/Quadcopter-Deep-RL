@@ -66,9 +66,9 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     # - (K/M) * norm(W) ** 2
     dw = q * u - p * v + G * np.cos(phi) * np.cos(theta) - (K/M) * norm(W) ** 2
     # ((L * B) / Ixx)
-    dp = ((L * K) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
+    dp = ((L * B) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
     # ((L * B) / Iyy)
-    dq = ((L * K) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
+    dq = ((L * B) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
     dr = (B/Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
     dpsi = (q * np.sin(phi) + r * np.cos(phi)) * (1 / np.cos(theta))
     dtheta = q * np.cos(phi) - r * np.sin(phi)
