@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -81,7 +83,7 @@ def n_rollouts(agent, env, n, flag=False, states_init=None,
     n_actions = np.zeros((n, env.steps, env.action_space.shape[0]))
     n_scores = np.zeros((n, env.steps, 2))
     state_init = None
-    for k in range(n):  # for k in progressbar(range(n)):
+    for k in tqdm(range(n)):  # for k in progressbar(range(n)):
         if isinstance(states_init, np.ndarray):
             if len(states_init.shape) == 2:
                 state_init = states_init[k, :]
