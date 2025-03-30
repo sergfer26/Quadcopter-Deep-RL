@@ -242,11 +242,11 @@ if __name__ == "__main__":
 
         th_str = str(th).replace('.', '_')
 
+        figsize = (args.figsize[0], args.figsize[1])
         if args.one_figure:
             fig, axes = plt.subplots(
                 dpi=200, nrows=2, ncols=init_states.shape[0] // 2, figsize=figsize)
 
-        figsize = (args.figsize[0], args.figsize[1])
         for i in range(init_states.shape[0]):
             if args.one_figure:
                 ax = axes.flatten()[i]
@@ -258,6 +258,7 @@ if __name__ == "__main__":
                             bool_state[i],
                             x_label=label[0],
                             y_label=label[1],
+                            figsize=figsize
                             ax=ax
                             )
             plt.tight_layout()
