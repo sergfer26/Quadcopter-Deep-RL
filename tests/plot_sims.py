@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
         if args.one_figure:
             fig, axes = plt.subplots(
-                dpi=200, nrows=2, ncols=init_states.shape[0] // 2, figsize=(15, 10))
+                dpi=200, nrows=2, ncols=init_states.shape[0] // 2, figsize=figsize)
 
         figsize = (args.figsize[0], args.figsize[1])
         for i in range(init_states.shape[0]):
