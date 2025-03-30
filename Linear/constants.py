@@ -33,8 +33,8 @@ F4 = np.array([[1, 0, 0.75, 0], [0.5, 0, -0.5, 0]]
 
 
 c1 = (((2 * K)/M) * omega_0) ** (-1)  # 1z
-c3 = (((2 * L * K) / Ixx) * omega_0) ** (-1)  # roll
-c4 = (((2 * L * K) / Iyy) * omega_0) ** (-1)  # pitch
+c3 = (((2 * L * B) / Ixx) * omega_0) ** (-1)  # roll
+c4 = (((2 * L * B) / Iyy) * omega_0) ** (-1)  # pitch
 c2 = (((2 * B) / Izz) * omega_0) ** (-1)  # yaw
 
 C = np.array([c1, c2, c3, c4])

@@ -60,15 +60,15 @@ def f(X, t, w1, w2, w3, w4):  # Sistema dinámico
     '''
     u, v, w, _, _, _, p, q, r, _, theta, phi = X
     # Ixx, Iyy, Izz = I
-    W = np.array([w1, w2, w3, w4])
     du = r * v - q * w - G * np.sin(theta)
     dv = p * w - r * u - G * np.cos(theta) * np.sin(phi)
     # - (K/M) * norm(W) ** 2
-    dw = q * u - p * v + G * np.cos(phi) * np.cos(theta) - (K/M) * norm(W) ** 2
-    # ((L * B) / Ixx)
-    dp = ((L * K) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
-    # ((L * B) / Iyy)
-    dq = ((L * K) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
+    dw = q * u - p * v + G * \
+        np.cos(phi) * np.cos(theta) - (K/M) * (w1**2 + w2**2 + w3**2 + w4**2)
+    # ((L * K) / Ixx)
+    dp = ((L * B) / Ixx) * (w4 ** 2 - w2 ** 2) - q * r * ((Izz - Iyy) / Ixx)
+    # ((L * K) / Iyy)
+    dq = ((L * B) / Iyy) * (w3 ** 2 - w1 ** 2) - p * r * ((Ixx - Izz) / Iyy)
     dr = (B/Izz) * (w2 ** 2 + w4 ** 2 - w1 ** 2 - w3 ** 2)
     dpsi = (q * np.sin(phi) + r * np.cos(phi)) * (1 / np.cos(theta))
     dtheta = q * np.cos(phi) - r * np.sin(phi)
