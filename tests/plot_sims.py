@@ -259,7 +259,7 @@ if __name__ == "__main__":
                 bool_state[i],
                 x_label=label[0],
                 y_label=label[1],
-                figsize=figsize
+                figsize=figsize,
                 ax=ax
             )
             plt.tight_layout()
