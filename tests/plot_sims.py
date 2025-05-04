@@ -148,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument('--threshold', type=float, default=0.5)
     parser.add_argument('--ord', type=str, default='inf')
     parser.add_argument('--figsize',
-                        type=int,
+                        type=float,
                         nargs='+',
                         help='The fig size tuple.',
                         default=[6, 10]
