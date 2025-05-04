@@ -251,16 +251,17 @@ if __name__ == "__main__":
             if args.one_figure:
                 ax = axes.flatten()[i]
             else:
-                fig, ax = plt.subplots(dpi=200)
+                fig, ax = plt.subplots(dpi=200, figsize=figsize)
             mask = abs(init_states[i, 0]) > 0
             label = np.array(STATE_NAMES)[mask]
-            plot_classifier(init_states[i, :, mask],
-                            bool_state[i],
-                            x_label=label[0],
-                            y_label=label[1],
-                            figsize=figsize
-                            ax=ax
-                            )
+            plot_classifier(
+                init_states[i, :, mask],
+                bool_state[i],
+                x_label=label[0],
+                y_label=label[1],
+                figsize=figsize
+                ax=ax
+            )
             plt.tight_layout()
 
             if not args.one_figure:
