@@ -61,7 +61,7 @@ def train_gps(gps: GPS, K, path, per_kl=0.1,
     # if isinstance(x0, np.ndarray):
     #     gps.x0 = x0
     # else:
-    #     gps.init_x0()
+    gps.init_x0()
 
     policy_cost = np.empty((K, gps.M))
     policy_states = np.empty((K, gps.M, gps.n_x))
