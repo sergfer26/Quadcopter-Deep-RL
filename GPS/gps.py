@@ -7,12 +7,12 @@ from torch import optim
 from copy import deepcopy
 from os.path import exists
 # from functools import partial
-from .utils import OfflineCost  # , OnlineCost
+from GPS.utils import OfflineCost  # , OnlineCost
 # from ilqr import RecedingHorizonController
-from .params import PARAMS_LQG, PARAMS_OFFLINE
-from .controller import OfflineController, iLQG
+from GPS.params import PARAMS_LQG, PARAMS_OFFLINE
+from GPS.controller import OfflineController, iLQG
 from torch.distributions.multivariate_normal import _batch_mahalanobis
-from .utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
+from GPS.utils import nearestPD, iLQR_Rollouts,  ContinuousDynamics
 from torch.utils.data import DataLoader
 
 
