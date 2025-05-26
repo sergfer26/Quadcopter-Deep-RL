@@ -36,7 +36,7 @@ cost = FiniteDiffCost(l=penalty,
 
 N = env.steps
 agent = iLQG(dynamics, cost, N)
-# expert = LinearAgent(env)
+expert = LinearAgent(env)
 
 
 steps = env.steps
@@ -67,7 +67,7 @@ create_animation(xs, us, env.time,
 '''
 agent.reset()
 states, actions, scores = n_rollouts(
-    agent, env, n=100)
+    agent, env, n=10)
 
 fig1, _ = plot_rollouts(states, env.time, STATE_NAMES, alpha=0.05)
 fig1.savefig(PATH + 'state_rollouts.png')
