@@ -147,8 +147,6 @@ def main(path):
     high_range = np.array(
         [.0, .0, .0, 1., 1., 1., .0, .0, .0, np.pi/64, np.pi/64, np.pi/64])
     low_range = - high_range
-    states = np.load(
-        "results_ilqr/stability_analysis/23_07_14_11_30/stability_region.npz")['states']
     gps = GPS(env,
               policy,
               dynamics_kwargs,
@@ -172,7 +170,6 @@ def main(path):
               batch_size=PARAMS['batch_size'],
               is_stochastic=PARAMS['is_stochastic'],
               time_step=PARAMS['time_step'],
-              states=states,
               threashold=PARAMS['threshold']
               )
     ti = time.time()
