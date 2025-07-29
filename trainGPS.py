@@ -169,8 +169,7 @@ def main(path):
               high_range=high_range,
               batch_size=PARAMS['batch_size'],
               is_stochastic=PARAMS['is_stochastic'],
-              time_step=PARAMS['time_step'],
-              threashold=PARAMS['threshold']
+              time_step=PARAMS['time_step']
               )
     ti = time.time()
     # 2. Training
