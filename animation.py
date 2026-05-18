@@ -36,7 +36,8 @@ def apply_R(p, R):
 
 def create_animation(states, actions, time, scores=None, state_labels=None,
                      action_labels=None, score_labels=None, goal=None,
-                     title=None, file_name='animation', path=PATH):
+                     title=None, file_name='animation', path=PATH, 
+                     delete_frames=True):
     '''
     Argumentos
     ----------
@@ -62,6 +63,8 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
         Nombre del archivo. <file_name>.gif
     path (opcional): `str`
         Nombre de la carpeta donde se guardan las imagenes temporales.
+    delete_frames (opcional): `bool`
+        Si es `True`, borra las imágenes temporales después de crear el gif.
     '''
 
     plt.style.use("fivethirtyeight")
@@ -88,7 +91,8 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
                 image = imageio.v2.imread(path + f'/frame_{j}_{i}.png')
                 writer.append_data(image)
 
-                os.system('rm ' + path + f'frame_{j}_{i}.png')
+                if delete_frames:
+                    os.system('rm ' + path + f'frame_{j}_{i}.png')
 
 
 def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
@@ -227,4 +231,6 @@ if __name__ == '__main__':
                      action_labels=ACTION_NAMES,
                      score_labels=score_names,
                      file_name='flight',
-                     path='Linear/sample_rollouts/')
+                     path='Linear/sample_rollouts/', 
+                     delete_frames=False
+                     )
