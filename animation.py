@@ -1,4 +1,6 @@
+import argparse
 import os
+import pathlib
 import imageio
 import numpy as np
 import matplotlib as mpl
@@ -9,10 +11,23 @@ from env import QuadcopterEnv
 # from numpy import cos, sin
 from matplotlib import pyplot as plt
 from simulation import plot_rollouts
-from params import STATE_NAMES, ACTION_NAMES
+from params import (
+    ACTION_NAMES,
+    PARAMS_DDPG,
+    PARAMS_TRAIN_DDPG,
+    REWARD_NAMES,
+    STATE_NAMES,
+)
+from policy import Policy
+from DDPG.ddpg import DDPGagent
+from DDPG.utils import AgentEnv
+from GPS.controller import DummyController
+from dynamics import transform_x, inv_transform_x
 
 
 PATH = 'test/'
+DEFAULT_GPS_PATH = PARAMS_TRAIN_DDPG['behavior_path'].rstrip('/')
+DEFAULT_ILQR_PATH = 'models'
 
 
 def square(vec=np.zeros(3), R=np.identity(3)):
@@ -37,7 +52,8 @@ def apply_R(p, R):
 def create_animation(states, actions, time, scores=None, state_labels=None,
                      action_labels=None, score_labels=None, goal=None,
                      title=None, file_name='animation', path=PATH, 
-                     delete_frames=True):
+                     delete_frames=True, style='fivethirtyeight',
+                     show_scores=True):
     '''
     Argumentos
     ----------
@@ -65,9 +81,14 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
         Nombre de la carpeta donde se guardan las imagenes temporales.
     delete_frames (opcional): `bool`
         Si es `True`, borra las imágenes temporales después de crear el gif.
+    style (opcional): `str`
+        Estilo de matplotlib usado para crear la animación.
+    show_scores (opcional): `bool`
+        Si es `True`, muestra los puntajes durante la animación.
     '''
 
-    plt.style.use("fivethirtyeight")
+    plt.style.use(style)
+    pathlib.Path(path).mkdir(parents=True, exist_ok=True)
     if len(states.shape) == 2:
         states = np.expand_dims(states, axis=0)
         actions = np.expand_dims(actions, axis=0)
@@ -76,9 +97,9 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
     samples = actions.shape[0]
     steps = actions.shape[1]
     _scores = None
-    file_name = path + file_name + '_{}.gif'
+    gif_path = os.path.join(path, file_name + '_{}.gif')
     for j in range(samples):
-        if isinstance(scores, np.ndarray):
+        if show_scores and isinstance(scores, np.ndarray):
             _scores = scores[j]
         _create_frames(states[j], actions[j], time, scores=_scores,
                        state_labels=state_labels,
@@ -86,13 +107,14 @@ def create_animation(states, actions, time, scores=None, state_labels=None,
                        score_labels=score_labels,
                        goal=goal,
                        path=path, j=j, title=title)
-        with imageio.get_writer(file_name.format(j), mode='i') as writer:
+        with imageio.get_writer(gif_path.format(j), mode='i') as writer:
             for i in range(0, steps):
-                image = imageio.v2.imread(path + f'/frame_{j}_{i}.png')
+                frame_path = os.path.join(path, f'frame_{j}_{i}.png')
+                image = imageio.v2.imread(frame_path)
                 writer.append_data(image)
 
                 if delete_frames:
-                    os.system('rm ' + path + f'frame_{j}_{i}.png')
+                    os.remove(frame_path)
 
 
 def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
@@ -171,9 +193,9 @@ def _create_frames(states: np.ndarray, actions: np.ndarray, time: np.ndarray,
                     fontsize=25)
             ax_scores.set_axis_off()
         if isinstance(j, int):
-            file_name = path + f'frame_{j}_{i}.png'
+            file_name = os.path.join(path, f'frame_{j}_{i}.png')
         else:
-            file_name = path + f'frame_{i}.png'
+            file_name = os.path.join(path, f'frame_{i}.png')
 
         if isinstance(title, str):
             fig.suptitle(title, fontsize=fontsize)
@@ -208,29 +230,92 @@ def _quadcopter_frame(states, goal_pos=None, state_bounds=None, ax=None):
     ax.set_zlabel('Z')
 
 
+def _build_agent(agent_type: str, env: QuadcopterEnv, agent_path: str = None):
+    if agent_type == 'linear':
+        return LinearAgent(env), env
+
+    if agent_type == 'ilqr':
+        control_path = agent_path or DEFAULT_ILQR_PATH
+        file_name = f'ilqr_control_{env.steps}.npz'
+        if os.path.isdir(control_path):
+            control_path = control_path.rstrip('/') + '/'
+        return DummyController(control_path, file_name), env
+
+    other_env = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
+    other_env.noise_on = False
+
+    if agent_type == 'gps':
+        policy_path = agent_path or DEFAULT_GPS_PATH
+        policy = Policy(other_env, PARAMS_DDPG['hidden_sizes'])
+        policy.load(policy_path)
+        return policy, other_env
+
+    if agent_type == 'ddpg':
+        if not isinstance(agent_path, str):
+            raise ValueError(
+                'A checkpoint directory must be provided with --agent-path '
+                'when agent type is ddpg.'
+            )
+        agent = DDPGagent(
+            other_env,
+            hidden_sizes=PARAMS_DDPG['hidden_sizes'],
+            actor_learning_rate=eval(PARAMS_DDPG['actor_learning_rate']),
+            critic_learning_rate=PARAMS_DDPG['critic_learning_rate'],
+            gamma=PARAMS_DDPG['gamma'],
+            tau=PARAMS_DDPG['tau'],
+            max_memory_size=PARAMS_DDPG['max_memory_size'],
+        )
+        agent.load(agent_path.rstrip('/') + '/')
+        return agent, other_env
+
+    raise ValueError(f'Unknown agent type: {agent_type}')
+
+
 if __name__ == '__main__':
-    # t = np.arange(0, 40, .1)
-    # size = len(t)
-    # state = f(t)
-    # angles = g(t, tmax=t[-1], tmin=t[0])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--steps', type=int, default=750,
+                        help='Number of simulation steps passed to env.set_time.')
+    parser.add_argument('--dt', type=float, default=0.04,
+                        help='Time step passed to env.set_time.')
+    parser.add_argument('--agent', type=str,
+                        choices=['linear', 'ilqr', 'ddpg', 'gps'],
+                        default='linear',
+                        help='Type of agent used to generate rollouts.')
+    parser.add_argument('--agent-path', type=str, default=None,
+                        help='Optional directory used to load gps/ddpg/ilqr agents.')
+    parser.add_argument('--file-name', type=str, default='flight',
+                        help='Base name of the generated gif files.')
+    parser.add_argument('--style', type=str, default='fivethirtyeight',
+                        help='Argument forwarded to plt.style.use.')
+    parser.add_argument('--show-scores', action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='Show or hide score text in animation frames.')
+    parser.add_argument('--n-rollouts', type=int, default=2,
+                        help='Number of rollouts used to build the animation.')
+    parser.add_argument('--path', type=str, default='Linear/sample_rollouts/',
+                        help='Directory where frames and gifs are written.')
+    parser.add_argument('--delete-frames',
+                        action=argparse.BooleanOptionalAction,
+                        default=False,
+                        help='Delete temporary PNG frames after building gifs.')
+    args = parser.parse_args()
+
     env = QuadcopterEnv()
-    env.set_time(305, 15)
-    # env4agent = AgentEnv(env, tx=transform_x, inv_tx=inv_transform_x)
-    agent = LinearAgent(env)
-    # agent = iLQRAgent()
-    # agent = DDPGagent(env4agent)
-    # agent.load('results_ddpg/12_9_112/')
-    states, actions, scores = n_rollouts(agent, env, n=5)
-    # states = np.apply_along_axis(inv_transform_x, -1, states)
-    # pos = states[:, 3:6]
-    # angles = states[:, 9:]
-    size = len(env.time)
-    score_names = ['$r_t$', r'$\sum^T r_t$']
-    create_animation(states, actions, env.time, scores=scores,
+    env.set_time(args.steps, args.dt)
+    agent, rollout_env = _build_agent(args.agent, env, args.agent_path)
+    transform_states = inv_transform_x if args.agent in {'gps', 'ddpg'} else None
+    states, actions, scores = n_rollouts(
+        agent, rollout_env, n=args.n_rollouts, t_x=transform_states
+    )
+
+    create_animation(states, actions, env.time,
+                     scores=scores if args.show_scores else None,
                      state_labels=STATE_NAMES,
                      action_labels=ACTION_NAMES,
-                     score_labels=score_names,
-                     file_name='flight',
-                     path='Linear/sample_rollouts/', 
-                     delete_frames=False
+                     score_labels=REWARD_NAMES,
+                     file_name=args.file_name,
+                     path=args.path,
+                     delete_frames=args.delete_frames,
+                     style=args.style,
+                     show_scores=args.show_scores
                      )
